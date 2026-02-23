@@ -1,6 +1,5 @@
-Flask
-gunicorn
-Flask-SQLAlchemy
-pandas
-openpyxl
-
+Flask==3.0.3
+Flask-SQLAlchemy==3.1.1
+gunicorn==22.0.0
+pandas==2.2.2
+openpyxl==3.1.5
