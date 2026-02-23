@@ -1,28 +1,65 @@
-{% extends "base.html" %}
-{% block content %}
+/* ===== HR Corporate Style ===== */
 
-<div class="card shadow-sm border-0">
-  <div class="card-body">
-    <div class="d-flex justify-content-between align-items-center">
-      <h3 class="fw-bold mb-0">Import Employee Data</h3>
-      <a href="{{ url_for('employees') }}" class="btn btn-outline-secondary">← กลับ</a>
-    </div>
+body {
+  font-family: "Segoe UI", "Tahoma", sans-serif;
+}
 
-    <hr class="my-3">
+/* Card Stat */
+.stat-card {
+  background: #ffffff;
+  border: 1px solid rgba(0,0,0,.08);
+  border-radius: 14px;
+  padding: 14px 16px;
+  transition: all .2s ease-in-out;
+}
 
-    <div class="alert alert-info">
-      <div class="fw-semibold mb-1">รองรับไฟล์ .xlsx / .csv</div>
-      <div class="small">
-        ต้องมีคอลัมน์ Em. ID (หรือ รหัสพนักงาน) อย่างน้อย 1 คอลัมน์<br>
-        ระบบพยายามจับคอลัมน์: No., Em.ID, ID Card, Name-TH, Name-EN, Position, Section, Department, Start work, Resign, Status, Degree, Major
-      </div>
-    </div>
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0,0,0,.08);
+}
 
-    <form method="post" enctype="multipart/form-data" class="d-flex gap-2 align-items-center">
-      <input class="form-control" type="file" name="file" accept=".xlsx,.xls,.csv">
-      <button class="btn btn-warning" type="submit">Import</button>
-    </form>
-  </div>
-</div>
+.stat-title {
+  font-size: 12px;
+  color: #6c757d;
+  font-weight: 600;
+}
 
-{% endblock %}
+.stat-value {
+  font-size: 28px;
+  font-weight: 800;
+}
+
+/* Table */
+.table thead th {
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.table tbody tr:hover {
+  background-color: #f1f6ff;
+}
+
+/* DataTables */
+.dataTables_wrapper .dataTables_filter input {
+  border-radius: 8px;
+  border: 1px solid #ced4da;
+  padding: 6px 10px;
+}
+
+.dataTables_wrapper .dataTables_length select {
+  border-radius: 8px;
+  border: 1px solid #ced4da;
+}
+
+/* Buttons */
+.btn {
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+/* Sticky header */
+thead.sticky-top {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
