@@ -14,36 +14,39 @@ def home():
     </ul>
     """
 
-@app.route("/employees")
+@app.route("/employees", methods=["GET", "POST"])
 def employees():
-    return """
+    if request.method == "POST":
+        name = request.form["name"]
+        dept = request.form["dept"]
+        position = request.form["position"]
+        employees_data.append((name, dept, position))
+
+    table_rows = ""
+    for emp in employees_data:
+        table_rows += f"<tr><td>{emp[0]}</td><td>{emp[1]}</td><td>{emp[2]}</td></tr>"
+
+    return f"""
     <h2>Employee Report</h2>
+
+    <form method="POST">
+        ชื่อ: <input name="name" required>
+        แผนก: <input name="dept" required>
+        ตำแหน่ง: <input name="position" required>
+        <button type="submit">เพิ่มพนักงาน</button>
+    </form>
+
+    <br><br>
+
     <table border="1" cellpadding="5">
         <tr>
             <th>ชื่อ</th>
             <th>แผนก</th>
             <th>ตำแหน่ง</th>
-            <th>ผ่าน OJT</th>
         </tr>
-        <tr>
-            <td>สมชาย</td>
-            <td>Diecasting</td>
-            <td>Operator</td>
-            <td>✔</td>
-        </tr>
+        {table_rows}
     </table>
+
     <br>
     <a href="/">กลับหน้าหลัก</a>
     """
-
-@app.route("/training")
-def training():
-    return """
-    <h2>Training Matrix</h2>
-    <p>Core Tools / ISO / IATF / Safety Training</p>
-    <br>
-    <a href="/">กลับหน้าหลัก</a>
-    """
-
-if __name__ == "__main__":
-    app.run()
