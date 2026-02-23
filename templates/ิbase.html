@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>{{ title or "SANKO Training System" }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+</head>
+<body>
+  <div class="container">
+    <div class="topbar">
+      <div class="brand">
+        <span>SANKO Training System 🚀</span>
+        <span class="badge">HR • Employee Data</span>
+      </div>
+      <div class="actions">
+        <a class="btn" href="{{ url_for('home') }}">🏠 หน้าแรก</a>
+        <a class="btn primary" href="{{ url_for('employees') }}">👥 Employee Data</a>
+        <a class="btn" href="{{ url_for('training') }}">📚 Training Matrix</a>
+      </div>
+    </div>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div class="flash">
+          {% for m in messages %}
+            <div>• {{ m }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+  </div>
+</body>
+</html>
