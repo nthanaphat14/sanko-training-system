@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="card shadow-sm border-0">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-center">
+      <h3 class="fw-bold mb-0">Import Employee Data</h3>
+      <a href="{{ url_for('employees') }}" class="btn btn-outline-secondary">← กลับ</a>
+    </div>
+
+    <hr class="my-3">
+
+    <div class="alert alert-info">
+      <div class="fw-semibold mb-1">รองรับไฟล์ .xlsx / .csv</div>
+      <div class="small">
+        ต้องมีคอลัมน์ Em. ID (หรือ รหัสพนักงาน) อย่างน้อย 1 คอลัมน์<br>
+        ระบบพยายามจับคอลัมน์: No., Em.ID, ID Card, Name-TH, Name-EN, Position, Section, Department, Start work, Resign, Status, Degree, Major
+      </div>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" class="d-flex gap-2 align-items-center">
+      <input class="form-control" type="file" name="file" accept=".xlsx,.xls,.csv">
+      <button class="btn btn-warning" type="submit">Import</button>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
