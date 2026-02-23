@@ -1,9 +1,25 @@
 from flask import Flask, request
+import sqlite3
 
 app = Flask(__name__)
 
 # เก็บข้อมูลแบบชั่วคราว (ถ้ารีสตาร์ท/รีโหลด อาจหายได้)
-employees_data = []
+app = Flask(__name__)
+def init_db():
+    conn = sqlite3.connect("database.db")
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS employees (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT,
+            dept TEXT,
+            position TEXT
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+init_db()
 
 @app.get("/")
 def home():
@@ -17,25 +33,38 @@ def home():
     """
 
 @app.route("/employees", methods=["GET", "POST"])
+def employees(): 
+    @app.route("/employees", methods=["GET", "POST"])
 def employees():
-    global employees_data
 
     if request.method == "POST":
-        name = request.form.get("name", "").strip()
-        dept = request.form.get("dept", "").strip()
-        position = request.form.get("position", "").strip()
+        name = request.form["name"]
+        dept = request.form["dept"]
+        position = request.form["position"]
 
-        if name and dept and position:
-            employees_data.append((name, dept, position))
+        conn = sqlite3.connect("database.db")
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO employees (name, dept, position) VALUES (?, ?, ?)",
+            (name, dept, position)
+        )
+        conn.commit()
+        conn.close()
 
-    rows = ""
-    for i, (name, dept, position) in enumerate(employees_data, start=1):
-        rows += f"""
+    conn = sqlite3.connect("database.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM employees")
+    rows = cursor.fetchall()
+    conn.close()
+
+    table_rows = ""
+    for row in rows:
+        table_rows += f"""
         <tr>
-          <td>{i}</td>
-          <td>{name}</td>
-          <td>{dept}</td>
-          <td>{position}</td>
+            <td>{row[0]}</td>
+            <td>{row[1]}</td>
+            <td>{row[2]}</td>
+            <td>{row[3]}</td>
         </tr>
         """
 
@@ -43,32 +72,24 @@ def employees():
     <h2>Employee Report</h2>
 
     <form method="POST">
-      ชื่อ: <input name="name" required>
-      แผนก: <input name="dept" required>
-      ตำแหน่ง: <input name="position" required>
-      <button type="submit">เพิ่มพนักงาน</button>
+        ชื่อ: <input name="name" required>
+        แผนก: <input name="dept" required>
+        ตำแหน่ง: <input name="position" required>
+        <button type="submit">เพิ่มพนักงาน</button>
     </form>
 
-    <br>
+    <br><br>
 
-    <table border="1" cellpadding="6">
-      <tr>
-        <th>#</th>
-        <th>ชื่อ</th>
-        <th>แผนก</th>
-        <th>ตำแหน่ง</th>
-      </tr>
-      {rows}
+    <table border="1" cellpadding="5">
+        <tr>
+            <th>ID</th>
+            <th>ชื่อ</th>
+            <th>แผนก</th>
+            <th>ตำแหน่ง</th>
+        </tr>
+        {table_rows}
     </table>
 
     <br>
-    <a href="/">กลับหน้าหลัก</a>
-    """
-
-@app.get("/training")
-def training():
-    return """
-    <h2>Training Matrix</h2>
-    <p>หน้านี้เราจะทำต่อเป็นตารางหลักสูตรตามตำแหน่ง</p>
     <a href="/">กลับหน้าหลัก</a>
     """
