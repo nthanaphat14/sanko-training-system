@@ -1,121 +1,117 @@
 {% extends "base.html" %}
 {% block content %}
 
-<div class="card shadow-sm border-0">
-  <div class="card-body">
-    <div class="d-flex justify-content-between align-items-center">
-      <h3 class="fw-bold mb-0">
-        {% if mode == "new" %}เพิ่มพนักงานใหม่{% else %}แก้ไขพนักงาน: {{ employee.em_id }}{% endif %}
-      </h3>
-      <a href="{{ url_for('employees') }}" class="btn btn-outline-secondary">← กลับ</a>
+<div class="page-head">
+  <div>
+    <h1>{% if mode == "new" %}เพิ่มพนักงาน{% else %}แก้ไขพนักงาน: {{ emp.em_id }}{% endif %}</h1>
+    <div class="muted">กรอกข้อมูลแล้วกดบันทึก</div>
+  </div>
+  <div class="actions">
+    <a class="btn" href="{{ url_for('employees_list') }}">← กลับ</a>
+  </div>
+</div>
+
+<div class="card">
+  <form method="post" class="form-grid">
+
+    <div class="field">
+      <label>No.</label>
+      <input name="no" value="{{ emp.no if emp else '' }}">
     </div>
 
-    <hr class="my-3">
+    <div class="field">
+      <label>Em. ID (ห้ามซ้ำ)</label>
+      {% if mode == "edit" %}
+        <input value="{{ emp.em_id }}" disabled>
+      {% else %}
+        <input name="em_id" required>
+      {% endif %}
+    </div>
 
-    <form method="post" class="row g-3">
+    <div class="field">
+      <label>ID Card</label>
+      <input name="id_card" value="{{ emp.id_card if emp else '' }}">
+    </div>
 
-      <div class="col-md-2">
-        <label class="form-label fw-semibold">No.</label>
-        <input class="form-control" name="no" value="{{ employee.no if employee else '' }}">
-      </div>
+    <div class="sep"></div>
+    <h3 class="section-title">ชื่อไทย</h3>
 
-      <div class="col-md-5">
-        <label class="form-label fw-semibold">Em. ID (ห้ามซ้ำ)</label>
-        <input class="form-control" name="em_id"
-               value="{{ employee.em_id if employee else '' }}"
-               {% if mode == "edit" %}readonly{% endif %}>
-      </div>
+    <div class="field">
+      <label>คำนำหน้า (TH)</label>
+      <input name="title_th" value="{{ emp.title_th if emp else '' }}">
+    </div>
+    <div class="field">
+      <label>ชื่อ (TH)</label>
+      <input name="first_name_th" value="{{ emp.first_name_th if emp else '' }}">
+    </div>
+    <div class="field">
+      <label>นามสกุล (TH)</label>
+      <input name="last_name_th" value="{{ emp.last_name_th if emp else '' }}">
+    </div>
 
-      <div class="col-md-5">
-        <label class="form-label fw-semibold">ID Card</label>
-        <input class="form-control" name="id_card" value="{{ employee.id_card if employee else '' }}">
-      </div>
+    <div class="sep"></div>
+    <h3 class="section-title">ชื่ออังกฤษ</h3>
 
-      <div class="col-12"><hr></div>
+    <div class="field">
+      <label>Title (EN)</label>
+      <input name="title_en" value="{{ emp.title_en if emp else '' }}">
+    </div>
+    <div class="field">
+      <label>First name (EN)</label>
+      <input name="first_name_en" value="{{ emp.first_name_en if emp else '' }}">
+    </div>
+    <div class="field">
+      <label>Last name (EN)</label>
+      <input name="last_name_en" value="{{ emp.last_name_en if emp else '' }}">
+    </div>
 
-      <div class="col-12"><h5 class="fw-bold">ชื่อไทย</h5></div>
+    <div class="sep"></div>
+    <h3 class="section-title">ตำแหน่ง/หน่วยงาน</h3>
 
-      <div class="col-md-2">
-        <label class="form-label fw-semibold">คำนำหน้า (TH)</label>
-        <input class="form-control" name="title_th" value="{{ employee.title_th if employee else '' }}">
-      </div>
-      <div class="col-md-5">
-        <label class="form-label fw-semibold">ชื่อ (TH)</label>
-        <input class="form-control" name="first_name_th" value="{{ employee.first_name_th if employee else '' }}">
-      </div>
-      <div class="col-md-5">
-        <label class="form-label fw-semibold">สกุล (TH)</label>
-        <input class="form-control" name="last_name_th" value="{{ employee.last_name_th if employee else '' }}">
-      </div>
+    <div class="field">
+      <label>Position</label>
+      <input name="position" value="{{ emp.position if emp else '' }}">
+    </div>
+    <div class="field">
+      <label>Section</label>
+      <input name="section" value="{{ emp.section if emp else '' }}">
+    </div>
+    <div class="field">
+      <label>Department</label>
+      <input name="department" value="{{ emp.department if emp else '' }}">
+    </div>
 
-      <div class="col-12"><h5 class="fw-bold mt-2">ชื่ออังกฤษ</h5></div>
+    <div class="sep"></div>
+    <h3 class="section-title">วันที่/สถานะ</h3>
 
-      <div class="col-md-2">
-        <label class="form-label fw-semibold">Title (EN)</label>
-        <input class="form-control" name="title_en" value="{{ employee.title_en if employee else '' }}">
-      </div>
-      <div class="col-md-5">
-        <label class="form-label fw-semibold">First name (EN)</label>
-        <input class="form-control" name="first_name_en" value="{{ employee.first_name_en if employee else '' }}">
-      </div>
-      <div class="col-md-5">
-        <label class="form-label fw-semibold">Last name (EN)</label>
-        <input class="form-control" name="last_name_en" value="{{ employee.last_name_en if employee else '' }}">
-      </div>
+    <div class="field">
+      <label>Start work</label>
+      <input name="start_work" value="{{ emp.start_work if emp else '' }}" placeholder="yyyy-mm-dd">
+    </div>
+    <div class="field">
+      <label>Resign</label>
+      <input name="resign" value="{{ emp.resign if emp else '' }}" placeholder="yyyy-mm-dd">
+    </div>
+    <div class="field">
+      <label>Status</label>
+      <input name="status" value="{{ emp.status if emp else '' }}">
+    </div>
 
-      <div class="col-12"><hr></div>
+    <div class="field">
+      <label>Degree</label>
+      <input name="degree" value="{{ emp.degree if emp else '' }}">
+    </div>
+    <div class="field">
+      <label>Major</label>
+      <input name="major" value="{{ emp.major if emp else '' }}">
+    </div>
+    <div></div>
 
-      <div class="col-12"><h5 class="fw-bold">ตำแหน่ง/หน่วยงาน</h5></div>
-
-      <div class="col-md-4">
-        <label class="form-label fw-semibold">Position</label>
-        <input class="form-control" name="position" value="{{ employee.position if employee else '' }}">
-      </div>
-      <div class="col-md-4">
-        <label class="form-label fw-semibold">Section</label>
-        <input class="form-control" name="section" value="{{ employee.section if employee else '' }}">
-      </div>
-      <div class="col-md-4">
-        <label class="form-label fw-semibold">Department</label>
-        <input class="form-control" name="department" value="{{ employee.department if employee else '' }}">
-      </div>
-
-      <div class="col-12"><hr></div>
-
-      <div class="col-12"><h5 class="fw-bold">วันที่/สถานะ</h5></div>
-
-      <div class="col-md-4">
-        <label class="form-label fw-semibold">Start work (yyyy-mm-dd หรือ dd-mm-yy)</label>
-        <input class="form-control" name="start_work" value="{{ employee.start_work.isoformat() if employee and employee.start_work else '' }}">
-      </div>
-
-      <div class="col-md-4">
-        <label class="form-label fw-semibold">Resign (yyyy-mm-dd หรือ dd-mm-yy)</label>
-        <input class="form-control" name="resign" value="{{ employee.resign.isoformat() if employee and employee.resign else '' }}">
-      </div>
-
-      <div class="col-md-4">
-        <label class="form-label fw-semibold">Status</label>
-        <input class="form-control" name="status" value="{{ employee.status if employee else '' }}">
-      </div>
-
-      <div class="col-md-6">
-        <label class="form-label fw-semibold">Degree</label>
-        <input class="form-control" name="degree" value="{{ employee.degree if employee else '' }}">
-      </div>
-
-      <div class="col-md-6">
-        <label class="form-label fw-semibold">Major</label>
-        <input class="form-control" name="major" value="{{ employee.major if employee else '' }}">
-      </div>
-
-      <div class="col-12 d-flex gap-2">
-        <button class="btn btn-primary px-4" type="submit">บันทึก</button>
-        <a class="btn btn-outline-secondary" href="{{ url_for('employees') }}">ยกเลิก</a>
-      </div>
-
-    </form>
-  </div>
+    <div class="actions-row">
+      <button class="btn primary" type="submit">บันทึก</button>
+      <a class="btn ghost" href="{{ url_for('employees_list') }}">ยกเลิก</a>
+    </div>
+  </form>
 </div>
 
 {% endblock %}
