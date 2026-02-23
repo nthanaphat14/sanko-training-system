@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="card shadow-sm border-0">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-center">
+      <h3 class="fw-bold mb-0">
+        {% if mode == "new" %}เพิ่มพนักงานใหม่{% else %}แก้ไขพนักงาน: {{ employee.em_id }}{% endif %}
+      </h3>
+      <a href="{{ url_for('employees') }}" class="btn btn-outline-secondary">← กลับ</a>
+    </div>
+
+    <hr class="my-3">
+
+    <form method="post" class="row g-3">
+
+      <div class="col-md-2">
+        <label class="form-label fw-semibold">No.</label>
+        <input class="form-control" name="no" value="{{ employee.no if employee else '' }}">
+      </div>
+
+      <div class="col-md-5">
+        <label class="form-label fw-semibold">Em. ID (ห้ามซ้ำ)</label>
+        <input class="form-control" name="em_id"
+               value="{{ employee.em_id if employee else '' }}"
+               {% if mode == "edit" %}readonly{% endif %}>
+      </div>
+
+      <div class="col-md-5">
+        <label class="form-label fw-semibold">ID Card</label>
+        <input class="form-control" name="id_card" value="{{ employee.id_card if employee else '' }}">
+      </div>
+
+      <div class="col-12"><hr></div>
+
+      <div class="col-12"><h5 class="fw-bold">ชื่อไทย</h5></div>
+
+      <div class="col-md-2">
+        <label class="form-label fw-semibold">คำนำหน้า (TH)</label>
+        <input class="form-control" name="title_th" value="{{ employee.title_th if employee else '' }}">
+      </div>
+      <div class="col-md-5">
+        <label class="form-label fw-semibold">ชื่อ (TH)</label>
+        <input class="form-control" name="first_name_th" value="{{ employee.first_name_th if employee else '' }}">
+      </div>
+      <div class="col-md-5">
+        <label class="form-label fw-semibold">สกุล (TH)</label>
+        <input class="form-control" name="last_name_th" value="{{ employee.last_name_th if employee else '' }}">
+      </div>
+
+      <div class="col-12"><h5 class="fw-bold mt-2">ชื่ออังกฤษ</h5></div>
+
+      <div class="col-md-2">
+        <label class="form-label fw-semibold">Title (EN)</label>
+        <input class="form-control" name="title_en" value="{{ employee.title_en if employee else '' }}">
+      </div>
+      <div class="col-md-5">
+        <label class="form-label fw-semibold">First name (EN)</label>
+        <input class="form-control" name="first_name_en" value="{{ employee.first_name_en if employee else '' }}">
+      </div>
+      <div class="col-md-5">
+        <label class="form-label fw-semibold">Last name (EN)</label>
+        <input class="form-control" name="last_name_en" value="{{ employee.last_name_en if employee else '' }}">
+      </div>
+
+      <div class="col-12"><hr></div>
+
+      <div class="col-12"><h5 class="fw-bold">ตำแหน่ง/หน่วยงาน</h5></div>
+
+      <div class="col-md-4">
+        <label class="form-label fw-semibold">Position</label>
+        <input class="form-control" name="position" value="{{ employee.position if employee else '' }}">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label fw-semibold">Section</label>
+        <input class="form-control" name="section" value="{{ employee.section if employee else '' }}">
+      </div>
+      <div class="col-md-4">
+        <label class="form-label fw-semibold">Department</label>
+        <input class="form-control" name="department" value="{{ employee.department if employee else '' }}">
+      </div>
+
+      <div class="col-12"><hr></div>
+
+      <div class="col-12"><h5 class="fw-bold">วันที่/สถานะ</h5></div>
+
+      <div class="col-md-4">
+        <label class="form-label fw-semibold">Start work (yyyy-mm-dd หรือ dd-mm-yy)</label>
+        <input class="form-control" name="start_work" value="{{ employee.start_work.isoformat() if employee and employee.start_work else '' }}">
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label fw-semibold">Resign (yyyy-mm-dd หรือ dd-mm-yy)</label>
+        <input class="form-control" name="resign" value="{{ employee.resign.isoformat() if employee and employee.resign else '' }}">
+      </div>
+
+      <div class="col-md-4">
+        <label class="form-label fw-semibold">Status</label>
+        <input class="form-control" name="status" value="{{ employee.status if employee else '' }}">
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label fw-semibold">Degree</label>
+        <input class="form-control" name="degree" value="{{ employee.degree if employee else '' }}">
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label fw-semibold">Major</label>
+        <input class="form-control" name="major" value="{{ employee.major if employee else '' }}">
+      </div>
+
+      <div class="col-12 d-flex gap-2">
+        <button class="btn btn-primary px-4" type="submit">บันทึก</button>
+        <a class="btn btn-outline-secondary" href="{{ url_for('employees') }}">ยกเลิก</a>
+      </div>
+
+    </form>
+  </div>
+</div>
+
+{% endblock %}
