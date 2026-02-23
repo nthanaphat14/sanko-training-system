@@ -3,23 +3,32 @@ import sqlite3
 
 app = Flask(__name__)
 
-# เก็บข้อมูลแบบชั่วคราว (ถ้ารีสตาร์ท/รีโหลด อาจหายได้)
-app = Flask(__name__)
+DB_NAME = "database.db"
+
+
+def get_conn():
+    return sqlite3.connect(DB_NAME)
+
+
 def init_db():
-    conn = sqlite3.connect("database.db")
-    cursor = conn.cursor()
-    cursor.execute("""
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute(
+        """
         CREATE TABLE IF NOT EXISTS employees (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT,
-            dept TEXT,
-            position TEXT
+            name TEXT NOT NULL,
+            dept TEXT NOT NULL,
+            position TEXT NOT NULL
         )
-    """)
+        """
+    )
     conn.commit()
     conn.close()
 
+
 init_db()
+
 
 @app.get("/")
 def home():
@@ -27,44 +36,43 @@ def home():
     <h1>SANKO Training System 🚀</h1>
     <h3>เมนูหลัก</h3>
     <ul>
-      <li><a href="/employees">Employee Report</a></li>
-      <li><a href="/training">Training Matrix</a></li>
+        <li><a href="/employees">Employee Report</a></li>
+        <li><a href="/training">Training Matrix</a></li>
     </ul>
     """
 
+
 @app.route("/employees", methods=["GET", "POST"])
-def employees(): 
-    @app.route("/employees", methods=["GET", "POST"])
 def employees():
-
     if request.method == "POST":
-        name = request.form["name"]
-        dept = request.form["dept"]
-        position = request.form["position"]
+        name = request.form.get("name", "").strip()
+        dept = request.form.get("dept", "").strip()
+        position = request.form.get("position", "").strip()
 
-        conn = sqlite3.connect("database.db")
-        cursor = conn.cursor()
-        cursor.execute(
-            "INSERT INTO employees (name, dept, position) VALUES (?, ?, ?)",
-            (name, dept, position)
-        )
-        conn.commit()
-        conn.close()
+        if name and dept and position:
+            conn = get_conn()
+            cur = conn.cursor()
+            cur.execute(
+                "INSERT INTO employees (name, dept, position) VALUES (?, ?, ?)",
+                (name, dept, position),
+            )
+            conn.commit()
+            conn.close()
 
-    conn = sqlite3.connect("database.db")
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM employees")
-    rows = cursor.fetchall()
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT id, name, dept, position FROM employees ORDER BY id DESC")
+    rows = cur.fetchall()
     conn.close()
 
     table_rows = ""
-    for row in rows:
+    for r in rows:
         table_rows += f"""
         <tr>
-            <td>{row[0]}</td>
-            <td>{row[1]}</td>
-            <td>{row[2]}</td>
-            <td>{row[3]}</td>
+            <td>{r[0]}</td>
+            <td>{r[1]}</td>
+            <td>{r[2]}</td>
+            <td>{r[3]}</td>
         </tr>
         """
 
@@ -90,6 +98,16 @@ def employees():
         {table_rows}
     </table>
 
+    <br>
+    <a href="/">กลับหน้าหลัก</a>
+    """
+
+
+@app.get("/training")
+def training():
+    return """
+    <h2>Training Matrix</h2>
+    <p>หน้านี้จะทำต่อ: ใส่ Matrix ตามตำแหน่ง + หลักสูตร</p>
     <br>
     <a href="/">กลับหน้าหลัก</a>
     """
