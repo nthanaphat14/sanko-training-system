@@ -7,29 +7,27 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
 </head>
 <body>
-  <div class="container">
-    <div class="topbar">
-      <div class="brand">
-        <span>SANKO Training System 🚀</span>
-        <span class="badge">HR • Employee Data</span>
-      </div>
-      <div class="actions">
-        <a class="btn" href="{{ url_for('home') }}">🏠 หน้าแรก</a>
-        <a class="btn primary" href="{{ url_for('employees') }}">👥 Employee Data</a>
-        <a class="btn" href="{{ url_for('training') }}">📚 Training Matrix</a>
-      </div>
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-title">SANKO Training System</div>
+      <div class="brand-sub">Employee Data</div>
     </div>
+    <div class="top-actions">
+      <a class="btn" href="{{ url_for('employees_list') }}">Employee Data</a>
+      <a class="btn" href="{{ url_for('employees_import') }}">Import</a>
+    </div>
+  </div>
 
-    {% with messages = get_flashed_messages() %}
+  <div class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
-        <div class="flash">
-          {% for m in messages %}
-            <div>• {{ m }}</div>
+        <div class="flash-wrap">
+          {% for cat, msg in messages %}
+            <div class="flash {{ cat }}">{{ msg }}</div>
           {% endfor %}
         </div>
       {% endif %}
     {% endwith %}
-
     {% block content %}{% endblock %}
   </div>
 </body>
