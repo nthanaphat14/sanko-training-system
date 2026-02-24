@@ -137,6 +137,28 @@ def employees_list():
         q=q,
         total=len(employees),
     )
+@app.route("/employees/new", methods=["GET", "POST"])
+def employee_new():
+    if request.method == "POST":
+        em_id = request.form.get("em_id", "").strip()
+        first_name_th = request.form.get("first_name_th", "").strip()
+
+        if not em_id:
+            flash("กรุณากรอกรหัสพนักงาน", "error")
+            return redirect(url_for("employee_new"))
+
+        if Employee.query.filter_by(em_id=em_id).first():
+            flash("em_id นี้มีอยู่แล้ว", "error")
+            return redirect(url_for("employee_new"))
+
+        emp = Employee(em_id=em_id, first_name_th=first_name_th)
+        db.session.add(emp)
+        db.session.commit()
+
+        flash("เพิ่มพนักงานเรียบร้อย", "success")
+        return redirect(url_for("employees_list"))
+
+    return render_template("employee_form.html")
 @app.route("/employees/import", methods=["GET", "POST"])
 def employees_import():
     if request.method == "GET":
