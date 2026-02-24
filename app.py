@@ -173,6 +173,24 @@ def employee_new():
         return redirect(url_for("employees_list"))
 
     return render_template("employee_form.html")
+    
+@app.route("/employees/<string:em_id>/edit", methods=["GET", "POST"])
+def employee_edit(em_id):
+    emp = Employee.query.filter_by(em_id=em_id).first_or_404()
+
+    if request.method == "POST":
+        emp.first_name_th = request.form.get("first_name_th")
+        emp.last_name_th = request.form.get("last_name_th")
+        emp.first_name_en = request.form.get("first_name_en")
+        emp.last_name_en = request.form.get("last_name_en")
+        emp.id_card = request.form.get("id_card")
+
+        db.session.commit()
+        flash("แก้ไขข้อมูลเรียบร้อย", "success")
+        return redirect(url_for("employees_list"))
+
+    return render_template("employee_form.html", employee=emp)
+
 @app.route("/employees/import", methods=["GET", "POST"])
 def employees_import():
     if request.method == "GET":
