@@ -10,6 +10,7 @@ from flask import (
 )
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import or_, nullslast
+from sqlalchemy.exc import IntegrityError, DataError
 from openpyxl import load_workbook
 
 # -------------------------------------------------
@@ -174,21 +175,42 @@ def employee_new():
         return redirect(url_for("employees_list"))
 
     return render_template("employee_form.html")
-    
+
+from sqlalchemy.exc import IntegrityError, DataError
+
+def normalize_status(x):
+    if not x:
+        return None
+    s = str(x).strip().upper()
+    if s in ("W", "WORKING", "ACTIVE", "ทำงาน", "ยังอยู่"):
+        return "W"
+    if s in ("RS", "RESIGN", "RESIGNED", "ลาออก", "ออก"):
+        return "RS"
+    return s
+
 @app.route("/employees/<string:em_id>/edit", methods=["GET", "POST"])
 def employee_edit(em_id):
     emp = Employee.query.filter_by(em_id=em_id).first_or_404()
 
     if request.method == "POST":
-        emp.first_name_th = request.form.get("first_name_th")
-        emp.last_name_th = request.form.get("last_name_th")
-        emp.first_name_en = request.form.get("first_name_en")
-        emp.last_name_en = request.form.get("last_name_en")
-        emp.id_card = request.form.get("id_card")
+        try:
+            emp.id_card = safe_str(request.form.get("id_card"))
+            emp.first_name_th = safe_str(request.form.get("first_name_th"))
+            emp.last_name_th  = safe_str(request.form.get("last_name_th"))
+            emp.first_name_en = safe_str(request.form.get("first_name_en"))
+            emp.last_name_en  = safe_str(request.form.get("last_name_en"))
+            emp.status = normalize_status(request.form.get("status"))
 
-        db.session.commit()
-        flash("แก้ไขข้อมูลเรียบร้อย", "success")
-        return redirect(url_for("employees_list"))
+            db.session.commit()
+            flash("แก้ไขข้อมูลเรียบร้อย", "success")
+            return redirect(url_for("employees_list"))
+
+        except (IntegrityError, DataError) as e:
+            db.session.rollback()
+            flash("บันทึกไม่สำเร็จ: ข้อมูลไม่ถูกต้องหรือซ้ำในระบบ", "error")
+        except Exception as e:
+            db.session.rollback()
+            flash(f"เกิดข้อผิดพลาด: {e}", "error")
 
     return render_template("employee_form.html", employee=emp)
 
