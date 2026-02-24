@@ -124,22 +124,24 @@ def healthz():
 @app.get("/employees")
 def employees_list():
     q = (request.args.get("q") or "").strip()
-    query = query.filter(
-    or_(
-        Employee.em_id.ilike(like),
-        Employee.id_card.ilike(like),
-        Employee.first_name_th.ilike(like),
-        Employee.last_name_th.ilike(like),
-        Employee.first_name_en.ilike(like),
-        Employee.last_name_en.ilike(like),
-        Employee.position.ilike(like),
-        Employee.section.ilike(like),
-        Employee.department.ilike(like),
-        Employee.status.ilike(like),
-        Employee.degree.ilike(like),
-        Employee.major.ilike(like),
-    )
-)
+
+    query = Employee.query  # ✅ ต้องอยู่ตรงนี้ (ก่อน if q)
+
+    if q:
+        like = f"%{q}%"
+        query = query.filter(
+            or_(
+                Employee.em_id.ilike(like),
+                Employee.id_card.ilike(like),
+                Employee.first_name_th.ilike(like),
+                Employee.last_name_th.ilike(like),
+                Employee.first_name_en.ilike(like),
+                Employee.last_name_en.ilike(like),
+                Employee.position.ilike(like),
+                Employee.department.ilike(like),
+                Employee.status.ilike(like),
+            )
+        )
 
     employees = query.order_by(nullslast(Employee.no.asc()), Employee.em_id.asc()).all()
 
@@ -149,6 +151,7 @@ def employees_list():
         q=q,
         total=len(employees),
     )
+    
 @app.route("/employees/new", methods=["GET", "POST"])
 def employee_new():
     if request.method == "POST":
