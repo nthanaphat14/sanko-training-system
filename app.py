@@ -490,6 +490,45 @@ def dashboard():
             "resigned": int(resign_map.get(m, 0)),
         })
 
+start_date = date(year, month, 1) if month else date(year, 1, 1)
+end_date = date(year + (1 if month == 12 else 0), (1 if month == 12 else (month + 1)), 1) if month else date(year + 1, 1, 1)
+
+# ---- เข้า: start_work ตามช่วง ----
+dept_join_rows = (
+    db.session.query(Employee.department, func.count(Employee.id))
+    .filter(Employee.start_work >= start_date, Employee.start_work < end_date)
+    .group_by(Employee.department)
+    .all()
+)
+
+# ---- ออก: resign ตามช่วง ----
+dept_resign_rows = (
+    db.session.query(Employee.department, func.count(Employee.id))
+    .filter(Employee.resign >= start_date, Employee.resign < end_date)
+    .group_by(Employee.department)
+    .all()
+)
+
+# map เป็น dict เพื่อ merge กันง่าย
+join_map = { (d or "ไม่ระบุ"): int(c) for d, c in dept_join_rows }
+resign_map = { (d or "ไม่ระบุ"): int(c) for d, c in dept_resign_rows }
+
+# รวมเป็น list เดียว
+dept_inout = []
+all_depts = set(join_map.keys()) | set(resign_map.keys())
+for d in all_depts:
+    dept_inout.append({
+        "department": d,
+        "joined": join_map.get(d, 0),
+        "resigned": resign_map.get(d, 0),
+        "net": join_map.get(d, 0) - resign_map.get(d, 0),
+    })
+
+# เรียง: ออกมากสุดก่อน หรือเข้าออกมากสุดก่อนก็ได้
+dept_inout.sort(key=lambda x: (x["joined"] + x["resigned"]), reverse=True)
+
+# เอา Top 10
+dept_inout_top10 = dept_inout[:10]
     return render_template(
         "dashboard.html",
         total=total,
@@ -503,6 +542,9 @@ def dashboard():
         joined_month=joined_month,
         resigned_month=resigned_month,
         month_summary=month_summary,
+        dept_inout_top10=dept_inout_top10,
+        start_date=start_date,
+        end_date=end_date,
     )
 
 # -------------------------------------------------
