@@ -15,6 +15,8 @@ from io import BytesIO
 from flask import send_file
 from openpyxl import load_workbook
 from openpyxl import Workbook
+from sqlalchemy import func  
+
 
 # -------------------------------------------------
 # App Config
@@ -408,6 +410,36 @@ def employees_export():
         as_attachment=True,
         download_name=filename,
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
+
+
+@app.get("/dashboard")
+def dashboard():
+    total = db.session.query(func.count(Employee.id)).scalar() or 0
+    active = db.session.query(func.count(Employee.id)).filter(Employee.status == "W").scalar() or 0
+    resigned = db.session.query(func.count(Employee.id)).filter(Employee.status == "RS").scalar() or 0
+
+    # สรุปตาม Department (Top 10)
+    dept_rows = (
+        db.session.query(Employee.department, func.count(Employee.id))
+        .group_by(Employee.department)
+        .order_by(func.count(Employee.id).desc())
+        .limit(10)
+        .all()
+    )
+
+    # แปลงให้ template ใช้ง่าย
+    dept_summary = [
+        {"department": (d or "ไม่ระบุ"), "count": c}
+        for d, c in dept_rows
+    ]
+
+    return render_template(
+        "dashboard.html",
+        total=total,
+        active=active,
+        resigned=resigned,
+        dept_summary=dept_summary,
     )
 
 # -------------------------------------------------
