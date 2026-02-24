@@ -525,11 +525,12 @@ def dashboard():
     })
 
 # เรียง: ออกมากสุดก่อน หรือเข้าออกมากสุดก่อนก็ได้
-dept_inout.sort(key=lambda x: (x["joined"] + x["resigned"]), reverse=True)
+    dept_inout.sort(key=lambda x: (x["joined"] + x["resigned"]), reverse=True)
 
 # เอา Top 10
-dept_inout_top10 = dept_inout[:10]
-return render_template(
+    dept_inout_top10 = dept_inout[:10]
+    
+    return render_template(
         "dashboard.html",
         total=total,
         active=active,
