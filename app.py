@@ -208,20 +208,22 @@ def employee_edit(em_id):
     return render_template("employee_form.html", mode="edit", emp=emp)
 
 
-@app.post("/employees/<em_id>/delete")
-def employee_delete(em_id):
-    emp = Employee.query.filter_by(em_id=em_id).first_or_404()
-    db.session.delete(emp)
-    db.session.commit()
-    flash("ลบข้อมูลเรียบร้อย 🗑️", "ok")
-    return redirect(url_for("employees_list"))
+@app.get("/employees/import")
+def employees_import():
+    return render_template("import.html")
 
+@app.get("/employees/export")
+def employees_export():
+    return "Export logic here"
 
 # -------------------------------------------------
 # Run (Local Only)
 # -------------------------------------------------
-with app.app_context():
-    db.create_all()
+def init_db():
+    with app.app_context():
+        db.create_all()
+
+init_db()
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
