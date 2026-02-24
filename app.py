@@ -547,6 +547,67 @@ def dashboard():
         start_date=start_date,
         end_date=end_date,
     )
+    
+@app.route("/trainings/import", methods=["GET", "POST"])
+def trainings_import():
+
+    if request.method == "GET":
+        return render_template("training_import.html")
+
+    f = request.files.get("file")
+    if not f or f.filename == "":
+        flash("กรุณาเลือกไฟล์ Excel", "error")
+        return redirect(url_for("trainings_import"))
+
+    wb = load_workbook(f, data_only=True)
+    ws = wb.active
+
+    added = 0
+    skipped = 0
+    not_found = 0
+
+    for row in ws.iter_rows(min_row=2, values_only=True):
+
+        if not row:
+            continue
+
+        emp_id_raw = row[3]  # Emp ID column
+
+        if not emp_id_raw:
+            skipped += 1
+            continue
+
+        em_id = str(emp_id_raw).strip().upper()
+
+        employee = Employee.query.filter(
+            func.upper(Employee.em_id) == em_id
+        ).first()
+
+        if not employee:
+            not_found += 1
+            continue
+
+        training = TrainingRecord(
+            employee_id=employee.id,
+            course_code=str(row[9]).strip() if row[9] else None,
+            course_name=str(row[10]).strip() if row[10] else None,
+            category=str(row[11]).strip() if row[11] else None,
+            training_date=row[12].date() if row[12] else None,
+            expire_date=row[19].date() if row[19] else None,
+            hours=float(row[14]) if row[14] else None,
+            result=str(row[16]).strip() if row[16] else None,
+            trainer=str(row[18]).strip() if row[18] else None,
+            remark=str(row[20]).strip() if row[20] else None,
+        )
+
+        db.session.add(training)
+        added += 1
+
+    db.session.commit()
+
+    flash(f"Import สำเร็จ เพิ่ม {added} | ไม่พบพนักงาน {not_found} | ข้าม {skipped}", "success")
+
+    return redirect(url_for("employees_list"))
 
 # -------------------------------------------------
 # Run (Local Only)
