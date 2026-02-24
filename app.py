@@ -9,6 +9,7 @@ from flask import (
     flash,
 )
 from flask_sqlalchemy import SQLAlchemy
+from openpyxl import load_workbook
 from sqlalchemy import or_
 
 # -------------------------------------------------
