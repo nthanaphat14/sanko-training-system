@@ -1,3 +1,19 @@
+<div class="card" style="margin-bottom:12px;">
+  <form method="get" style="display:flex; gap:10px; align-items:end; flex-wrap:wrap;">
+    <div class="field">
+      <label>ปี</label>
+      <input name="year" value="{{ year }}" style="width:120px;" />
+    </div>
+
+    <div class="field">
+      <label>เดือน (เว้นว่าง = ทั้งปี)</label>
+      <input name="month" value="{{ month or '' }}" placeholder="1-12" style="width:120px;" />
+    </div>
+
+    <button class="btn primary" type="submit">แสดงผล</button>
+    <a class="btn ghost" href="{{ url_for('dashboard') }}">รีเซ็ต</a>
+  </form>
+</div>
 {% extends "base.html" %}
 {% block content %}
 
@@ -58,3 +74,4 @@
 </div>
 
 {% endblock %}
+
