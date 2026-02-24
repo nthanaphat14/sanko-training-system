@@ -208,9 +208,23 @@ def employee_edit(em_id):
     return render_template("employee_form.html", mode="edit", emp=emp)
 
 
-@app.get("/employees/import")
+from flask import request, redirect, url_for, flash
+
+@app.route("/employees/import", methods=["GET", "POST"])
 def employees_import():
-    return render_template("import.html")
+
+    # เปิดหน้า import
+    if request.method == "GET":
+        return render_template("import.html")
+
+    # กดอัปโหลดไฟล์ (POST)
+    f = request.files.get("file")
+    if not f or f.filename == "":
+        flash("กรุณาเลือกไฟล์ Excel ก่อน", "error")
+        return redirect(url_for("employees_import"))
+
+    flash("อัปโหลดไฟล์สำเร็จ ✅", "ok")
+    return redirect(url_for("employees_list"))
 
 @app.get("/employees/export")
 def employees_export():
