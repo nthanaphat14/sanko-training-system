@@ -503,9 +503,9 @@ def dashboard():
 
 # ---- ออก: resign ตามช่วง ----
     dept_resign_rows = (
-    db.session.query(Employee.department, func.count(Employee.id))
+    db.session.query(Employee.section, func.count(Employee.id))
     .filter(Employee.resign >= start_date, Employee.resign < end_date)
-    .group_by(Employee.department)
+    .group_by(Employee.section)
     .all()
     )
 
