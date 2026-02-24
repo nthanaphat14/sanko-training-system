@@ -9,9 +9,8 @@ from flask import (
     flash,
 )
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import or_
+from sqlalchemy import or_, nullslast
 from openpyxl import load_workbook
-
 
 # -------------------------------------------------
 # App Config
@@ -125,25 +124,24 @@ def healthz():
 @app.get("/employees")
 def employees_list():
     q = (request.args.get("q") or "").strip()
-    query = Employee.query
+    query = query.filter(
+    or_(
+        Employee.em_id.ilike(like),
+        Employee.id_card.ilike(like),
+        Employee.first_name_th.ilike(like),
+        Employee.last_name_th.ilike(like),
+        Employee.first_name_en.ilike(like),
+        Employee.last_name_en.ilike(like),
+        Employee.position.ilike(like),
+        Employee.section.ilike(like),
+        Employee.department.ilike(like),
+        Employee.status.ilike(like),
+        Employee.degree.ilike(like),
+        Employee.major.ilike(like),
+    )
+)
 
-    if q:
-        like = f"%{q}%"
-        query = query.filter(
-            or_(
-                Employee.em_id.ilike(like),
-                Employee.id_card.ilike(like),
-                Employee.first_name_th.ilike(like),
-                Employee.last_name_th.ilike(like),
-                Employee.first_name_en.ilike(like),
-                Employee.last_name_en.ilike(like),
-                Employee.position.ilike(like),
-                Employee.department.ilike(like),
-                Employee.status.ilike(like),
-            )
-        )
-
-    employees = query.order_by(Employee.em_id.asc()).all()
+    employees = query.order_by(nullslast(Employee.no.asc()), Employee.em_id.asc()).all()
 
     return render_template(
         "employees.html",
