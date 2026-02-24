@@ -146,12 +146,12 @@ def employees_list():
 
     employees = query.order_by(nullslast(Employee.no.asc()), Employee.em_id.asc()).all()
 
-return render_template(
-    "employees.html",
-    employees=employees,
-    q=q,
-    total=len(employees),
-)
+    return render_template(
+        "employees.html",
+        employees=employees,
+        q=q,
+        total=len(employees),
+    )
     
 @app.route("/employees/new", methods=["GET", "POST"])
 def employee_new():
