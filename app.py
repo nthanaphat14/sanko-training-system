@@ -216,6 +216,33 @@ def employees_import():
     # เปิดหน้า import
     if request.method == "GET":
         return render_template("import.html")
+        
+        from openpyxl import load_workbook
+
+# ถ้าเป็น POST
+f = request.files.get("file")
+if not f or f.filename == "":
+    flash("กรุณาเลือกไฟล์ Excel ก่อน", "error")
+    return redirect(url_for("employees_import"))
+
+wb = load_workbook(f)
+ws = wb.active
+
+for row in ws.iter_rows(min_row=2, values_only=True):
+    if not row[0]:
+        continue
+
+    emp = Employee(
+        em_id=str(row[0]),
+        first_name_th=str(row[1]) if row[1] else None,
+        last_name_th=str(row[2]) if row[2] else None,
+    )
+    db.session.add(emp)
+
+db.session.commit()
+
+flash("Import สำเร็จ ✅", "ok")
+return redirect(url_for("employees_list"))
 
     # กดอัปโหลดไฟล์ (POST)
     f = request.files.get("file")
