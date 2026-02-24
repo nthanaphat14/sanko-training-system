@@ -1,24 +1,6 @@
-{% extends "base.html" %}
-{% block content %}
+<h2>Import Employees</h2>
 
-<div class="page-head">
-  <div>
-    <h1>Import Employee Data</h1>
-    <div class="muted">รองรับคอลัมน์: No., Em. ID, ID Card, Name-TH, Name-EN, Position, Section, Department, Start work, Resign, Status, Degree, Major</div>
-  </div>
-  <div class="actions">
-    <a class="btn" href="{{ url_for('employees_list') }}">← กลับ</a>
-  </div>
-</div>
-
-<div class="card">
-  <form method="post" enctype="multipart/form-data" class="import-box">
+<form method="post" enctype="multipart/form-data">
     <input type="file" name="file" accept=".xlsx,.xls" required>
-    <button class="btn primary" type="submit">เริ่ม Import</button>
-  </form>
-  <div class="muted" style="margin-top:10px;">
-    ระบบกัน NaN/ช่องว่างแล้ว ✅ ไม่พัง (No. ว่างก็ Import ได้)
-  </div>
-</div>
-
-{% endblock %}
+    <button type="submit">Upload</button>
+</form>
