@@ -3,7 +3,13 @@
 
 <div class="page-head">
   <div>
-    <h1>{% if mode == "new" %}เพิ่มพนักงาน{% else %}แก้ไขพนักงาน: {{ emp.em_id }}{% endif %}</h1>
+    <h1>
+      {% if employee %}
+        แก้ไขพนักงาน: {{ employee.em_id }}
+      {% else %}
+        เพิ่มพนักงาน
+      {% endif %}
+    </h1>
     <div class="muted">กรอกข้อมูลแล้วกดบันทึก</div>
   </div>
   <div class="actions">
@@ -16,13 +22,15 @@
 
     <div class="field">
       <label>No.</label>
-      <input name="no" value="{{ emp.no if emp else '' }}">
+      <input name="no" value="{{ employee.no if employee and employee.no is not none else '' }}">
     </div>
 
     <div class="field">
       <label>Em. ID (ห้ามซ้ำ)</label>
-      {% if mode == "edit" %}
-        <input value="{{ emp.em_id }}" disabled>
+      {% if employee %}
+        <input value="{{ employee.em_id }}" disabled>
+        <!-- ถ้าคุณอยากให้ POST ส่ง em_id มาด้วย ให้เปิดใช้บรรทัดนี้ -->
+        <!-- <input type="hidden" name="em_id" value="{{ employee.em_id }}"> -->
       {% else %}
         <input name="em_id" required>
       {% endif %}
@@ -30,7 +38,7 @@
 
     <div class="field">
       <label>ID Card</label>
-      <input name="id_card" value="{{ emp.id_card if emp else '' }}">
+      <input name="id_card" value="{{ employee.id_card if employee else '' }}">
     </div>
 
     <div class="sep"></div>
@@ -38,15 +46,15 @@
 
     <div class="field">
       <label>คำนำหน้า (TH)</label>
-      <input name="title_th" value="{{ emp.title_th if emp else '' }}">
+      <input name="title_th" value="{{ employee.title_th if employee else '' }}">
     </div>
     <div class="field">
       <label>ชื่อ (TH)</label>
-      <input name="first_name_th" value="{{ emp.first_name_th if emp else '' }}">
+      <input name="first_name_th" value="{{ employee.first_name_th if employee else '' }}">
     </div>
     <div class="field">
       <label>นามสกุล (TH)</label>
-      <input name="last_name_th" value="{{ emp.last_name_th if emp else '' }}">
+      <input name="last_name_th" value="{{ employee.last_name_th if employee else '' }}">
     </div>
 
     <div class="sep"></div>
@@ -54,15 +62,15 @@
 
     <div class="field">
       <label>Title (EN)</label>
-      <input name="title_en" value="{{ emp.title_en if emp else '' }}">
+      <input name="title_en" value="{{ employee.title_en if employee else '' }}">
     </div>
     <div class="field">
       <label>First name (EN)</label>
-      <input name="first_name_en" value="{{ emp.first_name_en if emp else '' }}">
+      <input name="first_name_en" value="{{ employee.first_name_en if employee else '' }}">
     </div>
     <div class="field">
       <label>Last name (EN)</label>
-      <input name="last_name_en" value="{{ emp.last_name_en if emp else '' }}">
+      <input name="last_name_en" value="{{ employee.last_name_en if employee else '' }}">
     </div>
 
     <div class="sep"></div>
@@ -70,15 +78,15 @@
 
     <div class="field">
       <label>Position</label>
-      <input name="position" value="{{ emp.position if emp else '' }}">
+      <input name="position" value="{{ employee.position if employee else '' }}">
     </div>
     <div class="field">
       <label>Section</label>
-      <input name="section" value="{{ emp.section if emp else '' }}">
+      <input name="section" value="{{ employee.section if employee else '' }}">
     </div>
     <div class="field">
       <label>Department</label>
-      <input name="department" value="{{ emp.department if emp else '' }}">
+      <input name="department" value="{{ employee.department if employee else '' }}">
     </div>
 
     <div class="sep"></div>
@@ -86,24 +94,26 @@
 
     <div class="field">
       <label>Start work</label>
-      <input name="start_work" value="{{ emp.start_work if emp else '' }}" placeholder="yyyy-mm-dd">
+      <input type="date" name="start_work"
+             value="{{ employee.start_work.isoformat() if employee and employee.start_work else '' }}">
     </div>
     <div class="field">
       <label>Resign</label>
-      <input name="resign" value="{{ emp.resign if emp else '' }}" placeholder="yyyy-mm-dd">
+      <input type="date" name="resign"
+             value="{{ employee.resign.isoformat() if employee and employee.resign else '' }}">
     </div>
     <div class="field">
       <label>Status</label>
-      <input name="status" value="{{ emp.status if emp else '' }}">
+      <input name="status" value="{{ employee.status if employee else '' }}" placeholder="W / RS">
     </div>
 
     <div class="field">
       <label>Degree</label>
-      <input name="degree" value="{{ emp.degree if emp else '' }}">
+      <input name="degree" value="{{ employee.degree if employee else '' }}">
     </div>
     <div class="field">
       <label>Major</label>
-      <input name="major" value="{{ emp.major if emp else '' }}">
+      <input name="major" value="{{ employee.major if employee else '' }}">
     </div>
     <div></div>
 
