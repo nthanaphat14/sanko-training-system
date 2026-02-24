@@ -44,6 +44,13 @@ class Employee(db.Model):
         full = f"{first} {last}".strip()
         return full
 
+    def en_full(self):   # ← ต้องเยื้อง 4 ช่อง
+        """คืนชื่อ-สกุลภาษาอังกฤษแบบรวม"""
+        first = (self.first_name_en or "").strip()
+        last = (self.last_name_en or "").strip()
+        full = f"{first} {last}".strip()
+        return full
+    
     id = db.Column(db.Integer, primary_key=True)
     no = db.Column(db.Integer, nullable=True)
     em_id = db.Column(db.String(40), unique=True, nullable=False)
