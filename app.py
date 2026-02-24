@@ -495,6 +495,7 @@ def dashboard():
         total=total,
         active=active,
         resigned_total=resigned_total,
+        resigned=resigned_total,
         year=year,
         month=month,
         joined_year=joined_year,
