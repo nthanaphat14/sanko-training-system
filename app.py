@@ -146,12 +146,12 @@ def employees_list():
 
     employees = query.order_by(nullslast(Employee.no.asc()), Employee.em_id.asc()).all()
 
-    return render_template(
-        "employees.html",
-        employees=employees,
-        q=q,
-        total=len(employees),
-    )
+return render_template(
+    "employees.html",
+    employees=employees,
+    q=q,
+    total=len(employees),
+)
     
 @app.route("/employees/new", methods=["GET", "POST"])
 def employee_new():
@@ -174,7 +174,7 @@ def employee_new():
         flash("เพิ่มพนักงานเรียบร้อย", "success")
         return redirect(url_for("employees_list"))
 
-    return render_template("employee_form.html")
+    return render_template("employee_form.html", employee=None)
 
 from sqlalchemy.exc import IntegrityError, DataError
 
@@ -211,8 +211,7 @@ def employee_edit(em_id):
         except Exception as e:
             db.session.rollback()
             flash(f"เกิดข้อผิดพลาด: {e}", "error")
-
-    return render_template("employee_form.html", employee=emp)
+return render_template("employee_form.html", employee=None)
 
 @app.route("/employees/<string:em_id>/delete", methods=["POST"])
 def employee_delete(em_id):
@@ -225,7 +224,7 @@ def employee_delete(em_id):
 @app.route("/employees/import", methods=["GET", "POST"])
 def employees_import():
     if request.method == "GET":
-        return render_template("import.html")
+        return render_template("employee_form.html", employee=None)
 
     f = request.files.get("file")
     if not f or f.filename == "":
