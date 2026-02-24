@@ -1,6 +1,63 @@
 {% extends "base.html" %}
 {% block content %}
 
+<div class="page-head">
+  <div>
+    <h1>Dashboard</h1>
+    <div class="muted">สรุปภาพรวมข้อมูลพนักงาน</div>
+  </div>
+  <div class="actions">
+    <a class="btn" href="{{ url_for('employees_list') }}">Employee Data</a>
+  </div>
+</div>
+
+<div class="card">
+  <div style="display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:12px;">
+    <div class="card" style="padding:14px;">
+      <div class="muted">พนักงานทั้งหมด</div>
+      <div style="font-size:28px; font-weight:700;">{{ total }}</div>
+    </div>
+    <div class="card" style="padding:14px;">
+      <div class="muted">Active (W)</div>
+      <div style="font-size:28px; font-weight:700;">{{ active }}</div>
+      <div style="margin-top:8px;">
+        <a class="btn ghost" href="{{ url_for('employees_list', q='W') }}">ดูรายการ</a>
+      </div>
+    </div>
+    <div class="card" style="padding:14px;">
+      <div class="muted">Resigned (RS)</div>
+      <div style="font-size:28px; font-weight:700;">{{ resigned }}</div>
+      <div style="margin-top:8px;">
+        <a class="btn ghost" href="{{ url_for('employees_list', q='RS') }}">ดูรายการ</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:12px;">
+  <h3 style="margin:0 0 10px 0;">Top 10 Department</h3>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Department</th>
+        <th style="text-align:right;">จำนวน</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in dept_summary %}
+      <tr>
+        <td>{{ row.department }}</td>
+        <td style="text-align:right;">{{ row.count }}</td>
+      </tr>
+      {% endfor %}
+      {% if dept_summary|length == 0 %}
+      <tr><td colspan="2" class="muted">ไม่มีข้อมูล</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+
+
 <div class="card" style="margin-bottom:12px;">
   <form method="get" style="display:flex; gap:10px; align-items:end; flex-wrap:wrap;">
     <div class="card" style="margin-top:12px;">
@@ -66,63 +123,6 @@
     <button class="btn primary" type="submit">แสดงผล</button>
     <a class="btn ghost" href="{{ url_for('dashboard') }}">รีเซ็ต</a>
   </form>
-</div>
-
-
-<div class="page-head">
-  <div>
-    <h1>Dashboard</h1>
-    <div class="muted">สรุปภาพรวมข้อมูลพนักงาน</div>
-  </div>
-  <div class="actions">
-    <a class="btn" href="{{ url_for('employees_list') }}">Employee Data</a>
-  </div>
-</div>
-
-<div class="card">
-  <div style="display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:12px;">
-    <div class="card" style="padding:14px;">
-      <div class="muted">พนักงานทั้งหมด</div>
-      <div style="font-size:28px; font-weight:700;">{{ total }}</div>
-    </div>
-    <div class="card" style="padding:14px;">
-      <div class="muted">Active (W)</div>
-      <div style="font-size:28px; font-weight:700;">{{ active }}</div>
-      <div style="margin-top:8px;">
-        <a class="btn ghost" href="{{ url_for('employees_list', q='W') }}">ดูรายการ</a>
-      </div>
-    </div>
-    <div class="card" style="padding:14px;">
-      <div class="muted">Resigned (RS)</div>
-      <div style="font-size:28px; font-weight:700;">{{ resigned }}</div>
-      <div style="margin-top:8px;">
-        <a class="btn ghost" href="{{ url_for('employees_list', q='RS') }}">ดูรายการ</a>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="card" style="margin-top:12px;">
-  <h3 style="margin:0 0 10px 0;">Top 10 Department</h3>
-  <table class="table">
-    <thead>
-      <tr>
-        <th>Department</th>
-        <th style="text-align:right;">จำนวน</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for row in dept_summary %}
-      <tr>
-        <td>{{ row.department }}</td>
-        <td style="text-align:right;">{{ row.count }}</td>
-      </tr>
-      {% endfor %}
-      {% if dept_summary|length == 0 %}
-      <tr><td colspan="2" class="muted">ไม่มีข้อมูล</td></tr>
-      {% endif %}
-    </tbody>
-  </table>
 </div>
 
 {% endblock %}
