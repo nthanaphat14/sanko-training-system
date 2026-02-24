@@ -9,8 +9,9 @@ from flask import (
     flash,
 )
 from flask_sqlalchemy import SQLAlchemy
-from openpyxl import load_workbook
 from sqlalchemy import or_
+from openpyxl import load_workbook
+
 
 # -------------------------------------------------
 # App Config
@@ -136,97 +137,43 @@ def employees_list():
         q=q,
         total=len(employees),
     )
-
-
-@app.route("/employees/new", methods=["GET", "POST"])
-def employee_new():
-    if request.method == "POST":
-        em_id = safe_str(request.form.get("em_id"))
-
-        if not em_id:
-            flash("กรุณากรอก Em. ID", "error")
-            return redirect(url_for("employee_new"))
-
-        if Employee.query.filter_by(em_id=em_id).first():
-            flash("Em. ID นี้มีอยู่แล้ว", "error")
-            return redirect(url_for("employee_new"))
-
-        emp = Employee(
-            no=safe_int(request.form.get("no")),
-            em_id=em_id,
-            id_card=safe_str(request.form.get("id_card")),
-            title_th=safe_str(request.form.get("title_th")),
-            first_name_th=safe_str(request.form.get("first_name_th")),
-            last_name_th=safe_str(request.form.get("last_name_th")),
-            title_en=safe_str(request.form.get("title_en")),
-            first_name_en=safe_str(request.form.get("first_name_en")),
-            last_name_en=safe_str(request.form.get("last_name_en")),
-            position=safe_str(request.form.get("position")),
-            section=safe_str(request.form.get("section")),
-            department=safe_str(request.form.get("department")),
-            start_work=safe_date(request.form.get("start_work")),
-            resign=safe_date(request.form.get("resign")),
-            status=safe_str(request.form.get("status")),
-            degree=safe_str(request.form.get("degree")),
-            major=safe_str(request.form.get("major")),
-        )
-
-        db.session.add(emp)
-        db.session.commit()
-
-        flash("เพิ่มพนักงานเรียบร้อย ✅", "ok")
-        return redirect(url_for("employees_list"))
-
-    return render_template("employee_form.html", mode="new", emp=None)
-
-
-@app.route("/employees/<em_id>/edit", methods=["GET", "POST"])
-def employee_edit(em_id):
-    emp = Employee.query.filter_by(em_id=em_id).first_or_404()
-
-    if request.method == "POST":
-        emp.no = safe_int(request.form.get("no"))
-        emp.id_card = safe_str(request.form.get("id_card"))
-        emp.title_th = safe_str(request.form.get("title_th"))
-        emp.first_name_th = safe_str(request.form.get("first_name_th"))
-        emp.last_name_th = safe_str(request.form.get("last_name_th"))
-        emp.title_en = safe_str(request.form.get("title_en"))
-        emp.first_name_en = safe_str(request.form.get("first_name_en"))
-        emp.last_name_en = safe_str(request.form.get("last_name_en"))
-        emp.position = safe_str(request.form.get("position"))
-        emp.section = safe_str(request.form.get("section"))
-        emp.department = safe_str(request.form.get("department"))
-        emp.start_work = safe_date(request.form.get("start_work"))
-        emp.resign = safe_date(request.form.get("resign"))
-        emp.status = safe_str(request.form.get("status"))
-        emp.degree = safe_str(request.form.get("degree"))
-        emp.major = safe_str(request.form.get("major"))
-
-        db.session.commit()
-        flash("บันทึกการแก้ไขเรียบร้อย ✅", "ok")
-        return redirect(url_for("employees_list"))
-
-    return render_template("employee_form.html", mode="edit", emp=emp)
-
-
-from flask import request, redirect, url_for, flash
-
 @app.route("/employees/import", methods=["GET", "POST"])
 def employees_import():
-
-    # เปิดหน้า import
     if request.method == "GET":
         return render_template("import.html")
-        
-    # กดอัปโหลดไฟล์ (POST)
+
     f = request.files.get("file")
     if not f or f.filename == "":
         flash("กรุณาเลือกไฟล์ Excel ก่อน", "error")
         return redirect(url_for("employees_import"))
 
-    flash("อัปโหลดไฟล์สำเร็จ ✅", "ok")
-    return redirect(url_for("employees_list"))
+    wb = load_workbook(f)
+    ws = wb.active
 
+    added = 0
+
+    for row in ws.iter_rows(min_row=2, values_only=True):
+        if not row or not row[0]:
+            continue
+
+        em_id = str(row[0]).strip()
+
+        if Employee.query.filter_by(em_id=em_id).first():
+            continue
+
+        emp = Employee(
+            em_id=em_id,
+            first_name_th=str(row[1]).strip() if row[1] else None,
+            last_name_th=str(row[2]).strip() if row[2] else None,
+        )
+
+        db.session.add(emp)
+        added += 1
+
+    db.session.commit()
+
+    flash(f"Import สำเร็จ ✅ เพิ่ม {added} รายการ", "ok")
+    return redirect(url_for("employees_list"))
 @app.get("/employees/export")
 def employees_export():
     return "Export logic here"
