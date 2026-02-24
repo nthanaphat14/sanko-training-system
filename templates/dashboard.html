@@ -36,7 +36,7 @@
 
 <div class="card" style="margin-top:12px;">
   <h3 style="margin:0 0 10px 0;">
-    Top 10 Department (เข้า/ออก)
+    Top 10 section (เข้า/ออก)
     <span class="muted" style="font-size:12px;">
       ({{ start_date }} ถึง {{ end_date }})
     </span>
@@ -45,16 +45,16 @@
   <table class="table">
     <thead>
       <tr>
-        <th>Department</th>
+        <th>section</th>
         <th style="text-align:right;">เข้า</th>
         <th style="text-align:right;">ออก</th>
         <th style="text-align:right;">สุทธิ</th>
       </tr>
     </thead>
     <tbody>
-      {% for r in dept_inout_top10 %}
+      {% for r in sect_inout_top10 %}
       <tr>
-        <td>{{ r.department }}</td>
+        <td>{{ r.section }}</td>
         <td style="text-align:right;">{{ r.joined }}</td>
         <td style="text-align:right;">{{ r.resigned }}</td>
         <td style="text-align:right;">{{ r.net }}</td>
