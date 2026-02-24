@@ -11,7 +11,10 @@ from flask import (
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import or_, nullslast
 from sqlalchemy.exc import IntegrityError, DataError
+from io import BytesIO
+from flask import send_file
 from openpyxl import load_workbook
+from openpyxl import Workbook
 
 # -------------------------------------------------
 # App Config
@@ -330,7 +333,82 @@ def employees_import():
 
 @app.get("/employees/export")
 def employees_export():
-    return "Export logic here"
+    # รองรับ export ตามคำค้นเหมือนหน้า list
+    q = (request.args.get("q") or "").strip()
+    status = (request.args.get("status") or "").strip().upper()  # optional: W / RS
+
+    query = Employee.query
+
+    if q:
+        like = f"%{q}%"
+        query = query.filter(
+            or_(
+                Employee.em_id.ilike(like),
+                Employee.id_card.ilike(like),
+                Employee.first_name_th.ilike(like),
+                Employee.last_name_th.ilike(like),
+                Employee.first_name_en.ilike(like),
+                Employee.last_name_en.ilike(like),
+                Employee.position.ilike(like),
+                Employee.section.ilike(like),
+                Employee.department.ilike(like),
+                Employee.status.ilike(like),
+            )
+        )
+
+    if status in ("W", "RS"):
+        query = query.filter(Employee.status == status)
+
+    employees = query.order_by(nullslast(Employee.no.asc()), Employee.em_id.asc()).all()
+
+    # สร้าง Excel
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Employees"
+
+    headers = [
+        "No", "Em ID", "ID Card",
+        "Title TH", "First TH", "Last TH",
+        "Title EN", "First EN", "Last EN",
+        "Position", "Section", "Department",
+        "Start Work", "Resign", "Status",
+        "Degree", "Major",
+    ]
+    ws.append(headers)
+
+    for e in employees:
+        ws.append([
+            e.no,
+            e.em_id,
+            e.id_card,
+            e.title_th,
+            e.first_name_th,
+            e.last_name_th,
+            e.title_en,
+            e.first_name_en,
+            e.last_name_en,
+            e.position,
+            e.section,
+            e.department,
+            e.start_work.isoformat() if e.start_work else "",
+            e.resign.isoformat() if e.resign else "",
+            e.status,
+            e.degree,
+            e.major,
+        ])
+
+    # ทำไฟล์เป็น bytes ส่งกลับ
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    filename = "employees_export.xlsx"
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name=filename,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )
 
 # -------------------------------------------------
 # Run (Local Only)
