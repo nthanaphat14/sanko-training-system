@@ -65,7 +65,6 @@ class Employee(db.Model):
     )
 
 
-@app.before_first_request
 def init_db():
     db.create_all()
 
@@ -221,5 +220,8 @@ def employee_delete(em_id):
 # -------------------------------------------------
 # Run (Local Only)
 # -------------------------------------------------
+with app.app_context():
+    db.create_all()
+
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", port=5000)
