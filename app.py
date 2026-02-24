@@ -516,7 +516,6 @@ resign_map = { (d or "ไม่ระบุ"): int(c) for d, c in dept_resign_ro
 # รวมเป็น list เดียว
 dept_inout = []
 all_depts = set(join_map.keys()) | set(resign_map.keys())
-    
 for d in all_depts:
         dept_inout.append({
         "department": d,
@@ -530,7 +529,7 @@ dept_inout.sort(key=lambda x: (x["joined"] + x["resigned"]), reverse=True)
 
 # เอา Top 10
 dept_inout_top10 = dept_inout[:10]
-    return render_template(
+return render_template(
         "dashboard.html",
         total=total,
         active=active,
