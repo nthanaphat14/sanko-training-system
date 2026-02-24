@@ -207,106 +207,106 @@ def employees_import():
 
     f = request.files.get("file")
     if not f or f.filename == "":
-        flash("กรุณาเลือกไฟล์ Excel ก่อน", "error")
+        flash("กรุณาเลือกไฟล์ Excel (.xlsx) ก่อน", "error")
         return redirect(url_for("employees_import"))
 
-    wb = load_workbook(f)
+    if not f.filename.lower().endswith(".xlsx"):
+        flash("รองรับเฉพาะไฟล์ .xlsx เท่านั้น", "error")
+        return redirect(url_for("employees_import"))
+
+    wb = load_workbook(f, data_only=True)
     ws = wb.active
 
     added = 0
-updated = 0
-skipped = 0
+    updated = 0
+    skipped = 0
 
-for row in ws.iter_rows(min_row=2, values_only=True):
-    # ป้องกันแถวว่าง
-    if not row:
-        skipped += 1
-        continue
+    for row in ws.iter_rows(min_row=2, values_only=True):
+        if not row:
+            skipped += 1
+            continue
 
-    # --- mapping ตาม “ไฟล์ของคุณ” ---
-    # สมมติคอลัมน์เรียงแบบ: No, Em.ID, ID Card, TitleTH, FirstTH, LastTH, Name-EN, Position, Section, Department, Start work, Resign, Status, Degree, Major
-    # ถ้าของคุณไม่ตรง ให้บอก ผมจะจัด mapping ให้ตรง 100%
-    no_raw = row[0] if len(row) > 0 else None
-    em_id_raw = row[1] if len(row) > 1 else None
+        no_raw = row[0] if len(row) > 0 else None
+        em_id_raw = row[1] if len(row) > 1 else None
+        if not em_id_raw:
+            skipped += 1
+            continue
 
-    if not em_id_raw:
-        skipped += 1
-        continue
+        em_id = str(em_id_raw).strip()
 
-    em_id = str(em_id_raw).strip()
+        emp = Employee.query.filter_by(em_id=em_id).first()
+        is_new = emp is None
+        if is_new:
+            emp = Employee(em_id=em_id)
 
-    # ✅ upsert: ถ้ามีอยู่แล้วให้ update
-    emp = Employee.query.filter_by(em_id=em_id).first()
-    is_new = emp is None
-    if is_new:
-        emp = Employee(em_id=em_id)
+        # No
+        try:
+            if no_raw is not None and str(no_raw).strip() != "":
+                emp.no = int(float(no_raw))
+        except:
+            pass
 
-    # --- no: รองรับ 1 / 1.0 / "001" ---
-    try:
-        if no_raw is not None and str(no_raw).strip() != "":
-            emp.no = int(float(no_raw))
-    except:
-        pass
+        # ID Card
+        if len(row) > 2 and row[2]:
+            emp.id_card = str(row[2]).strip()
 
-    # --- id_card ---
-    if len(row) > 2 and row[2]:
-        emp.id_card = str(row[2]).strip()
+        # TH
+        if len(row) > 3 and row[3]:
+            emp.title_th = str(row[3]).strip()
+        if len(row) > 4 and row[4]:
+            emp.first_name_th = str(row[4]).strip()
+        if len(row) > 5 and row[5]:
+            emp.last_name_th = str(row[5]).strip()
 
-    # --- TH name ---
-    if len(row) > 3 and row[3]:
-        emp.title_th = str(row[3]).strip()
-    if len(row) > 4 and row[4]:
-        emp.first_name_th = str(row[4]).strip()
-    if len(row) > 5 and row[5]:
-        emp.last_name_th = str(row[5]).strip()
+        # EN full name -> split
+        if len(row) > 6 and row[6]:
+            name_en = str(row[6]).strip()
+            parts = [p for p in name_en.split(" ") if p]
+            if len(parts) >= 2:
+                emp.first_name_en = " ".join(parts[:-1])
+                emp.last_name_en = parts[-1]
+            else:
+                emp.first_name_en = name_en
 
-    # --- Name-EN (ชื่อเต็ม) -> แยก first/last แบบง่าย ---
-    if len(row) > 6 and row[6]:
-        name_en = str(row[6]).strip()
-        parts = [p for p in name_en.split(" ") if p]
-        if len(parts) >= 2:
-            emp.first_name_en = " ".join(parts[:-1])
-            emp.last_name_en = parts[-1]
+        # Position / Section / Department
+        if len(row) > 7 and row[7]:
+            emp.position = str(row[7]).strip()
+        if len(row) > 8 and row[8]:
+            emp.section = str(row[8]).strip()
+        if len(row) > 9 and row[9]:
+            emp.department = str(row[9]).strip()
+
+        # Start work / Resign (แปลงเป็น Date ให้เข้ากับ model)
+        if len(row) > 10 and row[10]:
+            if isinstance(row[10], datetime):
+                emp.start_work = row[10].date()
+            else:
+                emp.start_work = safe_date(str(row[10]).strip()) or emp.start_work
+
+        if len(row) > 11 and row[11]:
+            if isinstance(row[11], datetime):
+                emp.resign = row[11].date()
+            else:
+                emp.resign = safe_date(str(row[11]).strip()) or emp.resign
+
+        # Status / Degree / Major
+        if len(row) > 12 and row[12]:
+            emp.status = str(row[12]).strip()
+        if len(row) > 13 and row[13]:
+            emp.degree = str(row[13]).strip()
+        if len(row) > 14 and row[14]:
+            emp.major = str(row[14]).strip()
+
+        if is_new:
+            db.session.add(emp)
+            added += 1
         else:
-            emp.first_name_en = name_en
-
-    # --- Position / Section / Department ---
-    if len(row) > 7 and row[7]:
-        emp.position = str(row[7]).strip()
-    if len(row) > 8 and row[8]:
-        emp.section = str(row[8]).strip()
-    if len(row) > 9 and row[9]:
-        emp.department = str(row[9]).strip()
-
-    # --- Start work / Resign / Status / Degree / Major ---
-    if len(row) > 10 and row[10]:
-        emp.start_work = str(row[10]).strip()
-    if len(row) > 11 and row[11]:
-        emp.resign = str(row[11]).strip()
-    if len(row) > 12 and row[12]:
-        emp.status = str(row[12]).strip()
-    if len(row) > 13 and row[13]:
-        emp.degree = str(row[13]).strip()
-    if len(row) > 14 and row[14]:
-        emp.major = str(row[14]).strip()
-
-    if is_new:
-        db.session.add(emp)
-        added += 1
-    else:
-        updated += 1
-
-db.session.commit()
-flash(f"Import สำเร็จ: เพิ่มใหม่ {added} | อัปเดต {updated} | ข้าม {skipped}", "success")
-return redirect(url_for("employees_list"))
-
-        db.session.add(emp)
-        added += 1
+            updated += 1
 
     db.session.commit()
-
-    flash(f"Import สำเร็จ ✅ เพิ่ม {added} รายการ", "ok")
+    flash(f"Import สำเร็จ: เพิ่มใหม่ {added} | อัปเดต {updated} | ข้าม {skipped}", "success")
     return redirect(url_for("employees_list"))
+
 @app.get("/employees/export")
 def employees_export():
     return "Export logic here"
