@@ -16,6 +16,7 @@ from flask import send_file
 from openpyxl import load_workbook
 from openpyxl import Workbook
 from sqlalchemy import func  
+from datetime import date
 
 
 # -------------------------------------------------
@@ -415,31 +416,92 @@ def employees_export():
 
 @app.get("/dashboard")
 def dashboard():
+    # รับค่า year/month จาก query string เช่น /dashboard?year=2026&month=2
+    today = date.today()
+    year = request.args.get("year", type=int) or today.year
+    month = request.args.get("month", type=int)  # อาจเป็น None
+
+    # รวมทั้งหมด / active / resigned (ของทั้งระบบ)
     total = db.session.query(func.count(Employee.id)).scalar() or 0
     active = db.session.query(func.count(Employee.id)).filter(Employee.status == "W").scalar() or 0
-    resigned = db.session.query(func.count(Employee.id)).filter(Employee.status == "RS").scalar() or 0
+    resigned_total = db.session.query(func.count(Employee.id)).filter(Employee.status == "RS").scalar() or 0
 
-    # สรุปตาม Department (Top 10)
-    dept_rows = (
-        db.session.query(Employee.department, func.count(Employee.id))
-        .group_by(Employee.department)
-        .order_by(func.count(Employee.id).desc())
-        .limit(10)
+    # ----- เข้า/ออก "ปีนี้" -----
+    joined_year = (
+        db.session.query(func.count(Employee.id))
+        .filter(Employee.start_work.isnot(None))
+        .filter(func.extract("year", Employee.start_work) == year)
+        .scalar()
+        or 0
+    )
+    resigned_year = (
+        db.session.query(func.count(Employee.id))
+        .filter(Employee.resign.isnot(None))
+        .filter(func.extract("year", Employee.resign) == year)
+        .scalar()
+        or 0
+    )
+
+    # ----- เข้า/ออก "เดือนนี้" (ถ้าเลือก month) -----
+    joined_month = None
+    resigned_month = None
+    if month:
+        joined_month = (
+            db.session.query(func.count(Employee.id))
+            .filter(Employee.start_work.isnot(None))
+            .filter(func.extract("year", Employee.start_work) == year)
+            .filter(func.extract("month", Employee.start_work) == month)
+            .scalar()
+            or 0
+        )
+        resigned_month = (
+            db.session.query(func.count(Employee.id))
+            .filter(Employee.resign.isnot(None))
+            .filter(func.extract("year", Employee.resign) == year)
+            .filter(func.extract("month", Employee.resign) == month)
+            .scalar()
+            or 0
+        )
+
+    # ----- สรุปเข้า/ออก รายเดือน (1-12) ของปีที่เลือก -----
+    join_rows = (
+        db.session.query(func.extract("month", Employee.start_work).label("m"), func.count(Employee.id))
+        .filter(Employee.start_work.isnot(None))
+        .filter(func.extract("year", Employee.start_work) == year)
+        .group_by("m")
+        .all()
+    )
+    resign_rows = (
+        db.session.query(func.extract("month", Employee.resign).label("m"), func.count(Employee.id))
+        .filter(Employee.resign.isnot(None))
+        .filter(func.extract("year", Employee.resign) == year)
+        .group_by("m")
         .all()
     )
 
-    # แปลงให้ template ใช้ง่าย
-    dept_summary = [
-        {"department": (d or "ไม่ระบุ"), "count": c}
-        for d, c in dept_rows
-    ]
+    join_map = {int(m): c for m, c in join_rows if m is not None}
+    resign_map = {int(m): c for m, c in resign_rows if m is not None}
+
+    month_summary = []
+    for m in range(1, 13):
+        month_summary.append({
+            "month": m,
+            "joined": int(join_map.get(m, 0)),
+            "resigned": int(resign_map.get(m, 0)),
+        })
 
     return render_template(
         "dashboard.html",
         total=total,
         active=active,
-        resigned=resigned,
-        dept_summary=dept_summary,
+        resigned_total=resigned_total,
+        year=year,
+        month=month,
+        joined_year=joined_year,
+        resigned_year=resigned_year,
+        joined_month=joined_month,
+        resigned_month=resigned_month,
+        month_summary=month_summary,
     )
 
 # -------------------------------------------------
