@@ -37,6 +37,13 @@ db = SQLAlchemy(app)
 class Employee(db.Model):
     __tablename__ = "employees"
 
+    def th_full(self):
+        """คืนชื่อ-สกุลภาษาไทยแบบรวม"""
+        first = (self.first_name_th or "").strip()
+        last = (self.last_name_th or "").strip()
+        full = f"{first} {last}".strip()
+        return full
+
     id = db.Column(db.Integer, primary_key=True)
     no = db.Column(db.Integer, nullable=True)
     em_id = db.Column(db.String(40), unique=True, nullable=False)
