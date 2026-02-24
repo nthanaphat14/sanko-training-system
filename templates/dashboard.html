@@ -35,23 +35,33 @@
 </div>
 
 <div class="card" style="margin-top:12px;">
-  <h3 style="margin:0 0 10px 0;">Top 10 Department</h3>
+  <h3 style="margin:0 0 10px 0;">
+    Top 10 Department (เข้า/ออก)
+    <span class="muted" style="font-size:12px;">
+      ({{ start_date }} ถึง {{ end_date }})
+    </span>
+  </h3>
+
   <table class="table">
     <thead>
       <tr>
         <th>Department</th>
-        <th style="text-align:right;">จำนวน</th>
+        <th style="text-align:right;">เข้า</th>
+        <th style="text-align:right;">ออก</th>
+        <th style="text-align:right;">สุทธิ</th>
       </tr>
     </thead>
     <tbody>
-      {% for row in dept_summary %}
+      {% for r in dept_inout_top10 %}
       <tr>
-        <td>{{ row.department }}</td>
-        <td style="text-align:right;">{{ row.count }}</td>
+        <td>{{ r.department }}</td>
+        <td style="text-align:right;">{{ r.joined }}</td>
+        <td style="text-align:right;">{{ r.resigned }}</td>
+        <td style="text-align:right;">{{ r.net }}</td>
       </tr>
       {% endfor %}
-      {% if dept_summary|length == 0 %}
-      <tr><td colspan="2" class="muted">ไม่มีข้อมูล</td></tr>
+      {% if dept_inout_top10|length == 0 %}
+      <tr><td colspan="4" class="muted">ไม่มีข้อมูลในช่วงที่เลือก</td></tr>
       {% endif %}
     </tbody>
   </table>
