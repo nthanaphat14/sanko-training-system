@@ -495,9 +495,9 @@ def dashboard():
 
 # ---- เข้า: start_work ตามช่วง ----
     dept_join_rows = (
-    db.session.query(Employee.department, func.count(Employee.id))
+    db.session.query(Employee.section, func.count(Employee.id))
     .filter(Employee.start_work >= start_date, Employee.start_work < end_date)
-    .group_by(Employee.department)
+    .group_by(Employee.section)
     .all()
     )
 
@@ -518,7 +518,7 @@ def dashboard():
     all_depts = set(join_map.keys()) | set(resign_map.keys())
     for d in all_depts:
         dept_inout.append({
-        "department": d,
+        "section": d,
         "joined": join_map.get(d, 0),
         "resigned": resign_map.get(d, 0),
         "net": join_map.get(d, 0) - resign_map.get(d, 0),
