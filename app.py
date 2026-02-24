@@ -86,8 +86,36 @@ class Employee(db.Model):
         db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )
 
+class TrainingRecord(db.Model):
+    __tablename__ = "training_records"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    employee_id = db.Column(
+        db.Integer,
+        db.ForeignKey("employees.id"),
+        nullable=False
+    )
+
+    course_code = db.Column(db.String(100))
+    course_name = db.Column(db.String(255))
+    category = db.Column(db.String(100))
+
+    training_date = db.Column(db.Date)
+    expire_date = db.Column(db.Date)
+
+    hours = db.Column(db.Float)
+    result = db.Column(db.String(50))
+    trainer = db.Column(db.String(255))
+    remark = db.Column(db.String(255))
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    employee = db.relationship("Employee", backref="trainings")
+
 
 def init_db():
+    with app.app_context():
     db.create_all()
 
 
