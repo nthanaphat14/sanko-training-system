@@ -211,7 +211,7 @@ def employee_edit(em_id):
         except Exception as e:
             db.session.rollback()
             flash(f"เกิดข้อผิดพลาด: {e}", "error")
-return render_template("employee_form.html", employee=None)
+return render_template("employee_form.html", employee=emp)
 
 @app.route("/employees/<string:em_id>/delete", methods=["POST"])
 def employee_delete(em_id):
@@ -224,7 +224,7 @@ def employee_delete(em_id):
 @app.route("/employees/import", methods=["GET", "POST"])
 def employees_import():
     if request.method == "GET":
-        return render_template("employee_form.html", employee=None)
+        return render_template("import.html")
 
     f = request.files.get("file")
     if not f or f.filename == "":
