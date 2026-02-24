@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="page-head">
+  <div>
+    <h1>Import Training</h1>
+    <div class="muted">นำเข้า Training Record จากไฟล์ Excel</div>
+  </div>
+  <div class="actions">
+    <a class="btn" href="{{ url_for('dashboard') }}">Dashboard</a>
+    <a class="btn" href="{{ url_for('employees_list') }}">Employee Data</a>
+  </div>
+</div>
+
+<div class="card" style="padding:14px;">
+  <form method="post" enctype="multipart/form-data" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+    <input class="input" type="file" name="file" accept=".xlsx,.xls" required>
+    <button class="btn primary" type="submit">Import</button>
+    <a class="btn ghost" href="{{ url_for('trainings_import') }}">รีเซ็ต</a>
+  </form>
+
+  <div class="muted" style="margin-top:10px;">
+    * รองรับ: .xlsx / .xls
+  </div>
+
+  {% if message %}
+    <div class="card" style="margin-top:12px; padding:12px;">
+      {{ message }}
+    </div>
+  {% endif %}
+</div>
+
+{% endblock %}
