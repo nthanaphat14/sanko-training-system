@@ -191,6 +191,14 @@ def employee_edit(em_id):
 
     return render_template("employee_form.html", employee=emp)
 
+@app.route("/employees/<string:em_id>/delete", methods=["POST"])
+def employee_delete(em_id):
+    emp = Employee.query.filter_by(em_id=em_id).first_or_404()
+    db.session.delete(emp)
+    db.session.commit()
+    flash("ลบข้อมูลเรียบร้อย", "success")
+    return redirect(url_for("employees_list"))
+
 @app.route("/employees/import", methods=["GET", "POST"])
 def employees_import():
     if request.method == "GET":
