@@ -40,8 +40,8 @@
         </tr>
       </thead>
       <tbody>
-        {% if trainings %}
-          {% for t in trainings %}
+        {% if rows %}
+          {% for t in rows %}
           <tr>
             <td>{{ loop.index }}</td>
             <td>{{ t.year or "" }}</td>
