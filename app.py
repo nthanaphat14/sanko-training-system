@@ -86,32 +86,42 @@ class Employee(db.Model):
         db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )
 
+from datetime import datetime, date
+
 class TrainingRecord(db.Model):
     __tablename__ = "training_records"
-
     id = db.Column(db.Integer, primary_key=True)
 
-    employee_id = db.Column(
-        db.Integer,
-        db.ForeignKey("employees.id"),
-        nullable=False
-    )
+    seq = db.Column(db.Integer, nullable=True)               # ลำดับ
+    year = db.Column(db.Integer, nullable=True)              # Year.
+    month = db.Column(db.Integer, nullable=True)             # Month
 
-    course_code = db.Column(db.String(100))
-    course_name = db.Column(db.String(255))
-    category = db.Column(db.String(100))
+    emp_id = db.Column(db.String(50), nullable=False, index=True)  # Emp ID
 
-    training_date = db.Column(db.Date)
-    expire_date = db.Column(db.Date)
+    prefix = db.Column(db.String(50), nullable=True)         # คำนำหน้า
+    full_name = db.Column(db.String(200), nullable=True)     # ชื่อ-สกุล
+    last_name = db.Column(db.String(200), nullable=True)     # นามสกุล
 
-    hours = db.Column(db.Float)
-    result = db.Column(db.String(50))
-    trainer = db.Column(db.String(255))
-    remark = db.Column(db.String(255))
+    department = db.Column(db.String(150), nullable=True)    # แผนก
+    position = db.Column(db.String(150), nullable=True)      # ตำแหน่ง
+
+    course_code = db.Column(db.String(100), nullable=True)   # รหัสหลักสูตร
+    course_name = db.Column(db.String(255), nullable=True)   # ชื่อหลักสูตร
+    course_type = db.Column(db.String(100), nullable=True)   # ประเภท
+
+    start_date = db.Column(db.Date, nullable=True)           # StartDate
+    end_date = db.Column(db.Date, nullable=True)             # EndDate
+    hours = db.Column(db.Float, nullable=True)               # ชั่วโมง
+
+    evaluate_method = db.Column(db.String(150), nullable=True)  # วิธีประเมิน
+    result = db.Column(db.String(50), nullable=True)            # ผล
+    score = db.Column(db.Float, nullable=True)                  # คะแนน
+    evaluator = db.Column(db.String(150), nullable=True)        # ผู้ประเมิน
+
+    expire_date = db.Column(db.Date, nullable=True)          # วันหมดอายุ
+    remark = db.Column(db.Text, nullable=True)               # หมายเหตุ
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-    employee = db.relationship("Employee", backref="trainings")
 
 
 def init_db():
@@ -123,24 +133,44 @@ def init_db():
 # Helper Functions
 # -------------------------------------------------
 def safe_str(x):
-    if not x:
+    if x is None:
         return None
-    x = str(x).strip()
-    return x if x else None
-
+    s = str(x).strip()
+    return s if s != "" else None
 
 def safe_int(x):
     try:
-        return int(x)
+        if x is None: return None
+        s = str(x).strip()
+        if s == "": return None
+        return int(float(s))
     except:
         return None
 
-
-def safe_date(x):
+def safe_float(x):
     try:
-        return datetime.strptime(x, "%Y-%m-%d").date()
+        if x is None: return None
+        s = str(x).strip()
+        if s == "": return None
+        return float(s)
     except:
         return None
+
+def parse_date(v):
+    # รองรับ date/datetime จาก Excel + string หลายรูปแบบ
+    if not v:
+        return None
+    if isinstance(v, datetime):
+        return v.date()
+    if isinstance(v, date):
+        return v
+    s = str(v).strip()
+    for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%Y/%m/%d"):
+        try:
+            return datetime.strptime(s, fmt).date()
+        except:
+            pass
+    return None
 
 
 # -------------------------------------------------
@@ -576,9 +606,93 @@ def dashboard():
         end_date=end_date,
     )
     
+@app.get("/trainings")
+def trainings_list():
+    q = (request.args.get("q") or "").strip()
+    year = (request.args.get("year") or "").strip()
+    month = (request.args.get("month") or "").strip()
+
+    query = TrainingRecord.query
+
+    if q:
+        like = f"%{q}%"
+        query = query.filter(
+            db.or_(
+                TrainingRecord.emp_id.ilike(like),
+                TrainingRecord.full_name.ilike(like),
+                TrainingRecord.course_code.ilike(like),
+                TrainingRecord.course_name.ilike(like),
+                TrainingRecord.department.ilike(like),
+                TrainingRecord.position.ilike(like),
+            )
+        )
+
+    if year.isdigit():
+        query = query.filter(TrainingRecord.year == int(year))
+    if month.isdigit():
+        query = query.filter(TrainingRecord.month == int(month))
+
+    rows = query.order_by(
+        TrainingRecord.start_date.desc().nullslast(),
+        TrainingRecord.id.desc()
+    ).limit(500).all()
+
+    total = query.count()
+
+    return render_template(
+        "trainings_list.html",
+        rows=rows, total=total,
+        q=q, year=year, month=month
+    )
+
+@app.route("/trainings/new", methods=["GET", "POST"])
+def trainings_new():
+    if request.method == "GET":
+        return render_template("trainings_new.html")
+
+    emp_id = safe_str(request.form.get("emp_id"))
+    if not emp_id:
+        flash("กรุณากรอก Emp ID", "error")
+        return redirect(url_for("trainings_new"))
+
+    tr = TrainingRecord(
+        seq=safe_int(request.form.get("seq")),
+        year=safe_int(request.form.get("year")),
+        month=safe_int(request.form.get("month")),
+        emp_id=emp_id,
+
+        prefix=safe_str(request.form.get("prefix")),
+        full_name=safe_str(request.form.get("full_name")),
+        last_name=safe_str(request.form.get("last_name")),
+
+        department=safe_str(request.form.get("department")),
+        position=safe_str(request.form.get("position")),
+
+        course_code=safe_str(request.form.get("course_code")),
+        course_name=safe_str(request.form.get("course_name")),
+        course_type=safe_str(request.form.get("course_type")),
+
+        start_date=parse_date(request.form.get("start_date")),
+        end_date=parse_date(request.form.get("end_date")),
+        hours=safe_float(request.form.get("hours")),
+
+        evaluate_method=safe_str(request.form.get("evaluate_method")),
+        result=safe_str(request.form.get("result")),
+        score=safe_float(request.form.get("score")),
+        evaluator=safe_str(request.form.get("evaluator")),
+
+        expire_date=parse_date(request.form.get("expire_date")),
+        remark=safe_str(request.form.get("remark")),
+    )
+
+    db.session.add(tr)
+    db.session.commit()
+
+    flash("บันทึก Training Record แล้ว", "success")
+    return redirect(url_for("trainings_list"))
+
 @app.route("/trainings/import", methods=["GET", "POST"])
 def trainings_import():
-
     if request.method == "GET":
         return render_template("training_import.html")
 
@@ -588,55 +702,65 @@ def trainings_import():
         return redirect(url_for("trainings_import"))
 
     wb = load_workbook(f, data_only=True)
-    ws = wb.active
+
+    ws = wb["Record Training"] if "Record Training" in wb.sheetnames else wb.active
+
+    headers = [safe_str(c.value) for c in ws[1]]
+
+    def col(name):
+        return headers.index(name) + 1 if name in headers else None
+
+    required = ["Emp ID", "รหัสหลักสูตร", "ชื่อหลักสูตร"]
+    for rname in required:
+        if rname not in headers:
+            flash(f"ไม่พบคอลัมน์: {rname}", "error")
+            return redirect(url_for("trainings_import"))
 
     added = 0
     skipped = 0
-    not_found = 0
 
-    for row in ws.iter_rows(min_row=2, values_only=True):
-
-        if not row:
-            continue
-
-        emp_id_raw = row[3]  # Emp ID column
-
-        if not emp_id_raw:
+    for r in range(2, ws.max_row + 1):
+        emp_id = safe_str(ws.cell(r, col("Emp ID")).value)
+        if not emp_id:
             skipped += 1
             continue
 
-        em_id = str(emp_id_raw).strip().upper()
+        tr = TrainingRecord(
+            seq=safe_int(ws.cell(r, col("ลำดับ")).value) if col("ลำดับ") else None,
+            year=safe_int(ws.cell(r, col("Year.")).value) if col("Year.") else None,
+            month=safe_int(ws.cell(r, col("Month")).value) if col("Month") else None,
 
-        employee = Employee.query.filter(
-            func.upper(Employee.em_id) == em_id
-        ).first()
+            emp_id=emp_id,
+            prefix=safe_str(ws.cell(r, col("คำนำหน้า")).value) if col("คำนำหน้า") else None,
+            full_name=safe_str(ws.cell(r, col("ชื่อ-สกุล")).value) if col("ชื่อ-สกุล") else None,
+            last_name=safe_str(ws.cell(r, col("นามสกุล")).value) if col("นามสกุล") else None,
 
-        if not employee:
-            not_found += 1
-            continue
+            department=safe_str(ws.cell(r, col("แผนก")).value) if col("แผนก") else None,
+            position=safe_str(ws.cell(r, col("ตำแหน่ง")).value) if col("ตำแหน่ง") else None,
 
-        training = TrainingRecord(
-            employee_id=employee.id,
-            course_code=str(row[9]).strip() if row[9] else None,
-            course_name=str(row[10]).strip() if row[10] else None,
-            category=str(row[11]).strip() if row[11] else None,
-            training_date=row[12].date() if row[12] else None,
-            expire_date=row[19].date() if row[19] else None,
-            hours=float(row[14]) if row[14] else None,
-            result=str(row[16]).strip() if row[16] else None,
-            trainer=str(row[18]).strip() if row[18] else None,
-            remark=str(row[20]).strip() if row[20] else None,
+            course_code=safe_str(ws.cell(r, col("รหัสหลักสูตร")).value),
+            course_name=safe_str(ws.cell(r, col("ชื่อหลักสูตร")).value),
+            course_type=safe_str(ws.cell(r, col("ประเภท")).value) if col("ประเภท") else None,
+
+            start_date=parse_date(ws.cell(r, col("StartDate")).value) if col("StartDate") else None,
+            end_date=parse_date(ws.cell(r, col("EndDate")).value) if col("EndDate") else None,
+            hours=safe_float(ws.cell(r, col("ชั่วโมง")).value) if col("ชั่วโมง") else None,
+
+            evaluate_method=safe_str(ws.cell(r, col("วิธีประเมิน")).value) if col("วิธีประเมิน") else None,
+            result=safe_str(ws.cell(r, col("ผล")).value) if col("ผล") else None,
+            score=safe_float(ws.cell(r, col("คะแนน")).value) if col("คะแนน") else None,
+            evaluator=safe_str(ws.cell(r, col("ผู้ประเมิน")).value) if col("ผู้ประเมิน") else None,
+
+            expire_date=parse_date(ws.cell(r, col("วันหมดอายุ")).value) if col("วันหมดอายุ") else None,
+            remark=safe_str(ws.cell(r, col("หมายเหตุ")).value) if col("หมายเหตุ") else None,
         )
 
-        db.session.add(training)
+        db.session.add(tr)
         added += 1
 
     db.session.commit()
-
-    flash(f"Import สำเร็จ เพิ่ม {added} | ไม่พบพนักงาน {not_found} | ข้าม {skipped}", "success")
-
-    return redirect(url_for("employees_list"))
-
+    flash(f"Import สำเร็จ: {added} รายการ | ข้าม: {skipped} แถว", "success")
+    return redirect(url_for("trainings_list"))
 # -------------------------------------------------
 # Run (Local Only)
 # -------------------------------------------------
