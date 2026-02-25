@@ -683,35 +683,27 @@ def trainings_new():
         return redirect(url_for("trainings_new"))
 
     tr = TrainingRecord(
-        seq=safe_int(request.form.get("seq")),
-        year=safe_int(request.form.get("year")),
-        month=safe_int(request.form.get("month")),
-        emp_id=emp_id,
-
-        prefix=safe_str(request.form.get("prefix")),
-        full_name=safe_str(request.form.get("full_name")),
-        last_name=safe_str(request.form.get("last_name")),
-
-        department=safe_str(request.form.get("department")),
-        position=safe_str(request.form.get("position")),
-
-        course_code=safe_str(request.form.get("course_code")),
-        course_name=safe_str(request.form.get("course_name")),
-        course_type=safe_str(request.form.get("course_type")),
-
-        start_date=parse_date(request.form.get("start_date")),
-        end_date=parse_date(request.form.get("end_date")),
-        hours=safe_float(request.form.get("hours")),
-
-        evaluate_method=safe_str(request.form.get("evaluate_method")),
-        result=safe_str(request.form.get("result")),
-        score=safe_float(request.form.get("score")),
-        evaluator=safe_str(request.form.get("evaluator")),
-
-        expire_date=parse_date(request.form.get("expire_date")),
-        remark=safe_str(request.form.get("remark")),
-    )
-
+    year=safe_int(row[1]),
+    month=safe_int(row[2]),
+    emp_id=safe_str(row[3]),
+    prefix=safe_str(row[4]),
+    first_name=safe_str(row[5]),
+    last_name=safe_str(row[6]),
+    department=safe_str(row[7]),
+    position=safe_str(row[8]),
+    course_code=safe_str(row[9]),
+    course_name=safe_str(row[10]),
+    category=safe_str(row[11]),
+    start_date=safe_date(row[12]),
+    end_date=safe_date(row[13]),
+    hours=float(row[14]) if str(row[14]).strip() else None,
+    eval_method=safe_str(row[15]),
+    result=safe_str(row[16]),
+    score=safe_str(row[17]),
+    evaluator=safe_str(row[18]),
+    expire_date=safe_date(row[19]),
+    remark=safe_str(row[20]),
+)
     db.session.add(tr)
     db.session.commit()
 
