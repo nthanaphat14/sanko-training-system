@@ -3,31 +3,86 @@
 
 <div class="page-head">
   <div>
-    <h1>Import Training</h1>
-    <div class="muted">นำเข้า Training Record จากไฟล์ Excel</div>
+    <h1>Training Record</h1>
+    <div class="muted">รวมทั้งหมด: {{ total }} รายการ</div>
   </div>
   <div class="actions">
-    <a class="btn" href="{{ url_for('dashboard') }}">Dashboard</a>
-    <a class="btn" href="{{ url_for('employees_list') }}">Employee Data</a>
+    <a class="btn" href="{{ url_for('trainings_new') }}">+ เพิ่ม Training</a>
+    <a class="btn primary" href="{{ url_for('trainings_import') }}">Import Training</a>
   </div>
 </div>
 
-<div class="card" style="padding:14px;">
-  <form method="post" enctype="multipart/form-data" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-    <input class="input" type="file" name="file" accept=".xlsx,.xls" required>
-    <button class="btn primary" type="submit">Import</button>
-    <a class="btn ghost" href="{{ url_for('trainings_import') }}">รีเซ็ต</a>
+<div class="card">
+  <form method="get" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+    <input name="q" value="{{ q }}" placeholder="ค้นหา: Emp ID / ชื่อ / หลักสูตร / แผนก / ตำแหน่ง" class="input" style="min-width:280px;">
+    <input name="year" value="{{ year }}" placeholder="ปี (Year)" class="input" style="width:120px;">
+    <input name="month" value="{{ month }}" placeholder="เดือน (1-12)" class="input" style="width:120px;">
+    <button class="btn" type="submit">ค้นหา</button>
+    <a class="btn ghost" href="{{ url_for('trainings_list') }}">ล้าง</a>
   </form>
+</div>
 
-  <div class="muted" style="margin-top:10px;">
-    * รองรับ: .xlsx / .xls
+<div class="card">
+  <div style="overflow:auto;">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>ลำดับ</th>
+          <th>Year</th>
+          <th>Month</th>
+          <th>Emp ID</th>
+          <th>คำนำหน้า</th>
+          <th>ชื่อ-สกุล</th>
+          <th>นามสกุล</th>
+          <th>แผนก</th>
+          <th>ตำแหน่ง</th>
+          <th>รหัสหลักสูตร</th>
+          <th>ชื่อหลักสูตร</th>
+          <th>ประเภท</th>
+          <th>StartDate</th>
+          <th>EndDate</th>
+          <th>ชั่วโมง</th>
+          <th>วิธีประเมิน</th>
+          <th>ผล</th>
+          <th>คะแนน</th>
+          <th>ผู้ประเมิน</th>
+          <th>วันหมดอายุ</th>
+          <th>หมายเหตุ</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td>{{ r.seq }}</td>
+          <td>{{ r.year }}</td>
+          <td>{{ r.month }}</td>
+          <td>{{ r.emp_id }}</td>
+          <td>{{ r.prefix }}</td>
+          <td>{{ r.full_name }}</td>
+          <td>{{ r.last_name }}</td>
+          <td>{{ r.department }}</td>
+          <td>{{ r.position }}</td>
+          <td>{{ r.course_code }}</td>
+          <td>{{ r.course_name }}</td>
+          <td>{{ r.course_type }}</td>
+          <td>{{ r.start_date }}</td>
+          <td>{{ r.end_date }}</td>
+          <td>{{ r.hours }}</td>
+          <td>{{ r.evaluate_method }}</td>
+          <td>{{ r.result }}</td>
+          <td>{{ r.score }}</td>
+          <td>{{ r.evaluator }}</td>
+          <td>{{ r.expire_date }}</td>
+          <td>{{ r.remark }}</td>
+        </tr>
+        {% endfor %}
+
+        {% if rows|length == 0 %}
+        <tr><td colspan="21" class="muted">ยังไม่มีข้อมูล Training Record</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
   </div>
-
-  {% if message %}
-    <div class="card" style="margin-top:12px; padding:12px;">
-      {{ message }}
-    </div>
-  {% endif %}
 </div>
 
 {% endblock %}
