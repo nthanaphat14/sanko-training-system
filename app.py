@@ -758,29 +758,43 @@ def trainings_import():
             month=safe_int(ws.cell(r, col("Month")).value) if col("Month") else None,
 
             emp_id=emp_id,
-            prefix=safe_str(ws.cell(r, col("คำนำหน้า")).value) if col("คำนำหน้า") else None,
-            full_name=safe_str(ws.cell(r, col("ชื่อ-สกุล")).value) if col("ชื่อ-สกุล") else None,
-            last_name=safe_str(ws.cell(r, col("นามสกุล")).value) if col("นามสกุล") else None,
+            prefix = safe_str(row[4])
+            first_name = safe_str(row[5])   # ช่องชื่อ
+            last_name  = safe_str(row[6])   # ช่องนามสกุล
 
-            department=safe_str(ws.cell(r, col("แผนก")).value) if col("แผนก") else None,
-            position=safe_str(ws.cell(r, col("ตำแหน่ง")).value) if col("ตำแหน่ง") else None,
+            # กันเคสไฟล์มี "ชื่อ-สกุล" อยู่ช่องเดียว (เช่นถูก merge มา)
+            if (not first_name) and last_name:
+                parts = last_name.split()
+                if len(parts) >= 2:
+                    first_name = parts[0]
+                    last_name = " ".join(parts[1:])
+                else:
+                    # ไม่มีเว้นวรรค -> เก็บไว้เป็นชื่อ
+                    first_name = last_name
+                    last_name = None
 
-            course_code=safe_str(ws.cell(r, col("รหัสหลักสูตร")).value),
-            course_name=safe_str(ws.cell(r, col("ชื่อหลักสูตร")).value),
-            course_type=safe_str(ws.cell(r, col("ประเภท")).value) if col("ประเภท") else None,
-
-            start_date=parse_date(ws.cell(r, col("StartDate")).value) if col("StartDate") else None,
-            end_date=parse_date(ws.cell(r, col("EndDate")).value) if col("EndDate") else None,
-            hours=safe_float(ws.cell(r, col("ชั่วโมง")).value) if col("ชั่วโมง") else None,
-
-            evaluate_method=safe_str(ws.cell(r, col("วิธีประเมิน")).value) if col("วิธีประเมิน") else None,
-            result=safe_str(ws.cell(r, col("ผล")).value) if col("ผล") else None,
-            score=safe_float(ws.cell(r, col("คะแนน")).value) if col("คะแนน") else None,
-            evaluator=safe_str(ws.cell(r, col("ผู้ประเมิน")).value) if col("ผู้ประเมิน") else None,
-
-            expire_date=parse_date(ws.cell(r, col("วันหมดอายุ")).value) if col("วันหมดอายุ") else None,
-            remark=safe_str(ws.cell(r, col("หมายเหตุ")).value) if col("หมายเหตุ") else None,
-        )
+            training = TrainingRecord(
+                year=safe_int(row[1]),
+                month=safe_int(row[2]),
+                emp_id=safe_str(row[3]),
+                prefix=prefix,
+                first_name=first_name,
+                last_name=last_name,
+                department=safe_str(row[7]),
+                position=safe_str(row[8]),
+                course_code=safe_str(row[9]),
+                course_name=safe_str(row[10]),
+                category=safe_str(row[11]),
+                start_date=safe_date(row[12]),
+                end_date=safe_date(row[13]),
+                hours=float(row[14]) if str(row[14]).strip() else None,
+                eval_method=safe_str(row[15]),
+                result=safe_str(row[16]),
+                score=safe_str(row[17]),
+                evaluator=safe_str(row[18]),
+                expire_date=safe_date(row[19]),
+                remark=safe_str(row[20]),
+            )
 
         db.session.add(tr)
         added += 1
