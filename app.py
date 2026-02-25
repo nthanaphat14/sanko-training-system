@@ -148,25 +148,28 @@ def safe_int(x):
         return None
         
 
-def safe_date(x):
+def safe_date(v):
     """
-    รับค่าได้ทั้ง date/datetime/ตัวเลข excel/สตริง แล้วคืนค่าเป็น date หรือ None
+    รับได้ทั้ง:
+    - datetime/date
+    - ตัวเลข excel date (บางครั้ง openpyxl จะให้เป็น datetime อยู่แล้ว)
+    - string หลาย format เช่น 2026-02-25, 25/02/2026, 25-02-2026
     """
-    if x is None:
+    if v is None:
         return None
 
     # ถ้าเป็น date/datetime อยู่แล้ว
-    if isinstance(x, date) and not isinstance(x, datetime):
-        return x
-    if isinstance(x, datetime):
-        return x.date()
+    if isinstance(v, datetime):
+        return v.date()
+    if isinstance(v, date):
+        return v
 
-    s = str(x).strip()
-    if not s:
+    s = str(v).strip()
+    if not s or s.lower() in ("none", "nan"):
         return None
 
-    # format ที่พบบ่อย
-    for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%m/%d/%Y"):
+    # ลอง format ที่พบบ่อย
+    for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%Y/%m/%d"):
         try:
             return datetime.strptime(s, fmt).date()
         except:
@@ -721,18 +724,20 @@ def trainings_import():
         return redirect(url_for("trainings_import"))
 
     wb = load_workbook(f, data_only=True)
-
     ws = wb["Record Training"] if "Record Training" in wb.sheetnames else wb.active
 
-    headers = [safe_str(c.value) for c in ws[1]]
+    # อ่านหัวตารางแถว 1 -> map ชื่อคอลัมน์เป็น index
+    headers = [str(ws.cell(1, c).value or "").strip() for c in range(1, ws.max_column + 1)]
+    header_map = {h: i+1 for i, h in enumerate(headers)}
 
     def col(name):
-        return headers.index(name) + 1 if name in headers else None
+        return header_map.get(name)
 
-    required = ["Emp ID", "รหัสหลักสูตร", "ชื่อหลักสูตร"]
-    for rname in required:
-        if rname not in headers:
-            flash(f"ไม่พบคอลัมน์: {rname}", "error")
+    # ชื่อคอลัมน์ตามไฟล์คุณ
+    REQUIRED = ["Emp ID", "รหัสหลักสูตร", "ชื่อหลักสูตร"]
+    for need in REQUIRED:
+        if col(need) is None:
+            flash(f"ไฟล์นี้ไม่มีคอลัมน์ '{need}' (ตรวจหัวตารางแถวที่ 1)", "error")
             return redirect(url_for("trainings_import"))
 
     added = 0
@@ -744,49 +749,56 @@ def trainings_import():
             skipped += 1
             continue
 
+        # ===== ดึงชื่อจากไฟล์ =====
+        prefix = safe_str(ws.cell(r, col("คำนำหน้า")).value)
+        full_name = safe_str(ws.cell(r, col("ชื่อ-สกุล")).value)
+        last_name = safe_str(ws.cell(r, col("นามสกุล")).value)
+
+        # ถ้าไฟล์บางแถวใส่ชื่อ+สกุลไว้ช่องเดียว ให้ split
+        first_name = full_name
+        if (not last_name) and full_name and (" " in full_name):
+            parts = full_name.split()
+            first_name = parts[0]
+            last_name = " ".join(parts[1:]) if len(parts) > 1 else None
+
+        # ===== หา employee เพื่อผูก FK =====
+        emp = Employee.query.filter_by(emp_id=emp_id).first()
+        if not emp:
+            skipped += 1
+            continue
+
         tr = TrainingRecord(
-            seq=safe_int(ws.cell(r, col("ลำดับ")).value) if col("ลำดับ") else None,
-            year=safe_int(ws.cell(r, col("Year.")).value) if col("Year.") else None,
-            month=safe_int(ws.cell(r, col("Month")).value) if col("Month") else None,
+            employee_id=emp.id,
+
+            # เก็บซ้ำได้ในหลายปีได้ตามที่คุณต้องการ
+            year=safe_int(ws.cell(r, col("Year.")).value),
+            month=safe_int(ws.cell(r, col("Month")).value),
 
             emp_id=emp_id,
-            prefix = safe_str(row[4])
-            first_name = safe_str(row[5])   # ช่องชื่อ
-            last_name  = safe_str(row[6])   # ช่องนามสกุล
+            prefix=prefix,
+            first_name=first_name,
+            last_name=last_name,
 
-            # กันเคสไฟล์มี "ชื่อ-สกุล" อยู่ช่องเดียว (เช่นถูก merge มา)
-            if (not first_name) and last_name:
-                parts = last_name.split()
-                if len(parts) >= 2:
-                    first_name = parts[0]
-                    last_name = " ".join(parts[1:])
-                else:
-                    # ไม่มีเว้นวรรค -> เก็บไว้เป็นชื่อ
-                    first_name = last_name
-                    last_name = None
+            department=safe_str(ws.cell(r, col("แผนก")).value),
+            position=safe_str(ws.cell(r, col("ตำแหน่ง")).value),
 
-            training = TrainingRecord(
-                year=safe_int(row[1]),
-                month=safe_int(row[2]),
-                emp_id=safe_str(row[3]),
-                prefix=prefix,
-                first_name=first_name,
-                last_name=last_name,
-                department=safe_str(row[7]),
-                position=safe_str(row[8]),
-                course_code=safe_str(row[9]),
-                course_name=safe_str(row[10]),
-                category=safe_str(row[11]),
-                start_date=safe_date(row[12]),
-                end_date=safe_date(row[13]),
-                hours=float(row[14]) if str(row[14]).strip() else None,
-                eval_method=safe_str(row[15]),
-                result=safe_str(row[16]),
-                score=safe_str(row[17]),
-                evaluator=safe_str(row[18]),
-                expire_date=safe_date(row[19]),
-                remark=safe_str(row[20]),
-            )
+            course_code=safe_str(ws.cell(r, col("รหัสหลักสูตร")).value),
+            course_name=safe_str(ws.cell(r, col("ชื่อหลักสูตร")).value),
+            category=safe_str(ws.cell(r, col("ประเภท")).value),
+
+            start_date=safe_date(ws.cell(r, col("StartDate")).value),
+            end_date=safe_date(ws.cell(r, col("EndDate")).value),
+
+            hours=float(ws.cell(r, col("ชั่วโมง")).value) if str(ws.cell(r, col("ชั่วโมง")).value or "").strip() != "" else None,
+
+            eval_method=safe_str(ws.cell(r, col("วิธีประเมิน")).value),
+            result=safe_str(ws.cell(r, col("ผล")).value),
+            score=safe_str(ws.cell(r, col("คะแนน")).value),
+            evaluator=safe_str(ws.cell(r, col("ผู้ประเมิน")).value),
+
+            expire_date=safe_date(ws.cell(r, col("วันหมดอายุ")).value),
+            remark=safe_str(ws.cell(r, col("หมายเหตุ")).value),
+        )
 
         db.session.add(tr)
         added += 1
