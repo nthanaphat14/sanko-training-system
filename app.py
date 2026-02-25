@@ -146,6 +146,28 @@ def safe_int(x):
         return int(float(s))
     except:
         return None
+        
+def safe_date(x):
+    if not x:
+        return None
+
+    try:
+        if isinstance(x, datetime):
+            return x.date()
+
+        x = str(x).strip()
+        if not x:
+            return None
+
+        for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y"):
+            try:
+                return datetime.strptime(x, fmt).date()
+            except:
+                continue
+
+        return None
+    except:
+        return None
 
 def safe_float(x):
     try:
