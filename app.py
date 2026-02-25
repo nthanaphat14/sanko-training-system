@@ -806,6 +806,44 @@ def trainings_import():
     db.session.commit()
     flash(f"Import สำเร็จ: {added} รายการ | ข้าม: {skipped} แถว", "success")
     return redirect(url_for("trainings_list"))
+    
+    @app.get("/trainings")
+    def trainings_list():
+        q = (request.args.get("q") or "").strip()
+        year = (request.args.get("year") or "").strip()
+        month = (request.args.get("month") or "").strip()
+
+        query = TrainingRecord.query
+
+        if q:
+            like = f"%{q}%"
+            query = query.filter(
+                db.or_(
+                    TrainingRecord.emp_id.ilike(like),
+                    TrainingRecord.first_name.ilike(like),
+                    TrainingRecord.last_name.ilike(like),
+                    TrainingRecord.course_code.ilike(like),
+                    TrainingRecord.course_name.ilike(like),
+                )
+            )
+
+        if year.isdigit():
+            query = query.filter(TrainingRecord.year == int(year))
+        if month.isdigit():
+            query = query.filter(TrainingRecord.month == int(month))
+
+        rows = query.order_by(
+            TrainingRecord.start_date.desc().nullslast(),
+            TrainingRecord.id.desc()
+        ).limit(500).all()
+
+        total = query.count()
+
+        return render_template(
+            "trainings_list.html",
+            rows=rows, total=total,
+            q=q, year=year, month=month
+        )
 # -------------------------------------------------
 # Run (Local Only)
 # -------------------------------------------------
