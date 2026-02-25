@@ -4,78 +4,97 @@
 <div class="page-head">
   <div>
     <h1>Training Record</h1>
-    <div class="muted">รายการ Training ทั้งหมด</div>
+    <div class="muted">รายการ Training ทั้งหมด: {{ total }}</div>
   </div>
   <div class="actions">
     <a class="btn ghost" href="{{ url_for('trainings_import') }}">Import</a>
+    <a class="btn ghost" href="{{ url_for('employees') }}">Employee Data</a>
   </div>
 </div>
 
-<div class="card">
-  <div style="overflow:auto;">
-    <table class="table" style="min-width:1500px;">
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Year</th>
-          <th>Month</th>
-          <th>Emp ID</th>
-          <th>Prefix</th>
-          <th>First Name</th>
-          <th>Last Name</th>
-          <th>Department</th>
-          <th>Position</th>
-          <th>Course Code</th>
-          <th>Course Name</th>
-          <th>Category</th>
-          <th>Start</th>
-          <th>End</th>
-          <th>Hours</th>
-          <th>Eval</th>
-          <th>Result</th>
-          <th>Score</th>
-          <th>Evaluator</th>
-          <th>Expire</th>
-          <th>Remark</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% if rows %}
-          {% for t in rows %}
-          <tr>
-            <td>{{ loop.index }}</td>
-            <td>{{ t.year or "" }}</td>
-            <td>{{ t.month or "" }}</td>
-            <td>{{ t.emp_id or "" }}</td>
-            <td>{{ t.prefix or "" }}</td>
-            <td>{{ t.first_name or "" }}</td>
-            <td>{{ t.last_name or "" }}</td>
-            <td>{{ t.department or "" }}</td>
-            <td>{{ t.position or "" }}</td>
-            <td>{{ t.course_code or "" }}</td>
-            <td>{{ t.course_name or "" }}</td>
-            <td>{{ t.category or "" }}</td>
-            <td>{{ t.start_date or "" }}</td>
-            <td>{{ t.end_date or "" }}</td>
-            <td>{{ t.hours or "" }}</td>
-            <td>{{ t.eval_method or "" }}</td>
-            <td>{{ t.result or "" }}</td>
-            <td>{{ t.score or "" }}</td>
-            <td>{{ t.evaluator or "" }}</td>
-            <td>{{ t.expire_date or "" }}</td>
-            <td>{{ t.remark or "" }}</td>
-          </tr>
-          {% endfor %}
-        {% else %}
-          <tr>
-            <td colspan="21" style="text-align:center; padding:20px;">
-              ยังไม่มีข้อมูล Training
-            </td>
-          </tr>
-        {% endif %}
-      </tbody>
-    </table>
-  </div>
+<div class="card" style="margin-bottom:14px;">
+  <form method="get" style="display:flex; gap:10px; flex-wrap:wrap; align-items:end;">
+    <div style="flex:1; min-width:220px;">
+      <div class="muted" style="margin-bottom:6px;">ค้นหา</div>
+      <input class="input" name="q" value="{{ q or '' }}" placeholder="Emp ID / ชื่อ / รหัสหลักสูตร / ชื่อหลักสูตร">
+    </div>
+    <div style="width:120px;">
+      <div class="muted" style="margin-bottom:6px;">Year</div>
+      <input class="input" name="year" value="{{ year or '' }}" placeholder="2026">
+    </div>
+    <div style="width:120px;">
+      <div class="muted" style="margin-bottom:6px;">Month</div>
+      <input class="input" name="month" value="{{ month or '' }}" placeholder="1-12">
+    </div>
+    <button class="btn" type="submit">ค้นหา</button>
+    <a class="btn ghost" href="{{ url_for('trainings_list') }}">ล้าง</a>
+  </form>
+</div>
+
+<div class="table-wrap card">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Year</th>
+        <th>Month</th>
+        <th>Emp ID</th>
+        <th>Prefix</th>
+        <th>First Name</th>
+        <th>Last Name</th>
+        <th>Department</th>
+        <th>Position</th>
+        <th>Course Code</th>
+        <th>Course Name</th>
+        <th>Category</th>
+        <th>StartDate</th>
+        <th>EndDate</th>
+        <th>Hours</th>
+        <th>Eval Method</th>
+        <th>Result</th>
+        <th>Score</th>
+        <th>Evaluator</th>
+        <th>Expire Date</th>
+        <th>Remark</th>
+      </tr>
+    </thead>
+
+    <tbody>
+    {% if rows and rows|length > 0 %}
+      {% for t in rows %}
+      <tr>
+        <td>{{ loop.index }}</td>
+        <td>{{ t.year or "" }}</td>
+        <td>{{ t.month or "" }}</td>
+        <td>{{ t.emp_id or "" }}</td>
+        <td>{{ t.prefix or "" }}</td>
+        <td>{{ t.first_name or "" }}</td>
+        <td>{{ t.last_name or "" }}</td>
+        <td>{{ t.department or "" }}</td>
+        <td>{{ t.position or "" }}</td>
+        <td>{{ t.course_code or "" }}</td>
+        <td>{{ t.course_name or "" }}</td>
+        <td>{{ t.category or "" }}</td>
+        <td>{{ t.start_date or "" }}</td>
+        <td>{{ t.end_date or "" }}</td>
+        <td>{{ t.hours or "" }}</td>
+        <td>{{ t.eval_method or "" }}</td>
+        <td>{{ t.result or "" }}</td>
+        <td>{{ t.score or "" }}</td>
+        <td>{{ t.evaluator or "" }}</td>
+        <td>{{ t.expire_date or "" }}</td>
+        <td>{{ t.remark or "" }}</td>
+      </tr>
+      {% endfor %}
+    {% else %}
+      <tr>
+        <td colspan="21" class="muted" style="padding:18px;">
+          ยังไม่มีข้อมูล Training Record (ลอง Import ก่อน)
+        </td>
+      </tr>
+    {% endif %}
+    </tbody>
+  </table>
 </div>
 
 {% endblock %}
