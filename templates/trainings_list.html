@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="page-head">
+  <div>
+    <h1>Training Record</h1>
+    <div class="muted">รายการ Training ทั้งหมด</div>
+  </div>
+  <div class="actions">
+    <a class="btn ghost" href="{{ url_for('trainings_import') }}">Import</a>
+  </div>
+</div>
+
+<div class="card">
+  <div style="overflow:auto;">
+    <table class="table" style="min-width:1500px;">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Year</th>
+          <th>Month</th>
+          <th>Emp ID</th>
+          <th>Prefix</th>
+          <th>First Name</th>
+          <th>Last Name</th>
+          <th>Department</th>
+          <th>Position</th>
+          <th>Course Code</th>
+          <th>Course Name</th>
+          <th>Category</th>
+          <th>Start</th>
+          <th>End</th>
+          <th>Hours</th>
+          <th>Eval</th>
+          <th>Result</th>
+          <th>Score</th>
+          <th>Evaluator</th>
+          <th>Expire</th>
+          <th>Remark</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if trainings %}
+          {% for t in trainings %}
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td>{{ t.year or "" }}</td>
+            <td>{{ t.month or "" }}</td>
+            <td>{{ t.emp_id or "" }}</td>
+            <td>{{ t.prefix or "" }}</td>
+            <td>{{ t.first_name or "" }}</td>
+            <td>{{ t.last_name or "" }}</td>
+            <td>{{ t.department or "" }}</td>
+            <td>{{ t.position or "" }}</td>
+            <td>{{ t.course_code or "" }}</td>
+            <td>{{ t.course_name or "" }}</td>
+            <td>{{ t.category or "" }}</td>
+            <td>{{ t.start_date or "" }}</td>
+            <td>{{ t.end_date or "" }}</td>
+            <td>{{ t.hours or "" }}</td>
+            <td>{{ t.eval_method or "" }}</td>
+            <td>{{ t.result or "" }}</td>
+            <td>{{ t.score or "" }}</td>
+            <td>{{ t.evaluator or "" }}</td>
+            <td>{{ t.expire_date or "" }}</td>
+            <td>{{ t.remark or "" }}</td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="21" style="text-align:center; padding:20px;">
+              ยังไม่มีข้อมูล Training
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
