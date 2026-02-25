@@ -147,27 +147,32 @@ def safe_int(x):
     except:
         return None
         
+
 def safe_date(x):
-    if not x:
+    """
+    รับค่าได้ทั้ง date/datetime/ตัวเลข excel/สตริง แล้วคืนค่าเป็น date หรือ None
+    """
+    if x is None:
         return None
 
-    try:
-        if isinstance(x, datetime):
-            return x.date()
+    # ถ้าเป็น date/datetime อยู่แล้ว
+    if isinstance(x, date) and not isinstance(x, datetime):
+        return x
+    if isinstance(x, datetime):
+        return x.date()
 
-        x = str(x).strip()
-        if not x:
-            return None
-
-        for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y"):
-            try:
-                return datetime.strptime(x, fmt).date()
-            except:
-                continue
-
+    s = str(x).strip()
+    if not s:
         return None
-    except:
-        return None
+
+    # format ที่พบบ่อย
+    for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%m/%d/%Y"):
+        try:
+            return datetime.strptime(s, fmt).date()
+        except:
+            pass
+
+    return None
 
 def safe_float(x):
     try:
