@@ -762,7 +762,7 @@ def trainings_import():
             last_name = " ".join(parts[1:]) if len(parts) > 1 else None
 
         # ===== หา employee เพื่อผูก FK =====
-        emp = Employee.query.filter_by(emp_id=emp_id).first()
+        emp = Employee.query.filter_by(em_id=emp_id).first()
         if not emp:
             skipped += 1
             continue
