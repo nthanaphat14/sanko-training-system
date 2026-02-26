@@ -836,12 +836,12 @@ for r in range(2, ws.max_row + 1):
         remark=safe_str(cellv(r, "หมายเหตุ")),
     )
             
-        db.session.add(tr)
-        added += 1
+    db.session.add(tr)
+    added += 1
 
-    db.session.commit()
-    flash(f"Import สำเร็จ: {added} รายการ | ข้าม: {skipped} แถว", "success")
-    return redirect(url_for("trainings_list"))
+db.session.commit()
+flash(f"Import สำเร็จ: {added} รายการ, ข้าม {skipped} รายการ", "success")
+return redirect(url_for("trainings_list"))
 
 @app.route("/trainings/new", methods=["GET", "POST"])
 def trainings_new():
