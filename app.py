@@ -98,6 +98,8 @@ class TrainingRecord(db.Model):
 
     emp_id = db.Column(db.String(50), nullable=False, index=True)  # Emp ID
 
+    employee_id = ab.Column(db.Integer, db.ForeignKey("employees.id"), nullable=True, index=True)
+    employee = db.relationship("Employee", backref=db.backref("training_records", lazy=True))
     prefix = db.Column(db.String(50), nullable=True)         # คำนำหน้า
     full_name = db.Column(db.String(200), nullable=True)     # ชื่อ-สกุล
     last_name = db.Column(db.String(200), nullable=True)     # นามสกุล
@@ -671,50 +673,9 @@ def trainings_list():
 
     return render_template(
         "trainings_list.html",
-        rows=rows,
-        total=total,
-        q=q,
-        year=year,
-        month=month
+        rows=rows, total=total,
+        q=q, year=year, month=month
     )
-
-@app.route("/trainings/new", methods=["GET", "POST"])
-def trainings_new():
-    if request.method == "GET":
-        return render_template("trainings_new.html")
-
-    emp_id = safe_str(request.form.get("emp_id"))
-    if not emp_id:
-        flash("กรุณากรอก Emp ID", "error")
-        return redirect(url_for("trainings_new"))
-
-    tr = TrainingRecord(
-        year=safe_int(request.form.get("year")),
-        month=safe_int(request.form.get("month")),
-        emp_id=emp_id,
-        prefix=safe_str(request.form.get("prefix")),
-        full_name=safe_str(request.form.get("full_name")),
-        last_name=safe_str(request.form.get("last_name")),
-        department=safe_str(request.form.get("department")),
-        position=safe_str(request.form.get("position")),
-        course_code=safe_str(request.form.get("course_code")),
-        course_name=safe_str(request.form.get("course_name")),
-        course_type=safe_str(request.form.get("course_type")),
-        start_date=safe_date(request.form.get("start_date")),
-        end_date=safe_date(request.form.get("end_date")),
-        hours=safe_float(request.form.get("hours")),
-        evaluate_method=safe_str(request.form.get("evaluate_method")),
-        result=safe_str(request.form.get("result")),
-        score=safe_float(request.form.get("score")),
-        evaluator=safe_str(request.form.get("evaluator")),
-        expire_date=safe_date(request.form.get("expire_date")),
-        remark=safe_str(request.form.get("remark")),
-    )
-
-    db.session.add(tr)
-    db.session.commit()
-    flash("บันทึก Training Record แล้ว", "success")
-    return redirect(url_for("trainings_list"))
 
 @app.route("/trainings/import", methods=["GET", "POST"])
 def trainings_import():
@@ -791,6 +752,45 @@ def trainings_import():
     db.session.commit()
     flash(f"Import สำเร็จ: {added} รายการ | ข้าม: {skipped} แถว", "success")
     return redirect(url_for("trainings_list"))
+
+@app.route("/trainings/new", methods=["GET", "POST"])
+def trainings_new():
+    if request.method == "GET":
+        return render_template("trainings_new.html")
+
+    emp_id = safe_str(request.form.get("emp_id"))
+    if not emp_id:
+        flash("กรุณากรอก Emp ID", "error")
+        return redirect(url_for("trainings_new"))
+
+    tr = TrainingRecord(
+        year=safe_int(request.form.get("year")),
+        month=safe_int(request.form.get("month")),
+        emp_id=emp_id,
+        prefix=safe_str(request.form.get("prefix")),
+        full_name=safe_str(request.form.get("full_name")),
+        last_name=safe_str(request.form.get("last_name")),
+        department=safe_str(request.form.get("department")),
+        position=safe_str(request.form.get("position")),
+        course_code=safe_str(request.form.get("course_code")),
+        course_name=safe_str(request.form.get("course_name")),
+        course_type=safe_str(request.form.get("course_type")),
+        start_date=safe_date(request.form.get("start_date")),
+        end_date=safe_date(request.form.get("end_date")),
+        hours=safe_float(request.form.get("hours")),
+        evaluate_method=safe_str(request.form.get("evaluate_method")),
+        result=safe_str(request.form.get("result")),
+        score=safe_float(request.form.get("score")),
+        evaluator=safe_str(request.form.get("evaluator")),
+        expire_date=safe_date(request.form.get("expire_date")),
+        remark=safe_str(request.form.get("remark")),
+    )
+
+    db.session.add(tr)
+    db.session.commit()
+    flash("บันทึก Training Record แล้ว", "success")
+    return redirect(url_for("trainings_list"))
+
     
 # -------------------------------------------------
 # Run (Local Only)
