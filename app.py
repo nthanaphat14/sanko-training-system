@@ -731,12 +731,11 @@ def trainings_import():
 
     # อ่านหัวตารางแถว 1 -> map ชื่อคอลัมน์เป็น index
     headers = [str(ws.cell(1, c).value or "").strip() for c in range(1, ws.max_column + 1)]
-    header_map = {h: i+1 for i, h in enumerate(headers)}
+    header_map = {h: i + 1 for i, h in enumerate(headers)}
 
     def col(name):
         return header_map.get(name)
 
-    # ชื่อคอลัมน์ตามไฟล์คุณ
     REQUIRED = ["Emp ID", "รหัสหลักสูตร", "ชื่อหลักสูตร"]
     for need in REQUIRED:
         if col(need) is None:
@@ -752,34 +751,17 @@ def trainings_import():
             skipped += 1
             continue
 
-        # ===== ดึงชื่อจากไฟล์ =====
         prefix = safe_str(ws.cell(r, col("คำนำหน้า")).value)
         full_name = safe_str(ws.cell(r, col("ชื่อ-สกุล")).value)
         last_name = safe_str(ws.cell(r, col("นามสกุล")).value)
 
-        # ถ้าไฟล์บางแถวใส่ชื่อ+สกุลไว้ช่องเดียว ให้ split
-        first_name = full_name
-        if (not last_name) and full_name and (" " in full_name):
-            parts = full_name.split()
-            first_name = parts[0]
-            last_name = " ".join(parts[1:]) if len(parts) > 1 else None
-
-        # ===== หา employee เพื่อผูก FK =====
-        emp = Employee.query.filter_by(em_id=emp_id).first()
-        if not emp:
-            skipped += 1
-            continue
-
         tr = TrainingRecord(
-            employee_id=emp.id,
-
-            # เก็บซ้ำได้ในหลายปีได้ตามที่คุณต้องการ
             year=safe_int(ws.cell(r, col("Year.")).value),
             month=safe_int(ws.cell(r, col("Month")).value),
 
             emp_id=emp_id,
             prefix=prefix,
-            first_name=first_name,
+            full_name=full_name,
             last_name=last_name,
 
             department=safe_str(ws.cell(r, col("แผนก")).value),
@@ -787,16 +769,16 @@ def trainings_import():
 
             course_code=safe_str(ws.cell(r, col("รหัสหลักสูตร")).value),
             course_name=safe_str(ws.cell(r, col("ชื่อหลักสูตร")).value),
-            category=safe_str(ws.cell(r, col("ประเภท")).value),
+            course_type=safe_str(ws.cell(r, col("ประเภท")).value),
 
             start_date=safe_date(ws.cell(r, col("StartDate")).value),
             end_date=safe_date(ws.cell(r, col("EndDate")).value),
 
-            hours=float(ws.cell(r, col("ชั่วโมง")).value) if str(ws.cell(r, col("ชั่วโมง")).value or "").strip() != "" else None,
+            hours=safe_float(ws.cell(r, col("ชั่วโมง")).value),
 
-            eval_method=safe_str(ws.cell(r, col("วิธีประเมิน")).value),
+            evaluate_method=safe_str(ws.cell(r, col("วิธีประเมิน")).value),
             result=safe_str(ws.cell(r, col("ผล")).value),
-            score=safe_str(ws.cell(r, col("คะแนน")).value),
+            score=safe_float(ws.cell(r, col("คะแนน")).value),
             evaluator=safe_str(ws.cell(r, col("ผู้ประเมิน")).value),
 
             expire_date=safe_date(ws.cell(r, col("วันหมดอายุ")).value),
@@ -810,20 +792,6 @@ def trainings_import():
     flash(f"Import สำเร็จ: {added} รายการ | ข้าม: {skipped} แถว", "success")
     return redirect(url_for("trainings_list"))
     
-
-
-        rows = query.order_by(
-            TrainingRecord.start_date.desc().nullslast(),
-            TrainingRecord.id.desc()
-        ).limit(500).all()
-
-        total = query.count()
-
-        return render_template(
-            "trainings_list.html",
-            rows=rows, total=total,
-            q=q, year=year, month=month
-        )
 # -------------------------------------------------
 # Run (Local Only)
 # -------------------------------------------------
