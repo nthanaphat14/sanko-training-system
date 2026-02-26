@@ -734,50 +734,50 @@ def trainings_import():
     ws = wb["Record Training"] if "Record Training" in wb.sheetnames else wb.active
 
 # --- header map (row 1) ---
-def norm(s: str) -> str:
-    return safe_str(s).lower().replace(" ", "").replace("_", "").replace("-", "")
+    def norm(s: str) -> str:
+        return safe_str(s).lower().replace(" ", "").replace("_", "").replace("-", "")
 
-headers = [safe_str(ws.cell(1, c).value) for c in range(1, ws.max_column + 1)]
-header_map = {norm(h): i + 1 for i, h in enumerate(headers)}
+    headers = [safe_str(ws.cell(1, c).value) for c in range(1, ws.max_column + 1)]
+    header_map = {norm(h): i + 1 for i, h in enumerate(headers)}
 
-ALIASES = {
-    "year.": ["year.", "year", "ปี"],
-    "month": ["month", "mon", "เดือน"],
-    "empid": ["empid", "emp id", "รหัสพนักงาน", "emp"],
-    "คำนำหน้า": ["คำนำหน้า", "prefix"],
-    "ชื่อ": ["ชื่อ", "firstname", "first name"],
-    "นามสกุล": ["นามสกุล", "lastname", "last name"],
-    "แผนก": ["แผนก", "section", "department"],
-    "ตำแหน่ง": ["ตำแหน่ง", "position"],
-    "รหัสหลักสูตร": ["รหัสหลักสูตร", "coursecode", "course code"],
-    "ชื่อหลักสูตร": ["ชื่อหลักสูตร", "coursename", "course name"],
-    "ประเภท": ["ประเภท", "category", "coursetype", "course type"],
-    "startdate": ["startdate", "start date", "วันที่เริ่ม"],
-    "enddate": ["enddate", "end date", "วันที่จบ"],
-    "ชั่วโมง": ["ชั่วโมง", "hours", "hour"],
-    "วิธีประเมิน": ["วิธีประเมิน", "evaluatemethod", "evaluate method"],
-    "ผล": ["ผล", "result"],
-    "คะแนน": ["คะแนน", "score"],
-    "ผู้ประเมิน": ["ผู้ประเมิน", "evaluator"],
-    "วันหมดอายุ": ["วันหมดอายุ", "expiredate", "expire date"],
-    "หมายเหตุ": ["หมายเหตุ", "remark", "note"],
-}
+    ALIASES = {
+        "year.": ["year.", "year", "ปี"],
+        "month": ["month", "mon", "เดือน"],
+        "empid": ["empid", "emp id", "รหัสพนักงาน", "emp"],
+        "คำนำหน้า": ["คำนำหน้า", "prefix"],
+        "ชื่อ": ["ชื่อ", "firstname", "first name"],
+        "นามสกุล": ["นามสกุล", "lastname", "last name"],
+        "แผนก": ["แผนก", "section", "department"],
+        "ตำแหน่ง": ["ตำแหน่ง", "position"],
+        "รหัสหลักสูตร": ["รหัสหลักสูตร", "coursecode", "course code"],
+        "ชื่อหลักสูตร": ["ชื่อหลักสูตร", "coursename", "course name"],
+        "ประเภท": ["ประเภท", "category", "coursetype", "course type"],
+        "startdate": ["startdate", "start date", "วันที่เริ่ม"],
+        "enddate": ["enddate", "end date", "วันที่จบ"],
+        "ชั่วโมง": ["ชั่วโมง", "hours", "hour"],
+        "วิธีประเมิน": ["วิธีประเมิน", "evaluatemethod", "evaluate method"],
+        "ผล": ["ผล", "result"],
+        "คะแนน": ["คะแนน", "score"],
+        "ผู้ประเมิน": ["ผู้ประเมิน", "evaluator"],
+        "วันหมดอายุ": ["วันหมดอายุ", "expiredate", "expire date"],
+        "หมายเหตุ": ["หมายเหตุ", "remark", "note"],
+    }
 
-def col(name: str):
-    k = norm(name)
-    if k in header_map:
-        return header_map[k]
-    for alt in ALIASES.get(k, []):
-        kk = norm(alt)
-        if kk in header_map:
-            return header_map[kk]
-    return None
-
-def cellv(r, name):
-    idx = col(name)
-    if not idx:
+    def col(name: str):
+        k = norm(name)
+        if k in header_map:
+            return header_map[k]
+        for alt in ALIASES.get(k, []):
+            kk = norm(alt)
+            if kk in header_map:
+                return header_map[kk]
         return None
-    return ws.cell(r, idx).value
+
+    def cellv(r, name):
+        idx = col(name)
+        if not idx:
+            return None
+        return ws.cell(r, idx).value
 
     added = 0
     skipped = 0
