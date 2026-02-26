@@ -132,11 +132,11 @@ def init_db():
 # -------------------------------------------------
 # Helper Functions
 # -------------------------------------------------
-def safe_str(x):
-    if x is None:
-        return None
-    s = str(x).strip()
-    return s if s != "" else None
+    
+def safe_str(v):
+    if v is None:
+        return ""
+    return str(v).strip()
 
 def safe_int(x):
     try:
@@ -733,18 +733,51 @@ def trainings_import():
     wb = load_workbook(f, data_only=True)
     ws = wb["Record Training"] if "Record Training" in wb.sheetnames else wb.active
 
-    # อ่านหัวตารางแถว 1 -> map ชื่อคอลัมน์เป็น index
-    headers = [str(ws.cell(1, c).value or "").strip() for c in range(1, ws.max_column + 1)]
-    header_map = {h: i + 1 for i, h in enumerate(headers)}
+# --- header map (row 1) ---
+def norm(s: str) -> str:
+    return safe_str(s).lower().replace(" ", "").replace("_", "").replace("-", "")
 
-    def col(name):
-        return header_map.get(name)
+headers = [safe_str(ws.cell(1, c).value) for c in range(1, ws.max_column + 1)]
+header_map = {norm(h): i + 1 for i, h in enumerate(headers)}
 
-    REQUIRED = ["Emp ID", "รหัสหลักสูตร", "ชื่อหลักสูตร"]
-    for need in REQUIRED:
-        if col(need) is None:
-            flash(f"ไฟล์นี้ไม่มีคอลัมน์ '{need}' (ตรวจหัวตารางแถวที่ 1)", "error")
-            return redirect(url_for("trainings_import"))
+ALIASES = {
+    "year.": ["year.", "year", "ปี"],
+    "month": ["month", "mon", "เดือน"],
+    "empid": ["empid", "emp id", "รหัสพนักงาน", "emp"],
+    "คำนำหน้า": ["คำนำหน้า", "prefix"],
+    "ชื่อ": ["ชื่อ", "firstname", "first name"],
+    "นามสกุล": ["นามสกุล", "lastname", "last name"],
+    "แผนก": ["แผนก", "section", "department"],
+    "ตำแหน่ง": ["ตำแหน่ง", "position"],
+    "รหัสหลักสูตร": ["รหัสหลักสูตร", "coursecode", "course code"],
+    "ชื่อหลักสูตร": ["ชื่อหลักสูตร", "coursename", "course name"],
+    "ประเภท": ["ประเภท", "category", "coursetype", "course type"],
+    "startdate": ["startdate", "start date", "วันที่เริ่ม"],
+    "enddate": ["enddate", "end date", "วันที่จบ"],
+    "ชั่วโมง": ["ชั่วโมง", "hours", "hour"],
+    "วิธีประเมิน": ["วิธีประเมิน", "evaluatemethod", "evaluate method"],
+    "ผล": ["ผล", "result"],
+    "คะแนน": ["คะแนน", "score"],
+    "ผู้ประเมิน": ["ผู้ประเมิน", "evaluator"],
+    "วันหมดอายุ": ["วันหมดอายุ", "expiredate", "expire date"],
+    "หมายเหตุ": ["หมายเหตุ", "remark", "note"],
+}
+
+def col(name: str):
+    k = norm(name)
+    if k in header_map:
+        return header_map[k]
+    for alt in ALIASES.get(k, []):
+        kk = norm(alt)
+        if kk in header_map:
+            return header_map[kk]
+    return None
+
+def cellv(r, name):
+    idx = col(name)
+    if not idx:
+        return None
+    return ws.cell(r, idx).value
 
     added = 0
     skipped = 0
@@ -760,40 +793,34 @@ def trainings_import():
         last_name = safe_str(ws.cell(r, col("นามสกุล")).value)
 
         tr = TrainingRecord(
-            seq=safe_int(ws.cell(r, col("ลำดับ")).value),
-            year=safe_int(ws.cell(r, col("Year.")).value),
-            month=safe_month(ws.cell(r, col("Month")).value),  # <-- แนะนำใช้ safe_month (ข้อ 2)
-
+            seq=safe_int(cellv(r, "ลำดับ")),
+            year=safe_int(cellv(r, "Year.")),
+            month=safe_month(cellv(r, "Month")),
             emp_id=emp_id,
-            employee_id=employee_id,  # ถ้าคุณทำ lookup employee_id แล้ว (ถ้ายังไม่ทำให้ข้ามได้)
 
-            prefix=safe_str(ws.cell(r, col("คำนำหน้า")).value),
+            prefix=prefix,
+            full_name=first,         # ถ้าฟอร์มคุณเป็น First Name ช่องเดียว ก็ใส่ first ไปก่อน
+            last_name=last,
 
-            # คุณบอกอยากให้ “ชื่อ-สกุล” เป็น “ชื่อ” อย่างเดียว → งั้นเก็บชื่อไว้ที่ full_name
-            full_name=safe_str(ws.cell(r, col("ชื่อ")).value),
-            last_name=safe_str(ws.cell(r, col("นามสกุล")).value),
+            department=section,      # ตอนนี้ใน model ยังชื่อ department -> แต่ใช้เก็บค่า section ไปก่อน
+            position=position,
 
-            # สำคัญ: Quality Control = แผนก/Section, Operator = ตำแหน่ง
-            department=safe_str(ws.cell(r, col("แผนก")).value),     # = Quality Control
-            position=safe_str(ws.cell(r, col("ตำแหน่ง")).value),     # = Operator
+            course_code=safe_str(cellv(r, "รหัสหลักสูตร")),
+            course_name=safe_str(cellv(r, "ชื่อหลักสูตร")),
+            course_type=safe_str(cellv(r, "ประเภท")),
 
-            course_code=safe_str(ws.cell(r, col("รหัสหลักสูตร")).value),
-            course_name=safe_str(ws.cell(r, col("ชื่อหลักสูตร")).value),
-            course_type=safe_str(ws.cell(r, col("ประเภท")).value),
+            start_date=safe_date(cellv(r, "StartDate")),
+            end_date=safe_date(cellv(r, "EndDate")),
+            hours=safe_float(cellv(r, "ชั่วโมง")),
 
-            start_date=safe_date(ws.cell(r, col("StartDate")).value),
-            end_date=safe_date(ws.cell(r, col("EndDate")).value),
-            hours=safe_float(ws.cell(r, col("ชั่วโมง")).value),
-
-            evaluate_method=safe_str(ws.cell(r, col("วิธีประเมิน")).value),
-            result=safe_str(ws.cell(r, col("ผล")).value),
-            score=safe_float(ws.cell(r, col("คะแนน")).value),
-            evaluator=safe_str(ws.cell(r, col("ผู้ประเมิน")).value),
-
-            expire_date=safe_date(ws.cell(r, col("วันหมดอายุ")).value),
-            remark=safe_str(ws.cell(r, col("หมายเหตุ")).value),
+            evaluate_method=safe_str(cellv(r, "วิธีประเมิน")),
+            result=safe_str(cellv(r, "ผล")),
+            score=safe_float(cellv(r, "คะแนน")),
+            evaluator=safe_str(cellv(r, "ผู้ประเมิน")),
+            expire_date=safe_date(cellv(r, "วันหมดอายุ")),
+            remark=safe_str(cellv(r, "หมายเหตุ")),
         )
-
+            
         db.session.add(tr)
         added += 1
 
