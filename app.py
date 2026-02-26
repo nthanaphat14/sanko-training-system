@@ -98,7 +98,7 @@ class TrainingRecord(db.Model):
 
     emp_id = db.Column(db.String(50), nullable=False, index=True)  # Emp ID
 
-    employee_id = ab.Column(db.Integer, db.ForeignKey("employees.id"), nullable=True, index=True)
+    employee_id = db.Column(db.Integer, db.ForeignKey("employees.id"), nullable=True, index=True)
     employee = db.relationship("Employee", backref=db.backref("training_records", lazy=True))
     prefix = db.Column(db.String(50), nullable=True)         # คำนำหน้า
     full_name = db.Column(db.String(200), nullable=True)     # ชื่อ-สกุล
