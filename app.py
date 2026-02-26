@@ -685,28 +685,35 @@ def trainings_new():
         flash("กรุณากรอก Emp ID", "error")
         return redirect(url_for("trainings_new"))
 
-    tr = TrainingRecord(
-        year=safe_int(row[1]),
-        month=safe_int(row[2]),
-        emp_id=safe_str(row[3]),
-        prefix=safe_str(row[4]),
-        first_name=safe_str(row[5]),
-        last_name=safe_str(row[6]),
-        department=safe_str(row[7]),
-        position=safe_str(row[8]),
-        course_code=safe_str(row[9]),
-        course_name=safe_str(row[10]),
-        category=safe_str(row[11]),
-        start_date=safe_date(row[12]),
-        end_date=safe_date(row[13]),
-        hours=float(row[14]) if str(row[14]).strip() else None,
-        eval_method=safe_str(row[15]),
-        result=safe_str(row[16]),
-        score=safe_str(row[17]),
-        evaluator=safe_str(row[18]),
-        expire_date=safe_date(row[19]),
-        remark=safe_str(row[20]),
-    )
+tr = TrainingRecord(
+    year=safe_int(ws.cell(r, col("Year.")).value),
+    month=safe_int(ws.cell(r, col("Month")).value),
+
+    emp_id=emp_id,
+    prefix=prefix,
+    first_name=first_name,
+    last_name=last_name,
+
+    department=safe_str(ws.cell(r, col("แผนก")).value),
+    position=safe_str(ws.cell(r, col("ตำแหน่ง")).value),
+
+    course_code=safe_str(ws.cell(r, col("รหัสหลักสูตร")).value),
+    course_name=safe_str(ws.cell(r, col("ชื่อหลักสูตร")).value),
+    category=safe_str(ws.cell(r, col("ประเภท")).value),
+
+    start_date=safe_date(ws.cell(r, col("StartDate")).value),
+    end_date=safe_date(ws.cell(r, col("EndDate")).value),
+
+    hours=safe_float(ws.cell(r, col("ชั่วโมง")).value),
+
+    eval_method=safe_str(ws.cell(r, col("วิธีประเมิน")).value),
+    result=safe_str(ws.cell(r, col("ผล")).value),
+    score=safe_str(ws.cell(r, col("คะแนน")).value),
+    evaluator=safe_str(ws.cell(r, col("ผู้ประเมิน")).value),
+
+    expire_date=safe_date(ws.cell(r, col("วันหมดอายุ")).value),
+    remark=safe_str(ws.cell(r, col("หมายเหตุ")).value),
+)
     db.session.add(tr)
     db.session.commit()
 
@@ -807,30 +814,7 @@ def trainings_import():
     flash(f"Import สำเร็จ: {added} รายการ | ข้าม: {skipped} แถว", "success")
     return redirect(url_for("trainings_list"))
     
-    @app.get("/trainings")
-    def trainings_list():
-        q = (request.args.get("q") or "").strip()
-        year = (request.args.get("year") or "").strip()
-        month = (request.args.get("month") or "").strip()
 
-        query = TrainingRecord.query
-
-        if q:
-            like = f"%{q}%"
-            query = query.filter(
-                db.or_(
-                    TrainingRecord.emp_id.ilike(like),
-                    TrainingRecord.first_name.ilike(like),
-                    TrainingRecord.last_name.ilike(like),
-                    TrainingRecord.course_code.ilike(like),
-                    TrainingRecord.course_name.ilike(like),
-                )
-            )
-
-        if year.isdigit():
-            query = query.filter(TrainingRecord.year == int(year))
-        if month.isdigit():
-            query = query.filter(TrainingRecord.month == int(month))
 
         rows = query.order_by(
             TrainingRecord.start_date.desc().nullslast(),
