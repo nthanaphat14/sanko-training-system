@@ -875,8 +875,6 @@ def trainings_new():
     db.session.commit()
     flash("บันทึก Training Record แล้ว", "success")
     return redirect(url_for("trainings_list"))
-
-    
 # -------------------------------------------------
 # Run (Local Only)
 # -------------------------------------------------
