@@ -686,38 +686,30 @@ def trainings_new():
         return redirect(url_for("trainings_new"))
 
     tr = TrainingRecord(
-        year=safe_int(ws.cell(r, col("Year.")).value),
-        month=safe_int(ws.cell(r, col("Month")).value),
-
+        year=safe_int(request.form.get("year")),
+        month=safe_int(request.form.get("month")),
         emp_id=emp_id,
-        prefix=prefix,
-        first_name=first_name,
-        last_name=last_name,
-
-        department=safe_str(ws.cell(r, col("แผนก")).value),
-        position=safe_str(ws.cell(r, col("ตำแหน่ง")).value),
-
-        course_code=safe_str(ws.cell(r, col("รหัสหลักสูตร")).value),
-        course_name=safe_str(ws.cell(r, col("ชื่อหลักสูตร")).value),
-        category=safe_str(ws.cell(r, col("ประเภท")).value),
-
-        start_date=safe_date(ws.cell(r, col("StartDate")).value),
-        end_date=safe_date(ws.cell(r, col("EndDate")).value),
-
-        hours=safe_float(ws.cell(r, col("ชั่วโมง")).value),
-
-        eval_method=safe_str(ws.cell(r, col("วิธีประเมิน")).value),
-        result=safe_str(ws.cell(r, col("ผล")).value),
-        score=safe_str(ws.cell(r, col("คะแนน")).value),
-        evaluator=safe_str(ws.cell(r, col("ผู้ประเมิน")).value),
-
-        expire_date=safe_date(ws.cell(r, col("วันหมดอายุ")).value),
-        remark=safe_str(ws.cell(r, col("หมายเหตุ")).value),
+        prefix=safe_str(request.form.get("prefix")),
+        full_name=safe_str(request.form.get("full_name")),
+        last_name=safe_str(request.form.get("last_name")),
+        department=safe_str(request.form.get("department")),
+        position=safe_str(request.form.get("position")),
+        course_code=safe_str(request.form.get("course_code")),
+        course_name=safe_str(request.form.get("course_name")),
+        course_type=safe_str(request.form.get("course_type")),
+        start_date=safe_date(request.form.get("start_date")),
+        end_date=safe_date(request.form.get("end_date")),
+        hours=safe_float(request.form.get("hours")),
+        evaluate_method=safe_str(request.form.get("evaluate_method")),
+        result=safe_str(request.form.get("result")),
+        score=safe_float(request.form.get("score")),
+        evaluator=safe_str(request.form.get("evaluator")),
+        expire_date=safe_date(request.form.get("expire_date")),
+        remark=safe_str(request.form.get("remark")),
     )
 
     db.session.add(tr)
     db.session.commit()
-
     flash("บันทึก Training Record แล้ว", "success")
     return redirect(url_for("trainings_list"))
 
