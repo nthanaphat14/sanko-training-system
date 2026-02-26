@@ -100,10 +100,12 @@ class TrainingRecord(db.Model):
 
     employee_id = db.Column(db.Integer, db.ForeignKey("employees.id"), nullable=True, index=True)
     employee = db.relationship("Employee", backref=db.backref("training_records", lazy=True))
-    prefix = db.Column(db.String(50), nullable=True)         # คำนำหน้า
-    full_name = db.Column(db.String(200), nullable=True)     # ชื่อ-สกุล
-    last_name = db.Column(db.String(200), nullable=True)     # นามสกุล
-
+    prefix      = safe_str(ws.cell(r, col("คำนำหน้า")).value)
+    first_name  = safe_str(ws.cell(r, col("ชื่อ")).value)
+    last_name   = safe_str(ws.cell(r, col("นามสกุล")).value)
+    
+    full_name = f"{first_name} {last_name}".strip()
+    
     department = db.Column(db.String(150), nullable=True)    # แผนก
     position = db.Column(db.String(150), nullable=True)      # ตำแหน่ง
 
@@ -149,6 +151,34 @@ def safe_int(x):
     except:
         return None
         
+def safe_month(v):
+    if v is None:
+        return None
+
+    # ถ้าเป็นเลขอยู่แล้ว
+    try:
+        iv = int(v)
+        if 1 <= iv <= 12:
+            return iv
+    except:
+        pass
+
+    s = str(v).strip().lower()
+    m = {
+        "jan": 1, "january": 1,
+        "feb": 2, "february": 2,
+        "mar": 3, "march": 3,
+        "apr": 4, "april": 4,
+        "may": 5,
+        "jun": 6, "june": 6,
+        "jul": 7, "july": 7,
+        "aug": 8, "august": 8,
+        "sep": 9, "sept": 9, "september": 9,
+        "oct": 10, "october": 10,
+        "nov": 11, "november": 11,
+        "dec": 12, "december": 12,
+    }
+    return m.get(s)       
 
 def safe_date(v):
     """
@@ -178,6 +208,27 @@ def safe_date(v):
             pass
 
     return None
+    
+    MONTH_MAP = {
+        "jan": 1, "january": 1,
+        "feb": 2, "february": 2,
+        "mar": 3, "march": 3,
+        "apr": 4, "april": 4,
+        "may": 5,
+        "jun": 6, "june": 6,
+        "jul": 7, "july": 7,
+        "aug": 8, "august": 8,
+        "sep": 9, "september": 9,
+        "oct": 10, "october": 10,
+        "nov": 11, "november": 11,
+        "dec": 12, "december": 12,
+    }
+
+def month_to_int(v):
+    s = safe_str(v).strip().lower()
+    if s.isdigit():
+        return int(s)
+    return MONTH_MAP.get(s[:3]) or MONTH_MAP.get(s)
 
 def safe_float(x):
     try:
@@ -671,11 +722,7 @@ def trainings_list():
 
     total = query.count()
 
-    return render_template(
-        "trainings_list.html",
-        rows=rows, total=total,
-        q=q, year=year, month=month
-    )
+    return render_template("trainings_list.html", rows=rows, total=total, q=q, year=year, month=month)
 
 @app.route("/trainings/import", methods=["GET", "POST"])
 def trainings_import():
@@ -717,16 +764,22 @@ def trainings_import():
         last_name = safe_str(ws.cell(r, col("นามสกุล")).value)
 
         tr = TrainingRecord(
+            seq=safe_int(ws.cell(r, col("ลำดับ")).value),
             year=safe_int(ws.cell(r, col("Year.")).value),
-            month=safe_int(ws.cell(r, col("Month")).value),
+            month=safe_month(ws.cell(r, col("Month")).value),  # <-- แนะนำใช้ safe_month (ข้อ 2)
 
             emp_id=emp_id,
-            prefix=prefix,
-            full_name=full_name,
-            last_name=last_name,
+            employee_id=employee_id,  # ถ้าคุณทำ lookup employee_id แล้ว (ถ้ายังไม่ทำให้ข้ามได้)
 
-            department=safe_str(ws.cell(r, col("แผนก")).value),
-            position=safe_str(ws.cell(r, col("ตำแหน่ง")).value),
+            prefix=safe_str(ws.cell(r, col("คำนำหน้า")).value),
+
+            # คุณบอกอยากให้ “ชื่อ-สกุล” เป็น “ชื่อ” อย่างเดียว → งั้นเก็บชื่อไว้ที่ full_name
+            full_name=safe_str(ws.cell(r, col("ชื่อ")).value),
+            last_name=safe_str(ws.cell(r, col("นามสกุล")).value),
+
+            # สำคัญ: Quality Control = แผนก/Section, Operator = ตำแหน่ง
+            department=safe_str(ws.cell(r, col("แผนก")).value),     # = Quality Control
+            position=safe_str(ws.cell(r, col("ตำแหน่ง")).value),     # = Operator
 
             course_code=safe_str(ws.cell(r, col("รหัสหลักสูตร")).value),
             course_name=safe_str(ws.cell(r, col("ชื่อหลักสูตร")).value),
@@ -734,7 +787,6 @@ def trainings_import():
 
             start_date=safe_date(ws.cell(r, col("StartDate")).value),
             end_date=safe_date(ws.cell(r, col("EndDate")).value),
-
             hours=safe_float(ws.cell(r, col("ชั่วโมง")).value),
 
             evaluate_method=safe_str(ws.cell(r, col("วิธีประเมิน")).value),
