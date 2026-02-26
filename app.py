@@ -783,30 +783,29 @@ def cellv(r, name):
     skipped = 0
 
     for r in range(2, ws.max_row + 1):
+        emp_id   = safe_str(cellv(r, "Emp ID"))
+        prefix   = safe_str(cellv(r, "คำนำหน้า"))
+        first    = safe_str(cellv(r, "ชื่อ"))
+        last     = safe_str(cellv(r, "นามสกุล"))
 
-    emp_id   = safe_str(cellv(r, "Emp ID"))
-    prefix   = safe_str(cellv(r, "คำนำหน้า"))
-    first    = safe_str(cellv(r, "ชื่อ"))
-    last     = safe_str(cellv(r, "นามสกุล"))
+        # แผนกใน Excel = Section (เชื่อมในเว็บ)
+        section  = safe_str(cellv(r, "แผนก"))
 
-    # แผนกใน Excel = Section (เชื่อมในเว็บ)
-    section  = safe_str(cellv(r, "แผนก"))
+        position = safe_str(cellv(r, "ตำแหน่ง"))
+        course_code = safe_str(cellv(r, "รหัสหลักสูตร"))
+        course_name = safe_str(cellv(r, "ชื่อหลักสูตร"))
+        course_type = safe_str(cellv(r, "ประเภท"))
 
-    position = safe_str(cellv(r, "ตำแหน่ง"))
-    course_code = safe_str(cellv(r, "รหัสหลักสูตร"))
-    course_name = safe_str(cellv(r, "ชื่อหลักสูตร"))
-    course_type = safe_str(cellv(r, "ประเภท"))
+        start_date = safe_date(cellv(r, "StartDate"))
+        end_date   = safe_date(cellv(r, "EndDate"))
+        hours      = safe_float(cellv(r, "ชั่วโมง"))
 
-    start_date = safe_date(cellv(r, "StartDate"))
-    end_date   = safe_date(cellv(r, "EndDate"))
-    hours      = safe_float(cellv(r, "ชั่วโมง"))
-
-    evaluate_method = safe_str(cellv(r, "วิธีประเมิน"))
-    result          = safe_str(cellv(r, "ผล"))
-    score           = safe_float(cellv(r, "คะแนน"))
-    evaluator       = safe_str(cellv(r, "ผู้ประเมิน"))
-    expire_date     = safe_date(cellv(r, "วันหมดอายุ"))
-    remark          = safe_str(cellv(r, "หมายเหตุ"))
+        evaluate_method = safe_str(cellv(r, "วิธีประเมิน"))
+        result          = safe_str(cellv(r, "ผล"))
+        score           = safe_float(cellv(r, "คะแนน"))
+        evaluator       = safe_str(cellv(r, "ผู้ประเมิน"))
+        expire_date     = safe_date(cellv(r, "วันหมดอายุ"))
+        remark          = safe_str(cellv(r, "หมายเหตุ"))
 
     tr = TrainingRecord(
         year= safe_int(cellv(r, "Year.")) ,
