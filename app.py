@@ -671,8 +671,11 @@ def trainings_list():
 
     return render_template(
         "trainings_list.html",
-        rows=rows, total=total,
-        q=q, year=year, month=month
+        rows=rows,
+        total=total,
+        q=q,
+        year=year,
+        month=month
     )
 
 @app.route("/trainings/new", methods=["GET", "POST"])
