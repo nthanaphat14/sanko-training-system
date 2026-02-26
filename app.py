@@ -98,13 +98,9 @@ class TrainingRecord(db.Model):
 
     emp_id = db.Column(db.String(50), nullable=False, index=True)  # Emp ID
 
-    employee_id = db.Column(db.Integer, db.ForeignKey("employees.id"), nullable=True, index=True)
-    employee = db.relationship("Employee", backref=db.backref("training_records", lazy=True))
-    prefix      = safe_str(ws.cell(r, col("คำนำหน้า")).value)
-    first_name  = safe_str(ws.cell(r, col("ชื่อ")).value)
-    last_name   = safe_str(ws.cell(r, col("นามสกุล")).value)
-    
-    full_name = f"{first_name} {last_name}".strip()
+    prefix = db.Column(db.String(50), nullable=True)
+    full_name = db.Column(db.String(200), nullable=True)
+    last_name = db.Column(db.String(200), nullable=True)
     
     department = db.Column(db.String(150), nullable=True)    # แผนก
     position = db.Column(db.String(150), nullable=True)      # ตำแหน่ง
