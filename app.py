@@ -782,44 +782,59 @@ def cellv(r, name):
     added = 0
     skipped = 0
 
-    for r in range(2, ws.max_row + 1):
-        emp_id = safe_str(ws.cell(r, col("Emp ID")).value)
-        if not emp_id:
-            skipped += 1
-            continue
+for r in range(2, ws.max_row + 1):
 
-        prefix = safe_str(ws.cell(r, col("คำนำหน้า")).value)
-        full_name = safe_str(ws.cell(r, col("ชื่อ-สกุล")).value)
-        last_name = safe_str(ws.cell(r, col("นามสกุล")).value)
+    emp_id = safe_str(cellv(r, "Emp ID"))
+    if not emp_id:
+        skipped += 1
+        continue
 
-        tr = TrainingRecord(
-            seq=safe_int(cellv(r, "ลำดับ")),
-            year=safe_int(cellv(r, "Year.")),
-            month=safe_month(cellv(r, "Month")),
-            emp_id=emp_id,
+    prefix = safe_str(cellv(r, "คำนำหน้า"))
 
-            prefix=prefix,
-            full_name=first,         # ถ้าฟอร์มคุณเป็น First Name ช่องเดียว ก็ใส่ first ไปก่อน
-            last_name=last,
+    # --- ชื่อ/นามสกุล ---
+    # กรณีไฟล์มีคอลัมน์ "ชื่อ-สกุล" (รวม)
+    full_name_raw = safe_str(cellv(r, "ชื่อ-สกุล"))
+    if full_name_raw:
+        full_name = full_name_raw
+        # ถ้าไม่มีคอลัมน์ "นามสกุล" ก็ปล่อยว่าง
+        last_name = safe_str(cellv(r, "นามสกุล"))
+    else:
+        # กรณีแยก "ชื่อ" + "นามสกุล"
+        full_name = safe_str(cellv(r, "ชื่อ"))
+        last_name = safe_str(cellv(r, "นามสกุล"))
 
-            department=section,      # ตอนนี้ใน model ยังชื่อ department -> แต่ใช้เก็บค่า section ไปก่อน
-            position=position,
+    # --- Section / Position ---
+    section = safe_str(cellv(r, "แผนก"))     # ในไฟล์ = Quality Control (Section)
+    position = safe_str(cellv(r, "ตำแหน่ง"))  # ในไฟล์ = Operator (Position)
 
-            course_code=safe_str(cellv(r, "รหัสหลักสูตร")),
-            course_name=safe_str(cellv(r, "ชื่อหลักสูตร")),
-            course_type=safe_str(cellv(r, "ประเภท")),
+    tr = TrainingRecord(
+        year=safe_int(cellv(r, "Year.")),
+        month=safe_month(cellv(r, "Month")),
 
-            start_date=safe_date(cellv(r, "StartDate")),
-            end_date=safe_date(cellv(r, "EndDate")),
-            hours=safe_float(cellv(r, "ชั่วโมง")),
+        emp_id=emp_id,
+        prefix=prefix,
+        full_name=full_name,
+        last_name=last_name,
 
-            evaluate_method=safe_str(cellv(r, "วิธีประเมิน")),
-            result=safe_str(cellv(r, "ผล")),
-            score=safe_float(cellv(r, "คะแนน")),
-            evaluator=safe_str(cellv(r, "ผู้ประเมิน")),
-            expire_date=safe_date(cellv(r, "วันหมดอายุ")),
-            remark=safe_str(cellv(r, "หมายเหตุ")),
-        )
+        department=section,   # เก็บ section ลงช่องเดิมของ DB (department)
+        position=position,
+
+        course_code=safe_str(cellv(r, "รหัสหลักสูตร")),
+        course_name=safe_str(cellv(r, "ชื่อหลักสูตร")),
+        course_type=safe_str(cellv(r, "ประเภท")),
+
+        start_date=safe_date(cellv(r, "StartDate")),
+        end_date=safe_date(cellv(r, "EndDate")),
+        hours=safe_float(cellv(r, "ชั่วโมง")),
+
+        evaluate_method=safe_str(cellv(r, "วิธีประเมิน")),
+        result=safe_str(cellv(r, "ผล")),
+        score=safe_float(cellv(r, "คะแนน")),
+        evaluator=safe_str(cellv(r, "ผู้ประเมิน")),
+
+        expire_date=safe_date(cellv(r, "วันหมดอายุ")),
+        remark=safe_str(cellv(r, "หมายเหตุ")),
+    )
             
         db.session.add(tr)
         added += 1
