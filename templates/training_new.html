@@ -3,9 +3,16 @@
 
 <h1>เพิ่ม Training Record</h1>
 
-<form method="post" action="{{ url_for('trainings_new') }}">
-  <input name="emp_id" value="">
-  <input name="full_name" value="">
+<form method="post"
+      action="{% if mode == 'edit' %}
+              {{ url_for('trainings_edit', tr_id=tr.id) }}
+              {% else %}
+              {{ url_for('trainings_new') }}
+              {% endif %}">
+  <input name="emp_id" value="{{ tr.emp_id if tr else '' }}">
+  <input name="first_name" value="{{ tr.first_name if tr else '' }}">
+  <input name="last_name" value="{{ tr.last_name if tr else '' }}">
+  <input name="course_name" value="{{ tr.course_name if tr else '' }}">
   ...
   <button type="submit">บันทึก</button>
 </form>
