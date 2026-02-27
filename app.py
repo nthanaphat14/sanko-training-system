@@ -735,36 +735,57 @@ def trainings_import():
 
 # --- header map (row 1) ---
     def norm(s: str) -> str:
-        return safe_str(s).lower().replace(" ", "").replace("_", "").replace("-", "")
-
-    headers = [safe_str(ws.cell(1, c).value) for c in range(1, ws.max_column + 1)]
-    header_map = {norm(h): i + 1 for i, h in enumerate(headers)}
-
+        s = safe_str) -> str:
+        for ch in [" ", "\u00a0", ".", "-", "_", "(", ")", "[", "]", "/"]:
+            s = s.replace(ch, "")
+        return s
+        
     ALIASES = {
-        "year.": ["year.", "year", "ปี"],
         "month": ["month", "mon", "เดือน"],
-        "empid": ["empid", "emp id", "รหัสพนักงาน", "emp"],
-        "คำนำหน้า": ["คำนำหน้า", "prefix"],
-        "ชื่อ": ["ชื่อ", "firstname", "first name"],
-        "นามสกุล": ["นามสกุล", "lastname", "last name"],
-        "แผนก": ["แผนก", "section", "department"],
-        "ตำแหน่ง": ["ตำแหน่ง", "position"],
-        "รหัสหลักสูตร": ["รหัสหลักสูตร", "coursecode", "course code"],
-        "ชื่อหลักสูตร": ["ชื่อหลักสูตร", "coursename", "course name"],
-        "ประเภท": ["ประเภท", "category", "coursetype", "course type"],
-        "startdate": ["startdate", "start date", "วันที่เริ่ม"],
-        "enddate": ["enddate", "end date", "วันที่จบ"],
-        "ชั่วโมง": ["ชั่วโมง", "hours", "hour"],
-        "วิธีประเมิน": ["วิธีประเมิน", "evaluatemethod", "evaluate method"],
-        "ผล": ["ผล", "result"],
-        "คะแนน": ["คะแนน", "score"],
-        "ผู้ประเมิน": ["ผู้ประเมิน", "evaluator"],
-        "วันหมดอายุ": ["วันหมดอายุ", "expiredate", "expire date"],
-        "หมายเหตุ": ["หมายเหตุ", "remark", "note"],
+        "empid": ["empid", "emp id", "รหัสพนักงาน", "emp_code", "employeeid"],
+        "prefix": ["คำนำหน้า", "prefix", "title"],
+        "firstname": ["ชื่อ", "firstname", "first name", "name"],
+        "lastname": ["นามสกุล", "lastname", "last name", "surname", "familyname"],
+
+        # ถ้ามีคอลัมน์ชื่อแบบ Full Name แทน firstname/lastname
+        "fullname": ["ชื่อ-สกุล", "ชื่อสกุล", "fullname", "full name"],
+
+        "department": ["แผนก", "section", "department", "dept"],
+        "position": ["ตำแหน่ง", "position", "jobtitle"],
     }
 
-    def col(name: str):
-        k = norm(name)
+    def find_header_row(ws, scan_rows=10) -> int:
+        best_row = 1
+        best_score = -1
+
+    header_row = find_header_row(ws, scan_rows=10)
+
+    # สร้าง map: normalized_header -> column_index
+    headers = [norm(ws.cell(header_row, c).value) for c in range(1, ws.max_column + 1)]
+    header_map = {norm(h): i + 1 for i, h in enumerate(headers) if norm(h)}
+        
+        for r in range(header_row + 1, ws.max_row + 1):
+            emp_id = safe_str(cellv(r, "empid"))
+            if not emp_id:
+                continue
+
+            prefix = safe_str(cellv(r, "prefix"))
+
+            first_name = safe_str(cellv(r, "firstname"))
+            last_name  = safe_str(cellv(r, "lastname"))
+
+            # ถ้าไม่มี firstname/lastname แต่มี fullname ให้แยกเอง
+            full = safe_str(cellv(r, "fullname"))
+            if (not first_name and not last_name) and full:
+                parts = full.split()
+                if len(parts) >= 2:
+                    first_name = parts[0]
+                    last_name = " ".join(parts[1:])
+            else:
+                first_name = full
+
+    def col(key: str):
+        k = norm(key)
         if k in header_map:
             return header_map[k]
         for alt in ALIASES.get(k, []):
@@ -773,8 +794,8 @@ def trainings_import():
                 return header_map[kk]
         return None
 
-    def cellv(r, name):
-        idx = col(name)
+    def cellv(r, key):
+        idx = col(key)
         if not idx:
             return None
         return ws.cell(r, idx).value
