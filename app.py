@@ -368,6 +368,10 @@ def employee_delete(em_id):
     db.session.commit()
     flash("ลบข้อมูลเรียบร้อย", "success")
     return redirect(url_for("employees_list"))
+
+@app.route("/employees/import", methods=["GET", "POST"])
+def employees_import():
+    return "Import Employees Page"
     
 @app.route("/trainings/import", methods=["GET", "POST"])
 def trainings_import():
