@@ -734,9 +734,10 @@ def trainings_import():
     ws = wb["Record Training"] if "Record Training" in wb.sheetnames else wb.active
 
 # --- header map (row 1) ---
+    def norm(s: str) -> str:
+        s = safe_str(s).lower()
         for ch in [" ", "\u00a0", ".", "-", "_", "(", ")", "[", "]", "/"]:
             s = s.replace(ch, "")
-    def norm(s: str) -> str:
         return safe_str(s).lower().replace(" ", "").replace("\n", "").replace("\t", "")
         
     ALIASES = {
