@@ -738,7 +738,7 @@ def trainings_import():
         s = safe_str) -> str:
         for ch in [" ", "\u00a0", ".", "-", "_", "(", ")", "[", "]", "/"]:
             s = s.replace(ch, "")
-        return s
+        return safe_str(s).lower().replace(" ", "").replace("\n", "").replace("\t", "")
         
     ALIASES = {
         "month": ["month", "mon", "เดือน"],
