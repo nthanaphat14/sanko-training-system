@@ -764,25 +764,25 @@ def trainings_import():
     headers = [norm(ws.cell(header_row, c).value) for c in range(1, ws.max_column + 1)]
     header_map = {norm(h): i + 1 for i, h in enumerate(headers) if norm(h)}
         
-        for r in range(header_row + 1, ws.max_row + 1):
-            emp_id = safe_str(cellv(r, "empid"))
-            if not emp_id:
-                continue
+    for r in range(header_row + 1, ws.max_row + 1):
+        emp_id = safe_str(cellv(r, "empid"))
+        if not emp_id:
+            continue
 
-            prefix = safe_str(cellv(r, "prefix"))
+        prefix = safe_str(cellv(r, "prefix"))
 
-            first_name = safe_str(cellv(r, "firstname"))
-            last_name  = safe_str(cellv(r, "lastname"))
+        first_name = safe_str(cellv(r, "firstname"))
+        last_name  = safe_str(cellv(r, "lastname"))
 
-            # ถ้าไม่มี firstname/lastname แต่มี fullname ให้แยกเอง
-            full = safe_str(cellv(r, "fullname"))
-            if (not first_name and not last_name) and full:
-                parts = full.split()
-                if len(parts) >= 2:
-                    first_name = parts[0]
-                    last_name = " ".join(parts[1:])
-            else:
-                first_name = full
+        # ถ้าไม่มี firstname/lastname แต่มี fullname ให้แยกเอง
+        full = safe_str(cellv(r, "fullname"))
+        if (not first_name and not last_name) and full:
+            parts = full.split()
+            if len(parts) >= 2:
+                first_name = parts[0]
+                last_name = " ".join(parts[1:])
+        else:
+            first_name = full
 
     def col(key: str):
         k = norm(key)
