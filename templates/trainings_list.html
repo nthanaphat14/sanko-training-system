@@ -59,7 +59,6 @@
         <th>Remark</th>
         
         <th>Actions</th>
-        
       </tr>
     </thead>
 
@@ -89,11 +88,16 @@
             <td>{{ t.expire_date or "" }}</td>
             <td>{{ t.remark or "" }}</td>
 
-            <!-- ✅ คอลัมน์ปุ่มจัดการ -->
             <td style="white-space:nowrap;">
               <a class="btn ghost" href="{{ url_for('trainings_edit', tr_id=t.id) }}">แก้ไข</a>
-              <form method="post" action="{{ url_for('trainings_delete', tr_id=t.id) }}" style="display:inline;">
-                <button class="btn danger" type="submit" onclick="return confirm('ลบรายการนี้?')">ลบ</button>
+
+              <form method="post"
+                    action="{{ url_for('trainings_delete', tr_id=t.id) }}"
+                    style="display:inline;">
+                <button class="btn danger" type="submit"
+                        onclick="return confirm('ลบรายการนี้?')">
+                  ลบ
+                </button>
               </form>
             </td>
           </tr>
