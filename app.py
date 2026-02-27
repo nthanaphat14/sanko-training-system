@@ -732,10 +732,10 @@ def trainings_edit(tr_id):
 
         tr.emp_id = safe_str(request.form.get("emp_id"))
         tr.prefix = safe_str(request.form.get("prefix"))
-        tr.frist_name = safe_str(request.form.get("frist_name"))
+        tr.first_name = safe_str(request.form.get("first_name"))
         tr.last_name = safe_str(request.form.get("last_name"))
 
-        tr.section = safe_str(request.form.get("section"))   
+        tr.section = safe_str(request.form.get("section"))
         tr.position = safe_str(request.form.get("position"))
 
         tr.course_code = safe_str(request.form.get("course_code"))
@@ -755,10 +755,10 @@ def trainings_edit(tr_id):
         tr.remark = safe_str(request.form.get("remark"))
 
         db.session.commit()
-        flash("แก้ไข Training Record แล้ว", "success")
+        flash("แก้ไข Training Record เรียบร้อย", "success")
         return redirect(url_for("trainings_list"))
 
-    return render_template("trainings_new.html", tr=tr, mode="edit")
+    return render_template("trainings_form.html", tr=tr, mode="edit")
 
 
 @app.route("/trainings/import", methods=["GET", "POST"])
