@@ -31,6 +31,9 @@ db_url = (os.environ.get("DATABASE_URL") or "").strip()
 if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
 
+if os.environ.get("RENDER") == "true" and not db_url:
+    raise RuntimeError("DATABASE_URL is missing on Render. Please set Postgres DATABASE_URL.")
+
 app.config["SQLALCHEMY_DATABASE_URI"] = db_url or "sqlite:///employee.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
@@ -719,6 +722,45 @@ def trainings_list():
     total = query.count()
 
     return render_template("trainings_list.html", rows=rows, total=total, q=q, year=year, month=month)
+
+@app.route("/trainings/<int:tr_id>/edit", methods=["GET", "POST"])
+def trainings_edit(tr_id):
+    tr = TrainingRecord.query.get_or_404(tr_id)
+
+    if request.method == "POST":
+        tr.year = safe_int(request.form.get("year"))
+        tr.month = safe_month(request.form.get("month"))
+
+    tr.emp_id = safe_str(request.form.get("emp_id"))
+        tr.prefix = safe_str(request.form.get("prefix"))
+        tr.frist_name = safe_str(request.form.get("frist_name"))
+        tr.last_name = safe_str(request.form.get("last_name"))
+
+        tr.section = safe_str(request.form.get("section"))   
+        tr.position = safe_str(request.form.get("position"))
+
+        tr.course_code = safe_str(request.form.get("course_code"))
+        tr.course_name = safe_str(request.form.get("course_name"))
+        tr.course_type = safe_str(request.form.get("course_type"))
+
+        tr.start_date = safe_date(request.form.get("start_date"))
+        tr.end_date = safe_date(request.form.get("end_date"))
+        tr.hours = safe_float(request.form.get("hours"))
+
+        tr.evaluate_method = safe_str(request.form.get("evaluate_method"))
+        tr.result = safe_str(request.form.get("result"))
+        tr.score = safe_float(request.form.get("score"))
+        tr.evaluator = safe_str(request.form.get("evaluator"))
+
+        tr.expire_date = safe_date(request.form.get("expire_date"))
+        tr.remark = safe_str(request.form.get("remark"))
+
+        db.session.commit()
+        flash("แก้ไข Training Record แล้ว", "success")
+        return redirect(url_for("trainings_list"))
+
+    return render_template("trainings_new.html", tr=tr, mode="edit")
+
 
 @app.route("/trainings/import", methods=["GET", "POST"])
 def trainings_import():
