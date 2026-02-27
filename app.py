@@ -34,6 +34,8 @@ if db_url.startswith("postgres://"):
 app.config["SQLALCHEMY_DATABASE_URI"] = db_url or "sqlite:///employee.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
+print("DATABASE =", app.config["SQLALCHEMY_DATABASE_URI"])  # 👈 ใส่ตรงนี้
+
 db = SQLAlchemy(app)
 
 
