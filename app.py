@@ -974,7 +974,7 @@ def trainings_new():
 @app.route("/trainings/new", methods=["GET", "POST"])
 def trainings_new():
     if request.method == "GET":
-        return render_template("training_new.html")
+        return render_template("trainings_new.html", tr=None, mode="new")
 
     tr = TrainingRecord(
         emp_id=safe_str(request.form.get("emp_id")),
