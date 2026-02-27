@@ -968,37 +968,6 @@ def trainings_new():
     flash("บันทึก Training Record แล้ว", "success")
     return redirect(url_for("trainings_list"))
 
-@app.route("/trainings/<int:tr_id>/edit", methods=["GET", "POST"])
-def trainings_edit(tr_id):
-    tr = TrainingRecord.query.get_or_404(tr_id)
-
-    if request.method == "POST":
-        tr.emp_id = safe_str(request.form.get("emp_id"))
-        tr.full_name = safe_str(request.form.get("full_name"))
-        tr.last_name = safe_str(request.form.get("last_name"))
-        tr.department = safe_str(request.form.get("department"))
-        tr.position = safe_str(request.form.get("position"))
-        tr.course_code = safe_str(request.form.get("course_code"))
-        tr.course_name = safe_str(request.form.get("course_name"))
-        tr.course_type = safe_str(request.form.get("course_type"))
-        tr.start_date = safe_date(request.form.get("start_date"))
-        tr.end_date = safe_date(request.form.get("end_date"))
-        tr.hours = safe_float(request.form.get("hours"))
-        tr.evaluate_method = safe_str(request.form.get("evaluate_method"))
-        tr.result = safe_str(request.form.get("result"))
-        tr.score = safe_float(request.form.get("score"))
-        tr.evaluator = safe_str(request.form.get("evaluator"))
-        tr.expire_date = safe_date(request.form.get("expire_date"))
-        tr.remark = safe_str(request.form.get("remark"))
-        tr.year = safe_int(request.form.get("year"))
-        tr.month = safe_month(request.form.get("month"))
-
-        db.session.commit()
-        flash("แก้ไข Training Record แล้ว", "success")
-        return redirect(url_for("trainings_list"))
-
-    return render_template("training_edit.html", tr=tr)
-
 @app.route("/trainings/<int:tr_id>/delete", methods=["POST"])
 def trainings_delete(tr_id):
     tr = TrainingRecord.query.get_or_404(tr_id)
