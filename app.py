@@ -99,10 +99,10 @@ class TrainingRecord(db.Model):
     emp_id = db.Column(db.String(50), nullable=False, index=True)  # Emp ID
 
     prefix = db.Column(db.String(50), nullable=True)
-    full_name = db.Column(db.String(200), nullable=True)
+    first_name = db.Column(db.String(200), nullable=True)
     last_name = db.Column(db.String(200), nullable=True)
     
-    department = db.Column(db.String(150), nullable=True)    # แผนก
+    section = db.Column(db.String(150), nullable=True)    # แผนก
     position = db.Column(db.String(150), nullable=True)      # ตำแหน่ง
 
     course_code = db.Column(db.String(100), nullable=True)   # รหัสหลักสูตร
@@ -866,9 +866,9 @@ def trainings_import():
         month= safe_month(cellv(r, "Month")),
         emp_id=emp_id,
         prefix=prefix,
-        full_name=first,     # <-- ชื่อ
+        first_name=first,     # <-- ชื่อ
         last_name=last,      # <-- นามสกุล
-        department=section,  # <-- เก็บ section ลง field เดิมก่อน
+        section=section,  # <-- เก็บ section ลง field เดิมก่อน
         position=position,
         course_code=course_code,
         course_name=course_name,
@@ -906,9 +906,9 @@ def trainings_new():
         month=safe_int(request.form.get("month")),
         emp_id=emp_id,
         prefix=safe_str(request.form.get("prefix")),
-        full_name=safe_str(request.form.get("full_name")),
+        first_name=safe_str(request.form.get("first_name")),
         last_name=safe_str(request.form.get("last_name")),
-        department=safe_str(request.form.get("department")),
+        section=safe_str(request.form.get("section")),
         position=safe_str(request.form.get("position")),
         course_code=safe_str(request.form.get("course_code")),
         course_name=safe_str(request.form.get("course_name")),
