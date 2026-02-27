@@ -968,37 +968,6 @@ def trainings_new():
     flash("บันทึก Training Record แล้ว", "success")
     return redirect(url_for("trainings_list"))
 
-@app.route("/trainings/new", methods=["GET", "POST"])
-def trainings_new():
-    if request.method == "GET":
-        return render_template("trainings_new.html", tr=None, mode="new")
-
-    tr = TrainingRecord(
-        emp_id=safe_str(request.form.get("emp_id")),
-        full_name=safe_str(request.form.get("full_name")),
-        last_name=safe_str(request.form.get("last_name")),
-        department=safe_str(request.form.get("department")),
-        position=safe_str(request.form.get("position")),
-        course_code=safe_str(request.form.get("course_code")),
-        course_name=safe_str(request.form.get("course_name")),
-        course_type=safe_str(request.form.get("course_type")),
-        start_date=safe_date(request.form.get("start_date")),
-        end_date=safe_date(request.form.get("end_date")),
-        hours=safe_float(request.form.get("hours")),
-        evaluate_method=safe_str(request.form.get("evaluate_method")),
-        result=safe_str(request.form.get("result")),
-        score=safe_float(request.form.get("score")),
-        evaluator=safe_str(request.form.get("evaluator")),
-        expire_date=safe_date(request.form.get("expire_date")),
-        remark=safe_str(request.form.get("remark")),
-        year=safe_int(request.form.get("year")),
-        month=safe_month(request.form.get("month")),
-    )
-    db.session.add(tr)
-    db.session.commit()
-    flash("เพิ่ม Training Record แล้ว", "success")
-    return redirect(url_for("trainings_list"))
-
 @app.route("/trainings/<int:tr_id>/edit", methods=["GET", "POST"])
 def trainings_edit(tr_id):
     tr = TrainingRecord.query.get_or_404(tr_id)
