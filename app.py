@@ -735,10 +735,10 @@ def trainings_import():
 
 # --- header map (row 1) ---
     def norm(s: str) -> str:
+        return safe_str(s).lower().replace(" ", "").replace("\n", "").replace("\t", "")
         s = safe_str) -> str:
         for ch in [" ", "\u00a0", ".", "-", "_", "(", ")", "[", "]", "/"]:
             s = s.replace(ch, "")
-        return safe_str(s).lower().replace(" ", "").replace("\n", "").replace("\t", "")
         
     ALIASES = {
         "month": ["month", "mon", "เดือน"],
