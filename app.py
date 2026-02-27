@@ -371,7 +371,65 @@ def employee_delete(em_id):
 
 @app.route("/employees/import", methods=["GET", "POST"])
 def employees_import():
-    return "Import Employees Page"
+    if request.method == "GET":
+        return render_template("employees_import.html")
+
+    f = request.files.get("file")
+    if not f or f.filename == "":
+        flash("กรุณาเลือกไฟล์ Excel", "error")
+        return redirect(url_for("employees_import"))
+
+    try:
+        wb = load_workbook(f, data_only=True)
+        ws = wb.active
+
+        # สมมติ header อยู่แถว 1 และข้อมูลเริ่มแถว 2
+        # ปรับ column ตามไฟล์จริงของคุณได้
+        # ตัวอย่าง: em_id, first_name_th, last_name_th, position, department, status
+        inserted = 0
+        updated = 0
+
+        for r in ws.iter_rows(min_row=2, values_only=True):
+            em_id = safe_str(r[0])
+            first_name_th = safe_str(r[1])
+            last_name_th = safe_str(r[2])
+            position = safe_str(r[3])
+            department = safe_str(r[4])
+            status = normalize_status(r[5])
+
+            if not em_id:
+                continue
+
+            emp = Employee.query.filter_by(em_id=em_id).first()
+            if emp:
+                # อัปเดตข้อมูลเดิม
+                emp.first_name_th = first_name_th or emp.first_name_th
+                emp.last_name_th = last_name_th or emp.last_name_th
+                emp.position = position or emp.position
+                emp.department = department or emp.department
+                emp.status = status or emp.status
+                updated += 1
+            else:
+                # เพิ่มใหม่
+                emp = Employee(
+                    em_id=em_id,
+                    first_name_th=first_name_th,
+                    last_name_th=last_name_th,
+                    position=position,
+                    department=department,
+                    status=status,
+                )
+                db.session.add(emp)
+                inserted += 1
+
+        db.session.commit()
+        flash(f"Import สำเร็จ: เพิ่มใหม่ {inserted} | อัปเดต {updated}", "success")
+        return redirect(url_for("employees_list"))
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Import ไม่สำเร็จ: {e}", "error")
+        return redirect(url_for("employees_import"))
     
 @app.route("/trainings/import", methods=["GET", "POST"])
 def trainings_import():
