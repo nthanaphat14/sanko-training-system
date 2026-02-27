@@ -365,6 +365,7 @@ def employee_delete(em_id):
     db.session.commit()
     flash("ลบข้อมูลเรียบร้อย", "success")
     return redirect(url_for("employees_list"))
+    
 @app.route("/trainings/import", methods=["GET", "POST"])
 def trainings_import():
     if request.method == "GET":
@@ -388,9 +389,9 @@ def trainings_import():
         ALIASES = {
             "emp_id": ["emp id", "empid", "รหัสพนักงาน", "รหัส"],
             "prefix": ["คำนำหน้า", "prefix"],
-            "full_name": ["ชื่อ", "first name", "firstname", "full name", "ชื่อสกุล", "ชื่อ-สกุล"],
+            "frist_name": ["ชื่อ", "first name", "firstname", "first name", "ชื่อสกุล", "ชื่อ-สกุล"],
             "last_name": ["นามสกุล", "last name", "lastname"],
-            "department": ["แผนก", "section", "department"],
+            "section ": ["แผนก", "section", "department"],
             "position": ["ตำแหน่ง", "position"],
             "course_code": ["รหัสหลักสูตร", "course code"],
             "course_name": ["ชื่อหลักสูตร", "course name"],
@@ -455,11 +456,11 @@ def trainings_import():
             prefix = safe_str(cellv(r, "prefix"))
 
             # ชื่อ / นามสกุล
-            full_name = safe_str(cellv(r, "full_name"))
+            frist_name = safe_str(cellv(r, "frist_name"))
             last_name = safe_str(cellv(r, "last_name"))
 
             # แผนก/ตำแหน่ง
-            department = safe_str(cellv(r, "department"))
+            section = safe_str(cellv(r, "section"))
             position = safe_str(cellv(r, "position"))
 
             course_code = safe_str(cellv(r, "course_code"))
@@ -497,9 +498,9 @@ def trainings_import():
                 month=month,
                 emp_id=emp_id,
                 prefix=prefix,
-                full_name=full_name,
+                first_name=first_name,
                 last_name=last_name,
-                department=department,
+                section=section,
                 position=position,
                 course_code=course_code,
                 course_name=course_name,
@@ -813,178 +814,6 @@ def trainings_edit(tr_id):
         return redirect(url_for("trainings_list"))
 
     return render_template("trainings_form.html", tr=tr, mode="edit")
-
-
-@app.route("/trainings/import", methods=["GET", "POST"])
-def trainings_import():
-    if request.method == "GET":
-        return render_template("training_import.html")
-
-    f = request.files.get("file")
-    if not f or f.filename == "":
-        flash("กรุณาเลือกไฟล์ Excel", "error")
-        return redirect(url_for("trainings_import"))
-
-    wb = load_workbook(f, data_only=True)
-    ws = wb["Record Training"] if "Record Training" in wb.sheetnames else wb.active
-
-# --- header map (row 1) ---
-    # --- header map (row = header_row) ---
-    def norm(s: str) -> str:
-        s = safe_str(s).strip().lower()
-        for ch in ["\u00a0", ".", "-", "_", "/", "(", ")", "[", "]"]:
-            s = s.replace(ch, " ")
-        s = " ".join(s.split())
-        return s
-
-    ALIASES = {
-        "empid": ["empid", "emp id", "รหัสพนักงาน", "รหัส"],
-        "prefix": ["คำนำหน้า", "prefix"],
-        "firstname": ["ชื่อ", "first name", "firstname"],
-        "lastname": ["นามสกุล", "last name", "lastname"],
-        "fullname": ["ชื่อสกุล", "ชื่อ-สกุล", "full name", "fullname"],
-        "month": ["เดือน", "month", "mon"],
-        "year": ["ปี", "year"],
-    }
-
-    def find_header_row(ws, scan_rows=10) -> int:
-        best_row = 1
-        best_score = -1
-        max_r = min(scan_rows, ws.max_row or 1)
-        for r in range(1, max_r + 1):
-            vals = [norm(ws.cell(r, c).value) for c in range(1, (ws.max_column or 1) + 1)]
-            score = 0
-            for k in ["empid", "firstname", "lastname", "fullname"]:
-                for alt in ALIASES.get(k, []):
-                    if norm(alt) in vals:
-                        score += 1
-                        break
-            if score > best_score:
-                best_score = score
-                best_row = r
-        return best_row
-
-    header_row = find_header_row(ws, scan_rows=10)
-    if not header_row:
-        header_row = 1  # กันพลาด
-
-    headers = [norm(ws.cell(header_row, c).value) for c in range(1, (ws.max_column or 1) + 1)]
-    header_map = {h: i + 1 for i, h in enumerate(headers) if h}
-
-    def col(key: str):
-        k = norm(key)
-        if k in header_map:
-            return header_map[k]
-        for alt in ALIASES.get(k, []):
-            kk = norm(alt)
-            if kk in header_map:
-                return header_map[kk]
-        return None
-
-    def cellv(r, key: str):
-        idx = col(key)
-        if not idx:
-            return None
-        return ws.cell(r, idx).value
-
-    added = 0
-    skipped = 0
-
-    for r in range(header_row + 1, (ws.max_row or 1) + 1):
-        emp_id = safe_str(cellv(r, "empid"))
-        if not emp_id:
-            skipped += 1
-            continue
-
-        prefix = safe_str(cellv(r, "prefix"))
-        first_name = safe_str(cellv(r, "firstname"))
-        last_name = safe_str(cellv(r, "lastname"))
-
-        # ถ้าไม่มี firstname/lastname แต่มี fullname ให้แยกชื่อ
-        full = safe_str(cellv(r, "fullname"))
-        if (not first_name and not last_name) and full:
-            parts = full.split()
-            if len(parts) >= 2:
-                first_name = parts[0]
-                last_name = " ".join(parts[1:])
-            else:
-                first_name = full
-
-        # TODO: ตรงนี้ค่อยสร้าง TrainingRecord แล้ว add/commit ตามเดิมของคุณ
-
-    def col(key: str):
-        k = norm(key)
-        if k in header_map:
-            return header_map[k]
-        for alt in ALIASES.get(k, []):
-            kk = norm(alt)
-            if kk in header_map:
-                return header_map[kk]
-        return None
-
-    def cellv(r, key):
-        idx = col(key)
-        if not idx:
-            return None
-        return ws.cell(r, idx).value
-
-    added = 0
-    skipped = 0
-
-    for r in range(2, ws.max_row + 1):
-        emp_id   = safe_str(cellv(r, "Emp ID"))
-        prefix   = safe_str(cellv(r, "คำนำหน้า"))
-        first    = safe_str(cellv(r, "ชื่อ"))
-        last     = safe_str(cellv(r, "นามสกุล"))
-
-        # แผนกใน Excel = Section (เชื่อมในเว็บ)
-        section  = safe_str(cellv(r, "แผนก"))
-
-        position = safe_str(cellv(r, "ตำแหน่ง"))
-        course_code = safe_str(cellv(r, "รหัสหลักสูตร"))
-        course_name = safe_str(cellv(r, "ชื่อหลักสูตร"))
-        course_type = safe_str(cellv(r, "ประเภท"))
-
-        start_date = safe_date(cellv(r, "StartDate"))
-        end_date   = safe_date(cellv(r, "EndDate"))
-        hours      = safe_float(cellv(r, "ชั่วโมง"))
-
-        evaluate_method = safe_str(cellv(r, "วิธีประเมิน"))
-        result          = safe_str(cellv(r, "ผล"))
-        score           = safe_float(cellv(r, "คะแนน"))
-        evaluator       = safe_str(cellv(r, "ผู้ประเมิน"))
-        expire_date     = safe_date(cellv(r, "วันหมดอายุ"))
-        remark          = safe_str(cellv(r, "หมายเหตุ"))
-
-    tr = TrainingRecord(
-        year= safe_int(cellv(r, "Year.")) ,
-        month= safe_month(cellv(r, "Month")),
-        emp_id=emp_id,
-        prefix=prefix,
-        first_name=first,     # <-- ชื่อ
-        last_name=last,      # <-- นามสกุล
-        section=section,  # <-- เก็บ section ลง field เดิมก่อน
-        position=position,
-        course_code=course_code,
-        course_name=course_name,
-        course_type=course_type,
-        start_date=start_date,
-        end_date=end_date,
-        hours=hours,
-        evaluate_method=evaluate_method,
-        result=result,
-        score=score,
-        evaluator=evaluator,
-        expire_date=expire_date,
-        remark=remark,
-    )
-            
-    db.session.add(tr)
-    added += 1
-
-    db.session.commit()
-    flash(f"Import สำเร็จ: {added} รายการ, ข้าม {skipped} รายการ", "success")
-    return redirect(url_for("trainings_list"))
 
 @app.route("/trainings/new", methods=["GET", "POST"])
 def trainings_new():
