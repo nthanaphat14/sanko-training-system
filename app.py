@@ -365,113 +365,167 @@ def employee_delete(em_id):
     db.session.commit()
     flash("ลบข้อมูลเรียบร้อย", "success")
     return redirect(url_for("employees_list"))
-
-@app.route("/employees/import", methods=["GET", "POST"])
-def employees_import():
+@app.route("/trainings/import", methods=["GET", "POST"])
+def trainings_import():
     if request.method == "GET":
-        return render_template("import.html")
+        return render_template("training_import.html")
 
     f = request.files.get("file")
     if not f or f.filename == "":
-        flash("กรุณาเลือกไฟล์ Excel (.xlsx) ก่อน", "error")
-        return redirect(url_for("employees_import"))
+        flash("กรุณาเลือกไฟล์ Excel", "error")
+        return redirect(url_for("trainings_import"))
 
-    if not f.filename.lower().endswith(".xlsx"):
-        flash("รองรับเฉพาะไฟล์ .xlsx เท่านั้น", "error")
-        return redirect(url_for("employees_import"))
+    try:
+        wb = load_workbook(f, data_only=True)
+        ws = wb["Record Training"] if "Record Training" in wb.sheetnames else wb.active
 
-    wb = load_workbook(f, data_only=True)
-    ws = wb.active
+        def norm(x):
+            s = safe_str(x).strip().lower()
+            for ch in ["\u00a0", ".", "-", "_", "/", "(", ")", "[", "]"]:
+                s = s.replace(ch, " ")
+            return " ".join(s.split())
 
-    added = 0
-    updated = 0
-    skipped = 0
+        ALIASES = {
+            "emp_id": ["emp id", "empid", "รหัสพนักงาน", "รหัส"],
+            "prefix": ["คำนำหน้า", "prefix"],
+            "full_name": ["ชื่อ", "first name", "firstname", "full name", "ชื่อสกุล", "ชื่อ-สกุล"],
+            "last_name": ["นามสกุล", "last name", "lastname"],
+            "department": ["แผนก", "section", "department"],
+            "position": ["ตำแหน่ง", "position"],
+            "course_code": ["รหัสหลักสูตร", "course code"],
+            "course_name": ["ชื่อหลักสูตร", "course name"],
+            "course_type": ["ประเภท", "category", "type", "course type"],
 
-    for row in ws.iter_rows(min_row=2, values_only=True):
-        if not row:
-            skipped += 1
-            continue
+            "start_date": ["startdate", "start date", "วันที่เริ่ม", "เริ่ม"],
+            "end_date": ["enddate", "end date", "วันที่จบ", "จบ"],
+            "hours": ["ชั่วโมง", "hours", "hour"],
 
-        no_raw = row[0] if len(row) > 0 else None
-        em_id_raw = row[1] if len(row) > 1 else None
-        if not em_id_raw:
-            skipped += 1
-            continue
+            "evaluate_method": ["วิธีประเมิน", "evaluate method"],
+            "result": ["ผล", "result"],
+            "score": ["คะแนน", "score"],
+            "evaluator": ["ผู้ประเมิน", "evaluator"],
+            "expire_date": ["วันหมดอายุ", "expire date"],
+            "remark": ["หมายเหตุ", "remark"],
 
-        em_id = str(em_id_raw).strip()
+            "year": ["year", "ปี", "year."],
+            "month": ["month", "เดือน", "mon"],
+        }
 
-        emp = Employee.query.filter_by(em_id=em_id).first()
-        is_new = emp is None
-        if is_new:
-            emp = Employee(em_id=em_id)
+        def find_header_row(scan_rows=10):
+            best_row, best_score = 1, -1
+            max_r = min(scan_rows, ws.max_row or 1)
+            max_c = ws.max_column or 1
+            for r in range(1, max_r + 1):
+                vals = [norm(ws.cell(r, c).value) for c in range(1, max_c + 1)]
+                score = 0
+                for must in ["emp_id", "full_name", "course_name", "start_date"]:
+                    if any(norm(a) in vals for a in ALIASES[must]):
+                        score += 1
+                if score > best_score:
+                    best_score, best_row = score, r
+            return best_row
 
-        # No
-        try:
-            if no_raw is not None and str(no_raw).strip() != "":
-                emp.no = int(float(no_raw))
-        except:
-            pass
+        header_row = find_header_row()
+        max_c = ws.max_column or 1
 
-        # ID Card
-        if len(row) > 2 and row[2]:
-            emp.id_card = str(row[2]).strip()
+        headers = [norm(ws.cell(header_row, c).value) for c in range(1, max_c + 1)]
+        header_map = {h: i + 1 for i, h in enumerate(headers) if h}
 
-        # TH
-        if len(row) > 3 and row[3]:
-            emp.title_th = str(row[3]).strip()
-        if len(row) > 4 and row[4]:
-            emp.first_name_th = str(row[4]).strip()
-        if len(row) > 5 and row[5]:
-            emp.last_name_th = str(row[5]).strip()
+        def col(key):
+            for alt in ALIASES.get(key, []):
+                k = norm(alt)
+                if k in header_map:
+                    return header_map[k]
+            return None
 
-        # EN full name -> split
-        if len(row) > 6 and row[6]:
-            name_en = str(row[6]).strip()
-            parts = [p for p in name_en.split(" ") if p]
-            if len(parts) >= 2:
-                emp.first_name_en = " ".join(parts[:-1])
-                emp.last_name_en = parts[-1]
-            else:
-                emp.first_name_en = name_en
+        def cellv(r, key):
+            idx = col(key)
+            if not idx:
+                return None
+            return ws.cell(r, idx).value
 
-        # Position / Section / Department
-        if len(row) > 7 and row[7]:
-            emp.position = str(row[7]).strip()
-        if len(row) > 8 and row[8]:
-            emp.section = str(row[8]).strip()
-        if len(row) > 9 and row[9]:
-            emp.department = str(row[9]).strip()
+        added, skipped, duplicated = 0, 0, 0
 
-        # Start work / Resign (แปลงเป็น Date ให้เข้ากับ model)
-        if len(row) > 10 and row[10]:
-            if isinstance(row[10], datetime):
-                emp.start_work = row[10].date()
-            else:
-                emp.start_work = safe_date(str(row[10]).strip()) or emp.start_work
+        for r in range(header_row + 1, (ws.max_row or 1) + 1):
+            emp_id = safe_str(cellv(r, "emp_id"))
+            if not emp_id:
+                skipped += 1
+                continue
 
-        if len(row) > 11 and row[11]:
-            if isinstance(row[11], datetime):
-                emp.resign = row[11].date()
-            else:
-                emp.resign = safe_date(str(row[11]).strip()) or emp.resign
+            prefix = safe_str(cellv(r, "prefix"))
 
-        # Status / Degree / Major
-        if len(row) > 12 and row[12]:
-            emp.status = str(row[12]).strip()
-        if len(row) > 13 and row[13]:
-            emp.degree = str(row[13]).strip()
-        if len(row) > 14 and row[14]:
-            emp.major = str(row[14]).strip()
+            # ชื่อ / นามสกุล
+            full_name = safe_str(cellv(r, "full_name"))
+            last_name = safe_str(cellv(r, "last_name"))
 
-        if is_new:
-            db.session.add(emp)
+            # แผนก/ตำแหน่ง
+            department = safe_str(cellv(r, "department"))
+            position = safe_str(cellv(r, "position"))
+
+            course_code = safe_str(cellv(r, "course_code"))
+            course_name = safe_str(cellv(r, "course_name"))
+            course_type = safe_str(cellv(r, "course_type"))
+
+            start_date = safe_date(cellv(r, "start_date"))
+            end_date = safe_date(cellv(r, "end_date"))
+            hours = safe_float(cellv(r, "hours"))
+
+            evaluate_method = safe_str(cellv(r, "evaluate_method"))
+            result = safe_str(cellv(r, "result"))
+            score = safe_float(cellv(r, "score"))
+            evaluator = safe_str(cellv(r, "evaluator"))
+            expire_date = safe_date(cellv(r, "expire_date"))
+            remark = safe_str(cellv(r, "remark"))
+
+            year = safe_int(cellv(r, "year"))
+            month = safe_month(cellv(r, "month"))
+
+            # ✅ เงื่อนไขซ้ำ: emp_id + start_date เหมือนกัน = ซ้ำ
+            if start_date:
+                exists = (
+                    TrainingRecord.query
+                    .filter(TrainingRecord.emp_id == emp_id)
+                    .filter(TrainingRecord.start_date == start_date)
+                    .first()
+                )
+                if exists:
+                    duplicated += 1
+                    continue
+
+            tr = TrainingRecord(
+                year=year,
+                month=month,
+                emp_id=emp_id,
+                prefix=prefix,
+                full_name=full_name,
+                last_name=last_name,
+                department=department,
+                position=position,
+                course_code=course_code,
+                course_name=course_name,
+                course_type=course_type,
+                start_date=start_date,
+                end_date=end_date,
+                hours=hours,
+                evaluate_method=evaluate_method,
+                result=result,
+                score=score,
+                evaluator=evaluator,
+                expire_date=expire_date,
+                remark=remark,
+            )
+
+            db.session.add(tr)
             added += 1
-        else:
-            updated += 1
 
-    db.session.commit()
-    flash(f"Import สำเร็จ: เพิ่มใหม่ {added} | อัปเดต {updated} | ข้าม {skipped}", "success")
-    return redirect(url_for("employees_list"))
+        db.session.commit()
+        flash(f"Import สำเร็จ: เพิ่ม {added} | ซ้ำ {duplicated} | ข้าม {skipped}", "success")
+        return redirect(url_for("trainings_list"))
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Import ไม่สำเร็จ: {e}", "error")
+        return redirect(url_for("trainings_import"))
 
 @app.get("/employees/export")
 def employees_export():
