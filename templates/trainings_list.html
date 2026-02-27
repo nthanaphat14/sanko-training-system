@@ -64,53 +64,47 @@
     </thead>
 
     <tbody>
-    {% if rows and rows|length > 0 %}
-      {% for t in rows %}
-      <tr>
-        <td>{{ loop.index }}</td>
-        <td>{{ t.year or "" }}</td>
-        <td>{{ t.month or "" }}</td>
-        <td>{{ t.emp_id or "" }}</td>
-        <td>{{ t.prefix or "" }}</td>
-        <td>{{ t.first_name or "" }}</td>
-        <td>{{ t.last_name or "" }}</td>
-        <td>{{ t.section or "" }}</td>
-        <td>{{ t.position or "" }}</td>
-        <td>{{ t.course_code or "" }}</td>
-        <td>{{ t.course_name or "" }}</td>
-        <td>{{ t.category or "" }}</td>
-        <td>{{ t.start_date or "" }}</td>
-        <td>{{ t.end_date or "" }}</td>
-        <td>{{ t.hours or "" }}</td>
-        <td>{{ t.eval_method or "" }}</td>
-        <td>{{ t.result or "" }}</td>
-        <td>{{ t.score or "" }}</td>
-        <td>{{ t.evaluator or "" }}</td>
-        <td>{{ t.expire_date or "" }}</td>
-        <td>{{ t.remark or "" }}</td>
-      </tr>
-      {% endfor %}
-    {% else %}
-      <tr>
-        <td colspan="21" class="muted" style="padding:18px;">
-          ยังไม่มีข้อมูล Training Record (ลอง Import ก่อน)
-        </td>
-      </tr>
-        <td>{{ r.emp_id }}</td>
-        <td>{{ r.first_name }}</td>
-        <td>{{ r.course_name }}</td>
-        <td>{{ r.start_date }}</td>
+      {% if rows and rows|length > 0 %}
+        {% for t in rows %}
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td>{{ t.year or "" }}</td>
+            <td>{{ t.month or "" }}</td>
+            <td>{{ t.emp_id or "" }}</td>
+            <td>{{ t.prefix or "" }}</td>
+            <td>{{ t.full_name or "" }}</td>
+            <td>{{ t.last_name or "" }}</td>
+            <td>{{ t.department or "" }}</td>
+            <td>{{ t.position or "" }}</td>
+            <td>{{ t.course_code or "" }}</td>
+            <td>{{ t.course_name or "" }}</td>
+            <td>{{ t.course_type or "" }}</td>
+            <td>{{ t.start_date or "" }}</td>
+            <td>{{ t.end_date or "" }}</td>
+            <td>{{ t.hours or "" }}</td>
+            <td>{{ t.evaluate_method or "" }}</td>
+            <td>{{ t.result or "" }}</td>
+            <td>{{ t.score or "" }}</td>
+            <td>{{ t.evaluator or "" }}</td>
+            <td>{{ t.expire_date or "" }}</td>
+            <td>{{ t.remark or "" }}</td>
 
-        <!-- เพิ่มตรงนี้ -->
-        <td>
-          <a href="{{ url_for('trainings_edit', tr_id=r.id) }}">
-            แก้ไข
-          </a>
-         </td>
-
-      </tr>
-      {% endfor %}
-      
+            <!-- ✅ คอลัมน์ปุ่มจัดการ -->
+            <td style="white-space:nowrap;">
+              <a class="btn ghost" href="{{ url_for('trainings_edit', tr_id=t.id) }}">แก้ไข</a>
+              <form method="post" action="{{ url_for('trainings_delete', tr_id=t.id) }}" style="display:inline;">
+                <button class="btn danger" type="submit" onclick="return confirm('ลบรายการนี้?')">ลบ</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+      {% else %}
+        <tr>
+          <td colspan="22" class="muted" style="padding:18px;">
+            ยังไม่มีข้อมูล Training Record (ลอง Import ก่อน)
+          </td>
+        </tr>
+      {% endif %}
     </tbody>
   </table>
 </div>
