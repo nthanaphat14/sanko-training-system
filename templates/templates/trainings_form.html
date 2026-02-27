@@ -1,0 +1,67 @@
+<form method="post"
+      action="{% if mode == 'edit' %}{{ url_for('trainings_edit', tr_id=tr.id) }}{% else %}{{ url_for('trainings_new') }}{% endif %}">
+
+  <label>Year</label>
+  <input name="year" value="{{ tr.year if tr else '' }}">
+
+  <label>Month</label>
+  <input name="month" value="{{ tr.month if tr else '' }}">
+
+  <label>Emp ID</label>
+  <input name="emp_id" value="{{ tr.emp_id if tr else '' }}" required>
+
+  <label>Prefix</label>
+  <input name="prefix" value="{{ tr.prefix if tr else '' }}">
+
+  <label>Full Name</label>
+  <input name="full_name" value="{{ tr.full_name if tr else '' }}">
+
+  <label>Last Name</label>
+  <input name="last_name" value="{{ tr.last_name if tr else '' }}">
+
+  <label>Department</label>
+  <input name="department" value="{{ tr.department if tr else '' }}">
+
+  <label>Position</label>
+  <input name="position" value="{{ tr.position if tr else '' }}">
+
+  <label>Course Code</label>
+  <input name="course_code" value="{{ tr.course_code if tr else '' }}">
+
+  <label>Course Name</label>
+  <input name="course_name" value="{{ tr.course_name if tr else '' }}">
+
+  <label>Course Type</label>
+  <input name="course_type" value="{{ tr.course_type if tr else '' }}">
+
+  <label>Start Date (YYYY-MM-DD)</label>
+  <input name="start_date" value="{{ tr.start_date if tr and tr.start_date else '' }}">
+
+  <label>End Date (YYYY-MM-DD)</label>
+  <input name="end_date" value="{{ tr.end_date if tr and tr.end_date else '' }}">
+
+  <label>Hours</label>
+  <input name="hours" value="{{ tr.hours if tr else '' }}">
+
+  <label>Evaluate Method</label>
+  <input name="evaluate_method" value="{{ tr.evaluate_method if tr else '' }}">
+
+  <label>Result</label>
+  <input name="result" value="{{ tr.result if tr else '' }}">
+
+  <label>Score</label>
+  <input name="score" value="{{ tr.score if tr else '' }}">
+
+  <label>Evaluator</label>
+  <input name="evaluator" value="{{ tr.evaluator if tr else '' }}">
+
+  <label>Expire Date (YYYY-MM-DD)</label>
+  <input name="expire_date" value="{{ tr.expire_date if tr and tr.expire_date else '' }}">
+
+  <label>Remark</label>
+  <input name="remark" value="{{ tr.remark if tr else '' }}">
+
+  <button type="submit">
+    {% if mode == 'edit' %}บันทึกการแก้ไข{% else %}บันทึก{% endif %}
+  </button>
+</form>
