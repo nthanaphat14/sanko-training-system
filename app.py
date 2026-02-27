@@ -92,6 +92,9 @@ from datetime import datetime, date
 
 class TrainingRecord(db.Model):
     __tablename__ = "training_records"
+    __table_args__ = (
+        db.UniqueConstraint("emp_id", "start_date", name="uq_training_emp_start"),
+    )
     id = db.Column(db.Integer, primary_key=True)
 
     seq = db.Column(db.Integer, nullable=True)               # ลำดับ
@@ -207,26 +210,26 @@ def safe_date(v):
 
     return None
     
-    MONTH_MAP = {
-        "jan": 1, "january": 1,
-        "feb": 2, "february": 2,
-        "mar": 3, "march": 3,
-        "apr": 4, "april": 4,
-        "may": 5,
-        "jun": 6, "june": 6,
-        "jul": 7, "july": 7,
-        "aug": 8, "august": 8,
-        "sep": 9, "september": 9,
-        "oct": 10, "october": 10,
-        "nov": 11, "november": 11,
-        "dec": 12, "december": 12,
-    }
+MONTH_MAP = {
+    "jan": 1, "january": 1,
+    "feb": 2, "february": 2,
+    "mar": 3, "march": 3,
+    "apr": 4, "april": 4,
+    "may": 5,
+    "jun": 6, "june": 6,
+    "jul": 7, "july": 7,
+    "aug": 8, "august": 8,
+    "sep": 9, "september": 9,
+    "oct": 10, "october": 10,
+    "nov": 11, "november": 11,
+    "dec": 12, "december": 12,
+}
 
 def month_to_int(v):
     s = safe_str(v).strip().lower()
     if s.isdigit():
         return int(s)
-    return MONTH_MAP.get(s[:3]) or MONTH_MAP.get(s)
+    parse(s[:3]) or MONTH_MAP.get(s)
 
 def safe_float(x):
     try:
@@ -237,7 +240,7 @@ def safe_float(x):
     except:
         return None
 
-def parse_date(v):
+def safe_date(v):
     # รองรับ date/datetime จาก Excel + string หลายรูปแบบ
     if not v:
         return None
