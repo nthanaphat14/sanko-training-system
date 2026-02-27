@@ -96,7 +96,21 @@
           ยังไม่มีข้อมูล Training Record (ลอง Import ก่อน)
         </td>
       </tr>
-    {% endif %}
+        <td>{{ r.emp_id }}</td>
+        <td>{{ r.first_name }}</td>
+        <td>{{ r.course_name }}</td>
+        <td>{{ r.start_date }}</td>
+
+        <!-- เพิ่มตรงนี้ -->
+        <td>
+          <a href="{{ url_for('trainings_edit', tr_id=r.id) }}">
+            แก้ไข
+          </a>
+         </td>
+
+      </tr>
+      {% endfor %}
+      
     </tbody>
   </table>
 </div>
