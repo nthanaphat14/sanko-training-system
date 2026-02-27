@@ -31,9 +31,6 @@ db_url = (os.environ.get("DATABASE_URL") or "").strip()
 if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
 
-if os.environ.get("RENDER") == "true" and not db_url:
-    raise RuntimeError("DATABASE_URL is missing on Render. Please set Postgres DATABASE_URL.")
-
 app.config["SQLALCHEMY_DATABASE_URI"] = db_url or "sqlite:///employee.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
