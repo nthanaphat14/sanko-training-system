@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h1>เพิ่ม Training Record</h1>
+
+<form method="post" action="{{ url_for('trainings_new') }}">
+  <input name="emp_id" value="">
+  <input name="full_name" value="">
+  ...
+  <button type="submit">บันทึก</button>
+</form>
+
+{% endblock %}
