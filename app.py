@@ -731,7 +731,7 @@ def trainings_edit(tr_id):
         tr.year = safe_int(request.form.get("year"))
         tr.month = safe_month(request.form.get("month"))
 
-    tr.emp_id = safe_str(request.form.get("emp_id"))
+        tr.emp_id = safe_str(request.form.get("emp_id"))
         tr.prefix = safe_str(request.form.get("prefix"))
         tr.frist_name = safe_str(request.form.get("frist_name"))
         tr.last_name = safe_str(request.form.get("last_name"))
