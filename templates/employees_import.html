@@ -3,7 +3,7 @@
 
 <div class="page-head">
   <div>
-    <h1>Import Employee Data</h1>
+    <h2>Import Employee Data</h2>
     <div class="muted">อัปโหลดไฟล์ Excel เพื่อเพิ่ม/อัปเดตข้อมูลพนักงาน</div>
   </div>
   <div class="actions">
@@ -14,7 +14,8 @@
 <div class="card">
   <form method="post" enctype="multipart/form-data">
     <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-      <input type="file" name="file" required>
+      <input type="file" name="file" accept=".xlsx" required>
+      <button type="submit">Upload</button>
       <button class="btn" type="submit">Import</button>
     </div>
   </form>
