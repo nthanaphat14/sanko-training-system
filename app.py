@@ -375,60 +375,92 @@ def employees_import():
         return render_template("employees_import.html")
 
     f = request.files.get("file")
-    if not f or f.filename == "":
-        flash("กรุณาเลือกไฟล์ Excel", "error")
+    if not f:
+        flash("กรุณาเลือกไฟล์ .xlsx", "error")
         return redirect(url_for("employees_import"))
 
     try:
         wb = load_workbook(f, data_only=True)
         ws = wb.active
 
-        # สมมติ header อยู่แถว 1 และข้อมูลเริ่มแถว 2
-        # ปรับ column ตามไฟล์จริงของคุณได้
-        # ตัวอย่าง: em_id, first_name_th, last_name_th, position, department, status
-        inserted = 0
-        updated = 0
+        # อ่านหัวตาราง (row 1)
+        headers = []
+        for c in ws[1]:
+            headers.append((str(c.value).strip() if c.value is not None else ""))
 
-        for r in ws.iter_rows(min_row=2, values_only=True):
-            em_id = safe_str(r[0])
-            first_name_th = safe_str(r[1])
-            last_name_th = safe_str(r[2])
-            position = safe_str(r[3])
-            department = safe_str(r[4])
-            status = normalize_status(r[5])
+        def col(name):
+            # หา index ของคอลัมน์แบบยืดหยุ่น (รองรับชื่อหลายแบบ)
+            name = name.strip().lower()
+            for i, h in enumerate(headers):
+                if (h or "").strip().lower() == name:
+                    return i
+            return None
+
+        # คอลัมน์ตามไฟล์คุณ
+        c_no = col("no.")
+        c_em = col("em. id") or col("em id") or col("employee id")
+        c_idcard = col("id card")
+        c_name_th = col("ชื่อไทย")  # สำคัญ
+        c_name_en = col("name-en") or col("name-en ")
+        c_position = col("position")
+        c_section = col("section")
+        c_dept = col("department")
+        c_start = col("start work")
+        c_resign = col("resign")
+        c_status = col("status")
+        c_degree = col("degree")
+        c_major = col("major")
+
+        if c_em is None:
+            flash("ไม่พบคอลัมน์ Em. ID ในไฟล์", "error")
+            return redirect(url_for("employees_import"))
+
+        added = 0
+        skipped = 0
+
+        # วนอ่านตั้งแต่แถว 2
+        for row in ws.iter_rows(min_row=2, values_only=True):
+            em_id = safe_str(row[c_em]) if c_em is not None else ""
+            em_id = em_id.strip()
 
             if not em_id:
                 continue
 
-            emp = Employee.query.filter_by(em_id=em_id).first()
-            if emp:
-                # อัปเดตข้อมูลเดิม
-                emp.first_name_th = first_name_th or emp.first_name_th
-                emp.last_name_th = last_name_th or emp.last_name_th
-                emp.position = position or emp.position
-                emp.department = department or emp.department
-                emp.status = status or emp.status
-                updated += 1
-            else:
-                # เพิ่มใหม่
-                emp = Employee(
-                    em_id=em_id,
-                    first_name_th=first_name_th,
-                    last_name_th=last_name_th,
-                    position=position,
-                    department=department,
-                    status=status,
-                )
-                db.session.add(emp)
-                inserted += 1
+            # ✅ กันซ้ำ: ถ้า em_id มีแล้ว ข้าม
+            if Employee.query.filter_by(em_id=em_id).first():
+                skipped += 1
+                continue
+
+            # ชื่อไทยในไฟล์เป็น "ชื่อไทย" (รวมชื่อ+สกุล) — ใส่ไว้ใน first_name_th แบบง่ายก่อน
+            name_th = safe_str(row[c_name_th]) if c_name_th is not None else ""
+            name_en = safe_str(row[c_name_en]) if c_name_en is not None else ""
+
+            emp = Employee(
+                no=safe_int(row[c_no]) if c_no is not None else None,
+                em_id=em_id,
+                id_card=safe_str(row[c_idcard]) if c_idcard is not None else "",
+                first_name_th=name_th,   # ถ้าคุณอยากแยกชื่อ/สกุลไทย เดี๋ยวผมทำเพิ่มให้ได้
+                first_name_en=name_en,
+                position=safe_str(row[c_position]) if c_position is not None else "",
+                section=safe_str(row[c_section]) if c_section is not None else "",
+                department=safe_str(row[c_dept]) if c_dept is not None else "",
+                start_work=safe_date(row[c_start]) if c_start is not None else None,
+                resign=safe_date(row[c_resign]) if c_resign is not None else None,
+                status=safe_str(row[c_status]) if c_status is not None else "",
+                degree=safe_str(row[c_degree]) if c_degree is not None else "",
+                major=safe_str(row[c_major]) if c_major is not None else "",
+            )
+
+            db.session.add(emp)
+            added += 1
 
         db.session.commit()
-        flash(f"Import สำเร็จ: เพิ่มใหม่ {inserted} | อัปเดต {updated}", "success")
+        flash(f"Import Employees สำเร็จ: เพิ่ม {added} แถว | ข้ามซ้ำ {skipped} แถว", "success")
         return redirect(url_for("employees_list"))
 
     except Exception as e:
         db.session.rollback()
-        flash(f"Import ไม่สำเร็จ: {e}", "error")
+        flash(f"Import Employees ล้มเหลว: {e}", "error")
         return redirect(url_for("employees_import"))
     
 @app.route("/trainings/import", methods=["GET", "POST"])
