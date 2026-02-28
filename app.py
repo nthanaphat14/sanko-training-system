@@ -513,18 +513,20 @@ def trainings_import():
             best_row, best_score = 1, -1
             max_r = min(scan_rows, ws.max_row or 1)
             max_c = ws.max_column or 1
+
             for r in range(1, max_r + 1):
                 vals = [norm(ws.cell(r, c).value) for c in range(1, max_c + 1)]
                 score = 0
-                must in ["emp_id", "first_name", "course_name", "start_date"]:
-                for must in musts:
-                    for a in ALTASES.get(must, []):
-                    if (norm(a) in vals :
-                        score += 1
-                        break
-                        
+
+                for must in ["emp_id", "first_name", "course_name", "start_date"]:
+                    for a in ALIASES.get(must, []):
+                        if norm(a) in vals:
+                            score += 1
+                            break
+
                 if score > best_score:
                     best_score, best_row = score, r
+
             return best_row
 
         header_row = find_header_row()
