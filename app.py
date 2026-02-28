@@ -599,8 +599,8 @@ def trainings_import():
                 month=month,
                 emp_id=emp_id,
                 prefix=prefix,
-                first_name=first_name,
-                last_name=last_name,
+                first_name = safe_str(cellv(r, "first_name"))
+                last_name = safe_str(cellv(r, "last_name"))
                 section=section,
                 position=position,
                 course_code=course_code,
