@@ -558,11 +558,9 @@ def trainings_import():
 
             prefix = safe_str(cellv(r, "prefix"))
 
-            # ชื่อ / นามสกุล
-            frist_name = safe_str(cellv(r, "frist_name"))
+            first_name = safe_str(cellv(r, "first_name"))
             last_name = safe_str(cellv(r, "last_name"))
 
-            # แผนก/ตำแหน่ง
             section = safe_str(cellv(r, "section"))
             position = safe_str(cellv(r, "position"))
 
