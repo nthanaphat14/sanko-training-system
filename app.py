@@ -507,7 +507,7 @@ def employees_import():
 # 2) ROUTES: IMPORT + VIEW RESULT (วางในส่วน Routes)
 # =========================
 @app.route("/trainings/import", methods=["GET", "POST"])
-def trainings_import():
+def trainings_import_list():
     if request.method == "GET":
         return render_template("training_import.html")
 
