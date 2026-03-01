@@ -991,15 +991,6 @@ def trainings_bulk_delete():
             .delete(synchronize_session=False)
         )
 
-        db.session.commit()
-        flash(f"ลบสำเร็จ {deleted} รายการ", "success")
-        return redirect(url_for("trainings_list"))
-
-    except Exception as e:
-        db.session.rollback()
-        flash(f"ลบไม่สำเร็จ: {e}", "error")
-        return redirect(url_for("trainings_list"))
-
 @app.route("/trainings/<int:tr_id>/delete", methods=["POST"])
 def trainings_delete(tr_id):
     tr = TrainingRecord.query.get_or_404(tr_id)
