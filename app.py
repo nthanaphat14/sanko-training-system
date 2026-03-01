@@ -555,7 +555,7 @@ def trainings_import():
             if not emp_id:
                 skipped += 1
                 continue
-
+                
             prefix = safe_str(cellv(r, "prefix"))
 
             first_name = safe_str(cellv(r, "first_name"))
@@ -999,6 +999,18 @@ def trainings_bulk_delete():
         db.session.rollback()
         flash(f"ลบไม่สำเร็จ: {e}", "error")
         return redirect(url_for("trainings_list"))
+
+@app.route("/trainings/<int:tr_id>/delete", methods=["POST"])
+def trainings_delete(tr_id):
+    tr = TrainingRecord.query.get_or_404(tr_id)
+    try:
+        db.session.delete(tr)
+        db.session.commit()
+        flash("ลบรายการแล้ว", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"ลบไม่สำเร็จ: {e}", "error")
+    return redirect(url_for("trainings_list"))
 
 # -------------------------------------------------
 # Run (Local Only)
