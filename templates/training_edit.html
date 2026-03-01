@@ -1,114 +1,132 @@
 {% extends "base.html" %}
 {% block content %}
 
-<h1>แก้ไข Training Record</h1>
-
-<form method="post" class="card" style="padding:20px;">
-
+<div class="page-head">
   <div>
-    <label>Year</label>
-    <input name="year" value="{{ tr.year or '' }}">
+    <h1>Edit Training Record</h1>
+    <div class="muted">แก้ไขรายการ: #{{ tr.id }}</div>
   </div>
-
-  <div>
-    <label>Month</label>
-    <input name="month" value="{{ tr.month or '' }}">
+  <div class="actions">
+    <a class="btn ghost" href="{{ url_for('trainings_list') }}">กลับหน้ารายการ</a>
   </div>
+</div>
 
-  <div>
-    <label>Emp ID</label>
-    <input name="emp_id" value="{{ tr.emp_id }}">
-  </div>
+<div class="card" style="padding:16px;">
+  <form method="post" action="{{ url_for('trainings_edit', tr_id=tr.id) }}" style="display:grid; gap:10px;">
 
-  <div>
-    <label>Prefix</label>
-    <input name="prefix" value="{{ tr.prefix or '' }}">
-  </div>
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+      <div>
+        <div class="muted" style="margin-bottom:6px;">Year</div>
+        <input class="input" name="year" value="{{ tr.year or '' }}">
+      </div>
+      <div>
+        <div class="muted" style="margin-bottom:6px;">Month</div>
+        <input class="input" name="month" value="{{ tr.month or '' }}">
+      </div>
+    </div>
 
-  <div>
-    <label>First Name</label>
-    <input name="first_name" value="{{ tr.first_name or '' }}">
-  </div>
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+      <div>
+        <div class="muted" style="margin-bottom:6px;">Emp ID</div>
+        <input class="input" name="emp_id" value="{{ tr.emp_id or '' }}">
+      </div>
+      <div>
+        <div class="muted" style="margin-bottom:6px;">Prefix</div>
+        <input class="input" name="prefix" value="{{ tr.prefix or '' }}">
+      </div>
+    </div>
 
-  <div>
-    <label>Last Name</label>
-    <input name="last_name" value="{{ tr.last_name or '' }}">
-  </div>
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+      <div>
+        <div class="muted" style="margin-bottom:6px;">First Name</div>
+        <input class="input" name="first_name" value="{{ tr.first_name or '' }}">
+      </div>
+      <div>
+        <div class="muted" style="margin-bottom:6px;">Last Name</div>
+        <input class="input" name="last_name" value="{{ tr.last_name or '' }}">
+      </div>
+    </div>
 
-  <div>
-    <label>Section</label>
-    <input name="section" value="{{ tr.section or '' }}">
-  </div>
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+      <div>
+        <div class="muted" style="margin-bottom:6px;">Section</div>
+        <input class="input" name="section" value="{{ tr.section or '' }}">
+      </div>
+      <div>
+        <div class="muted" style="margin-bottom:6px;">Position</div>
+        <input class="input" name="position" value="{{ tr.position or '' }}">
+      </div>
+    </div>
 
-  <div>
-    <label>Position</label>
-    <input name="position" value="{{ tr.position or '' }}">
-  </div>
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+      <div>
+        <div class="muted" style="margin-bottom:6px;">Course Code</div>
+        <input class="input" name="course_code" value="{{ tr.course_code or '' }}">
+      </div>
+      <div>
+        <div class="muted" style="margin-bottom:6px;">Course Type</div>
+        <input class="input" name="course_type" value="{{ tr.course_type or '' }}">
+      </div>
+    </div>
 
-  <div>
-    <label>Course Code</label>
-    <input name="course_code" value="{{ tr.course_code or '' }}">
-  </div>
+    <div>
+      <div class="muted" style="margin-bottom:6px;">Course Name</div>
+      <input class="input" name="course_name" value="{{ tr.course_name or '' }}">
+    </div>
 
-  <div>
-    <label>Course Name</label>
-    <input name="course_name" value="{{ tr.course_name or '' }}">
-  </div>
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+      <div>
+        <div class="muted" style="margin-bottom:6px;">Start Date (YYYY-MM-DD)</div>
+        <input class="input" name="start_date" value="{{ tr.start_date or '' }}">
+      </div>
+      <div>
+        <div class="muted" style="margin-bottom:6px;">End Date (YYYY-MM-DD)</div>
+        <input class="input" name="end_date" value="{{ tr.end_date or '' }}">
+      </div>
+    </div>
 
-  <div>
-    <label>Course Type</label>
-    <input name="course_type" value="{{ tr.course_type or '' }}">
-  </div>
+    <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px;">
+      <div>
+        <div class="muted" style="margin-bottom:6px;">Hours</div>
+        <input class="input" name="hours" value="{{ tr.hours or '' }}">
+      </div>
+      <div>
+        <div class="muted" style="margin-bottom:6px;">Score</div>
+        <input class="input" name="score" value="{{ tr.score or '' }}">
+      </div>
+      <div>
+        <div class="muted" style="margin-bottom:6px;">Expire Date</div>
+        <input class="input" name="expire_date" value="{{ tr.expire_date or '' }}">
+      </div>
+    </div>
 
-  <div>
-    <label>Start Date</label>
-    <input type="date" name="start_date" value="{{ tr.start_date }}">
-  </div>
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+      <div>
+        <div class="muted" style="margin-bottom:6px;">Evaluate Method</div>
+        <input class="input" name="evaluate_method" value="{{ tr.evaluate_method or '' }}">
+      </div>
+      <div>
+        <div class="muted" style="margin-bottom:6px;">Result</div>
+        <input class="input" name="result" value="{{ tr.result or '' }}">
+      </div>
+    </div>
 
-  <div>
-    <label>End Date</label>
-    <input type="date" name="end_date" value="{{ tr.end_date }}">
-  </div>
+    <div>
+      <div class="muted" style="margin-bottom:6px;">Evaluator</div>
+      <input class="input" name="evaluator" value="{{ tr.evaluator or '' }}">
+    </div>
 
-  <div>
-    <label>Hours</label>
-    <input name="hours" value="{{ tr.hours or '' }}">
-  </div>
+    <div>
+      <div class="muted" style="margin-bottom:6px;">Remark</div>
+      <textarea class="input" name="remark" rows="3">{{ tr.remark or '' }}</textarea>
+    </div>
 
-  <div>
-    <label>Evaluate Method</label>
-    <input name="evaluate_method" value="{{ tr.evaluate_method or '' }}">
-  </div>
+    <div style="display:flex; gap:10px; margin-top:8px;">
+      <button class="btn" type="submit">บันทึก</button>
+      <a class="btn ghost" href="{{ url_for('trainings_list') }}">ยกเลิก</a>
+    </div>
 
-  <div>
-    <label>Result</label>
-    <input name="result" value="{{ tr.result or '' }}">
-  </div>
-
-  <div>
-    <label>Score</label>
-    <input name="score" value="{{ tr.score or '' }}">
-  </div>
-
-  <div>
-    <label>Evaluator</label>
-    <input name="evaluator" value="{{ tr.evaluator or '' }}">
-  </div>
-
-  <div>
-    <label>Expire Date</label>
-    <input type="date" name="expire_date" value="{{ tr.expire_date }}">
-  </div>
-
-  <div>
-    <label>Remark</label>
-    <textarea name="remark">{{ tr.remark or '' }}</textarea>
-  </div>
-
-  <br>
-  <button class="btn">บันทึก</button>
-  <a class="btn ghost" href="{{ url_for('trainings_list') }}">ยกเลิก</a>
-
-</form>
+  </form>
+</div>
 
 {% endblock %}
