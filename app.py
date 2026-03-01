@@ -906,7 +906,6 @@ def trainings_edit(tr_id):
         tr.result = safe_str(request.form.get("result"))
         tr.score = safe_float(request.form.get("score"))
         tr.evaluator = safe_str(request.form.get("evaluator"))
-
         tr.expire_date = safe_date(request.form.get("expire_date"))
         tr.remark = safe_str(request.form.get("remark"))
 
@@ -914,7 +913,7 @@ def trainings_edit(tr_id):
         flash("แก้ไข Training Record เรียบร้อย", "success")
         return redirect(url_for("trainings_list"))
 
-    return render_template("trainings_form.html", tr=tr, mode="edit")
+    return render_template("trainings_edit.html", tr=tr)
 
 @app.route("/trainings/new", methods=["GET", "POST"])
 def trainings_new():
