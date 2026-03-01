@@ -32,90 +32,103 @@
   </form>
 </div>
 
-<div style="display:flex; gap:10px; align-items:center; margin:10px 0;">
-  <button class="btn danger" type="submit">ลบที่เลือก</button>
-  <span class="muted" id="selCount">เลือก 0 รายการ</span>
-</div>
+{# ✅ ฟอร์ม bulk delete ต้องครอบ "ปุ่มลบ" + "checkbox ทั้งหมด" #}
+<form method="post" action="{{ url_for('trainings_bulk_delete') }}"
+      onsubmit="return confirm('ยืนยันลบรายการที่เลือก?');">
 
-<div class="table-wrap card">
-  <table class="table">
-    <thead>
-      <tr>
-        <th style="width:40px; text-align:center;">
-          <input type="checkbox" id="checkAll">
-        </th>
-        <th>#</th>
-        <th>Year</th>
-        <th>Month</th>
-        <th>Emp ID</th>
-        <th>Prefix</th>
-        <th>First Name</th>
-        <th>Last Name</th>
-        <th>Section</th>
-        <th>Position</th>
-        <th>Course Code</th>
-        <th>Course Name</th>
-        <th>Type</th>
-        <th>StartDate</th>
-        <th>EndDate</th>
-        <th>Hours</th>
-        <th>Eval Method</th>
-        <th>Result</th>
-        <th>Score</th>
-        <th>Evaluator</th>
-        <th>Expire Date</th>
-        <th>Remark</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
+  <div style="display:flex; gap:10px; align-items:center; margin:10px 0;">
+    <button class="btn danger" type="submit">ลบที่เลือก</button>
+    <span class="muted" id="selCount">เลือก 0 รายการ</span>
+  </div>
 
-    <tbody>
-      {% if rows and rows|length > 0 %}
-        {% for t in rows %}
+  <div class="table-wrap card">
+    <table class="table">
+      <thead>
         <tr>
-          <td style="text-align:center;">
-            <input type="checkbox" name="ids" value="{{ t.id }}" class="rowCheck">
-          <td>{{ loop.index }}</td>
-          <td>{{ t.year or "" }}</td>
-          <td>{{ t.month or "" }}</td>
-          <td>{{ t.emp_id or "" }}</td>
-          <td>{{ t.prefix or "" }}</td>
-          <td>{{ t.first_name or "" }}</td>
-          <td>{{ t.last_name or "" }}</td>
-          <td>{{ t.section or "" }}</td>
-          <td>{{ t.position or "" }}</td>
-          <td>{{ t.course_code or "" }}</td>
-          <td>{{ t.course_name or "" }}</td>
-          <td>{{ t.course_type or "" }}</td>
-          <td>{{ t.start_date or "" }}</td>
-          <td>{{ t.end_date or "" }}</td>
-          <td>{{ t.hours or "" }}</td>
-          <td>{{ t.evaluate_method or "" }}</td>
-          <td>{{ t.result or "" }}</td>
-          <td>{{ t.score or "" }}</td>
-          <td>{{ t.evaluator or "" }}</td>
-          <td>{{ t.expire_date or "" }}</td>
-          <td>{{ t.remark or "" }}</td>
-          <td>
-            <a class="btn" href="{{ url_for('trainings_edit', tr_id=t.id) }}">แก้ไข</a>
-            <form method="post" action="{{ url_for('trainings_delete', tr_id=t.id) }}" style="display:inline;">
-              <button class="btn danger" type="submit" onclick="return confirm('ลบรายการนี้?')">ลบ</button>
-            <form method="post" action="{{ url_for('trainings_bulk_delete') }}"
-              onsubmit="return confirm('ยืนยันลบรายการที่เลือก?');">
-            </form>
-          </td>
+          <th style="width:40px; text-align:center;">
+            <input type="checkbox" id="checkAll">
+          </th>
+          <th>#</th>
+          <th>Year</th>
+          <th>Month</th>
+          <th>Emp ID</th>
+          <th>Prefix</th>
+          <th>First Name</th>
+          <th>Last Name</th>
+          <th>Section</th>
+          <th>Position</th>
+          <th>Course Code</th>
+          <th>Course Name</th>
+          <th>Type</th>
+          <th>StartDate</th>
+          <th>EndDate</th>
+          <th>Hours</th>
+          <th>Eval Method</th>
+          <th>Result</th>
+          <th>Score</th>
+          <th>Evaluator</th>
+          <th>Expire Date</th>
+          <th>Remark</th>
+          <th>Actions</th>
         </tr>
-        {% endfor %}
-      {% else %}
-        <tr>
-          <td colspan="22" class="muted" style="padding:18px;">
-            ยังไม่มีข้อมูล Training Record (ลอง Import ก่อน)
-          </td>
-        </tr>
-      {% endif %}
-    </tbody>
-  </table>
-</div>
+      </thead>
+
+      <tbody>
+        {% if rows and rows|length > 0 %}
+          {% for t in rows %}
+          <tr>
+            <td style="text-align:center;">
+              <input type="checkbox" name="ids" value="{{ t.id }}" class="rowCheck">
+            </td>
+
+            <td>{{ loop.index }}</td>
+            <td>{{ t.year or "" }}</td>
+            <td>{{ t.month or "" }}</td>
+            <td>{{ t.emp_id or "" }}</td>
+            <td>{{ t.prefix or "" }}</td>
+            <td>{{ t.first_name or "" }}</td>
+            <td>{{ t.last_name or "" }}</td>
+            <td>{{ t.section or "" }}</td>
+            <td>{{ t.position or "" }}</td>
+            <td>{{ t.course_code or "" }}</td>
+            <td>{{ t.course_name or "" }}</td>
+            <td>{{ t.course_type or "" }}</td>
+            <td>{{ t.start_date or "" }}</td>
+            <td>{{ t.end_date or "" }}</td>
+            <td>{{ t.hours or "" }}</td>
+            <td>{{ t.evaluate_method or "" }}</td>
+            <td>{{ t.result or "" }}</td>
+            <td>{{ t.score or "" }}</td>
+            <td>{{ t.evaluator or "" }}</td>
+            <td>{{ t.expire_date or "" }}</td>
+            <td>{{ t.remark or "" }}</td>
+
+            <td style="white-space:nowrap;">
+              <a class="btn" href="{{ url_for('trainings_edit', tr_id=t.id) }}">แก้ไข</a>
+
+              {# ✅ ไม่ซ้อน form: ใช้ form แยก + ปุ่มชี้ไป form ด้วย form="" #}
+              <form id="del-{{ t.id }}" method="post"
+                    action="{{ url_for('trainings_delete', tr_id=t.id) }}"
+                    style="display:none;"></form>
+
+              <button class="btn danger" type="submit" form="del-{{ t.id }}"
+                      onclick="return confirm('ลบรายการนี้?')">
+                ลบ
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+        {% else %}
+          <tr>
+            <td colspan="23" class="muted" style="padding:18px;">
+              ยังไม่มีข้อมูล Training Record (ลอง Import ก่อน)
+            </td>
+          </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</form>
 
 <script>
   const checkAll = document.getElementById("checkAll");
@@ -136,7 +149,6 @@
 
   document.addEventListener("change", (e) => {
     if (e.target.classList && e.target.classList.contains("rowCheck")) {
-      // ถ้าไม่ครบทุกอัน ให้ checkAll ไม่ติ๊ก
       const checks = rowChecks();
       const allChecked = checks.length > 0 && checks.every(c => c.checked);
       if (checkAll) checkAll.checked = allChecked;
