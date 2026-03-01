@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="page-head">
+  <div>
+    <h1>Training Import Batch #{{ batch.id }}</h1>
+    <div class="muted">
+      Added {{ batch.added }} | Updated {{ batch.updated }} | Duplicate {{ batch.duplicated }} | Skipped {{ batch.skipped }}
+    </div>
+  </div>
+  <div class="actions">
+    <a class="btn ghost" href="{{ url_for('training_imports_list') }}">ย้อนกลับ</a>
+    <a class="btn ghost" href="{{ url_for('trainings_list') }}">หน้า Training List</a>
+  </div>
+</div>
+
+{% macro render_table(items, title) %}
+  <div class="card" style="margin-bottom:14px;">
+    <h3 style="margin:0 0 10px 0;">{{ title }} ({{ items|length }})</h3>
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Row</th>
+            <th>Emp ID</th>
+            <th>Name</th>
+            <th>Section</th>
+            <th>Position</th>
+            <th>Course Code</th>
+            <th>Course Name</th>
+            <th>Start</th>
+            <th>End</th>
+            <th>Reason</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for x in items %}
+          <tr>
+            <td>{{ x.row_no or "" }}</td>
+            <td>{{ x.emp_id or "" }}</td>
+            <td>{{ (x.first_name or "") ~ " " ~ (x.last_name or "") }}</td>
+            <td>{{ x.section or "" }}</td>
+            <td>{{ x.position or "" }}</td>
+            <td>{{ x.course_code or "" }}</td>
+            <td>{{ x.course_name or "" }}</td>
+            <td>{{ x.start_date or "" }}</td>
+            <td>{{ x.end_date or "" }}</td>
+            <td>{{ x.reason or "" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endmacro %}
+
+{{ render_table(added, "✅ Added") }}
+{{ render_table(updated, "🟡 Updated") }}
+{{ render_table(duplicated, "🔴 Duplicate") }}
+{{ render_table(skipped, "⚪ Skipped") }}
+
+{% endblock %}
