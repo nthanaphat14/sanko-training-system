@@ -503,11 +503,8 @@ def employees_import():
         flash(f"Import Employees ล้มเหลว: {e}", "error")
         return redirect(url_for("employees_import"))
     
-# =========================
-# 2) ROUTES: IMPORT + VIEW RESULT (วางในส่วน Routes)
-# =========================
 @app.route("/trainings/import", methods=["GET", "POST"])
-def trainings_import_list():
+def trainings_import():
     if request.method == "GET":
         return render_template("training_import.html")
 
@@ -545,26 +542,29 @@ def trainings_import_list():
         wb = load_workbook(f, data_only=True)
         ws = wb["Record Training"] if "Record Training" in wb.sheetnames else wb.active
 
-        # ======= HEADER MAP รองรับหลายชื่อหัวตาราง =======
+        # ======= NORMALIZE HEADER =======
         def norm(x):
             s = safe_str(x).strip().lower()
-            for ch in ["\u00a0", ".", "-", "_", "/", "(", ")", "[", "]"]:
+            for ch in ["\u00a0", ".", "-", "_", "/", "(", ")", "[", "]", ":"]:
                 s = s.replace(ch, " ")
             return " ".join(s.split())
 
+        # ✅ เพิ่ม alias ให้ตรงไฟล์คุณ (ชื่อไทย / name-th ฯลฯ)
         ALIASES = {
             "seq": ["ลำดับ", "no", "seq", "#"],
             "year": ["year", "year.", "ปี"],
             "month": ["month", "mon", "เดือน"],
-            "emp_id": ["emp id", "empid", "รหัสพนักงาน", "รหัส"],
+
+            "emp_id": ["em id", "emp id", "empid", "รหัสพนักงาน", "รหัส", "employee id"],
             "prefix": ["คำนำหน้า", "prefix"],
-            "first_name": ["ชื่อ", "first name", "firstname"],
+            "first_name": ["ชื่อ", "ชื่อไทย", "name th", "thai name", "first name", "firstname"],
             "last_name": ["นามสกุล", "last name", "lastname"],
-            "section": ["แผนก", "section", "ฝ่าย", "หน่วยงาน"],
-            "position": ["ตำแหน่ง", "position"],
-            "course_code": ["รหัสหลักสูตร", "course code", "coursecode"],
-            "course_name": ["ชื่อหลักสูตร", "course name", "coursename"],
-            "course_type": ["ประเภท", "type", "category", "course type"],
+            "section": ["section", "แผนก", "ฝ่าย", "หน่วยงาน", "department"],
+            "position": ["position", "ตำแหน่ง"],
+
+            "course_code": ["course code", "coursecode", "รหัสหลักสูตร"],
+            "course_name": ["course name", "coursename", "ชื่อหลักสูตร"],
+            "course_type": ["course type", "type", "category", "ประเภท"],
 
             "start_date": ["startdate", "start date", "วันที่เริ่ม", "เริ่ม"],
             "end_date": ["enddate", "end date", "วันที่จบ", "จบ"],
@@ -583,6 +583,7 @@ def trainings_import_list():
             max_r = min(scan_rows, ws.max_row or 1)
             max_c = ws.max_column or 1
             must_keys = ["emp_id", "course_code", "course_name", "start_date"]
+
             for r in range(1, max_r + 1):
                 vals = [norm(ws.cell(r, c).value) for c in range(1, max_c + 1)]
                 score = 0
@@ -599,7 +600,6 @@ def trainings_import_list():
         header_map = {h: i + 1 for i, h in enumerate(headers) if h}
 
         def col(key):
-            # key = canonical เช่น "first_name"
             for alt in ALIASES.get(key, []):
                 k = norm(alt)
                 if k in header_map:
@@ -641,7 +641,7 @@ def trainings_import_list():
             expire_date = safe_date(cellv(r, "expire_date"))
             remark = safe_str(cellv(r, "remark"))
 
-            # ---- ถ้าแถวว่างมาก ๆ ให้ข้าม ----
+            # ---- ถ้าแถวว่างมาก ๆ ให้ข้ามแบบเงียบ ----
             if not emp_id and not course_code and not course_name and not start_date:
                 continue
 
@@ -667,18 +667,10 @@ def trainings_import_list():
                 continue
 
             # ======================================================
-            # เงื่อนไขคุณ (สรุปจากบรีฟล่าสุด)
-            # KEY สำหรับ “ตัวเดิม” = emp_id + start_date + end_date + course_code
-            #
-            # 1) ถ้า start/end ต่าง → เพิ่มได้ (Added)
-            # 2) ถ้า start/end เหมือนกัน:
-            #    - ถ้า course_code เหมือนกัน:
-            #         - ถ้าข้อมูลเดิมว่าง แล้วไฟล์ใหม่มี → Update
-            #         - ถ้าไม่มีอะไรให้เติม → Duplicate
-            #    - ถ้า course_code ไม่เหมือนกัน → Added (เพิ่มได้)
+            # KEY “ตัวเดิม” = emp_id + start_date + end_date + course_code
+            # - ถ้า key นี้ไม่เคยมี → Added
+            # - ถ้าเคยมี → พยายามเติมช่องว่าง (Updated) ไม่งั้น Duplicate
             # ======================================================
-
-            # ---- หา “ตัวเดิม” แบบ key เต็ม ----
             existing = (
                 TrainingRecord.query
                 .filter(TrainingRecord.emp_id == emp_id)
@@ -689,7 +681,6 @@ def trainings_import_list():
             )
 
             if existing is None:
-                # ถ้าไม่มี course_code เดิมในช่วงวันเดียวกัน → เพิ่มได้เลย
                 tr = TrainingRecord(
                     year=year,
                     month=month,
@@ -731,18 +722,18 @@ def trainings_import_list():
                 )
                 continue
 
-            # ---- มีตัวเดิมแล้ว: พยายาม UPDATE เฉพาะ “ช่องที่เดิมว่าง” ----
+            # ---- มีตัวเดิมแล้ว: UPDATE เฉพาะช่องที่เดิมว่าง + ใหม่มีค่า ----
             updated_flag = False
 
-            # update เฉพาะ field ตั้งแต่ course_name ถึง remark (ตามที่คุณบรีฟ)
-            # และ update เฉพาะกรณี "เดิมว่าง + ใหม่มีค่า"
             def fill_if_empty(field, new_value):
                 nonlocal updated_flag
                 old = getattr(existing, field)
-                if (old is None or str(old).strip() == "") and (new_value is not None and str(new_value).strip() != ""):
+                old_empty = (old is None) or (isinstance(old, str) and old.strip() == "")
+                new_ok = (new_value is not None) and (not (isinstance(new_value, str) and new_value.strip() == ""))
+                if old_empty and new_ok:
                     setattr(existing, field, new_value)
                     updated_flag = True
-
+                    
             fill_if_empty("course_name", course_name)
             fill_if_empty("course_type", course_type)
             fill_if_empty("hours", hours)
@@ -753,7 +744,7 @@ def trainings_import_list():
             fill_if_empty("expire_date", expire_date)
             fill_if_empty("remark", remark)
 
-# (optional) ถ้าคุณอยากให้ชื่อ/section/position เติมได้เหมือนกัน ให้เปิด 3 บรรทัดนี้
+            # ✅ แนะนำ: เติม prefix/name/section/position ได้ด้วย (เพราะตอนนี้ของคุณ first_name/section ว่างอยู่)
             fill_if_empty("prefix", prefix)
             fill_if_empty("first_name", first_name)
             fill_if_empty("last_name", last_name)
@@ -783,7 +774,7 @@ def trainings_import_list():
                 duplicated += 1
                 log_item(
                     "Duplicate",
-                    reason="พบรายการเดิมแล้ว และไม่มีข้อมูลใหม่เพื่อเติม (เดิมไม่ว่าง)",
+                    reason="พบรายการเดิมแล้ว และไม่มีข้อมูลใหม่เพื่อเติม",
                     row_no=r,
                     emp_id=emp_id,
                     prefix=prefix,
@@ -798,7 +789,7 @@ def trainings_import_list():
                     end_date=end_date,
                 )
 
-     # ---- บันทึกผล ----
+        # ---- บันทึกผลลง batch ----
         batch.added = added
         batch.updated = updated
         batch.duplicated = duplicated
@@ -807,8 +798,7 @@ def trainings_import_list():
         db.session.commit()
 
         flash(
-            f"Import สำเร็จ: เพิ่ม {added} | อัปเดต {updated} | ซ้ำ {duplicated} | ข้าม {skipped} "
-            f"— ดูรายชื่อได้ที่หน้า Import รอบนี้",
+            f"Import สำเร็จ: เพิ่ม {added} | อัปเดต {updated} | ซ้ำ {duplicated} | ข้าม {skipped}",
             "success"
         )
         return redirect(url_for("import_batch_detail", batch_id=batch.id))
@@ -818,17 +808,23 @@ def trainings_import_list():
         flash(f"Import ไม่สำเร็จ: {e}", "error")
         return redirect(url_for("trainings_import"))
 
+
+# =========================================================
+# IMPORT HISTORY LIST
+# =========================================================
 @app.get("/training-imports")
 def import_batches_list():
     batches = ImportBatch.query.order_by(ImportBatch.id.desc()).limit(50).all()
     return render_template("training-imports_list.html", batches=batches)
 
 
+# =========================================================
+# IMPORT HISTORY DETAIL
+# =========================================================
 @app.get("/training-imports/<int:batch_id>")
 def import_batch_detail(batch_id):
     batch = ImportBatch.query.get_or_404(batch_id)
 
-    # แยกตามสถานะ
     added = ImportItem.query.filter_by(batch_id=batch_id, status="Added").order_by(ImportItem.id.asc()).all()
     updated = ImportItem.query.filter_by(batch_id=batch_id, status="Updated").order_by(ImportItem.id.asc()).all()
     duplicated = ImportItem.query.filter_by(batch_id=batch_id, status="Duplicate").order_by(ImportItem.id.asc()).all()
@@ -841,7 +837,7 @@ def import_batch_detail(batch_id):
         updated=updated,
         duplicated=duplicated,
         skipped=skipped,
-    )
+    )                    
 
 @app.get("/employees/export")
 def employees_export():
