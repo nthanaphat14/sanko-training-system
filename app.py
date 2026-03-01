@@ -963,6 +963,9 @@ def trainings_delete(tr_id):
 
 @app.route("/trainings/bulk-delete", methods=["POST"])
 def trainings_bulk_delete():
+
+    print("BULK DELETE IDS:", request.form.getlist("ids"))
+    
     ids = request.form.getlist("ids")  # ✅ ต้อง getlist เท่านั้น
 
     if not ids:
