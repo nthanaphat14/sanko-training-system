@@ -961,6 +961,33 @@ def trainings_delete(tr_id):
     flash("ลบ Training Record แล้ว", "success")
     return redirect(url_for("trainings_list"))
 
+@app.post("/trainings/bulk-delete")
+def trainings_bulk_delete():
+    ids = request.form.getlist("ids")  # <-- ได้ list ของ id ที่ติ๊ก
+
+    if not ids:
+        flash("ยังไม่ได้เลือกรายการที่จะลบ", "error")
+        return redirect(url_for("trainings_list"))
+
+    try:
+        # แปลงเป็น int กันข้อมูลแปลก
+        ids_int = [int(x) for x in ids]
+
+        deleted = (
+            db.session.query(TrainingRecord)
+            .filter(TrainingRecord.id.in_(ids_int))
+            .delete(synchronize_session=False)
+        )
+
+        db.session.commit()
+        flash(f"ลบสำเร็จ {deleted} รายการ", "success")
+        return redirect(url_for("trainings_list"))
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f"ลบไม่สำเร็จ: {e}", "error")
+        return redirect(url_for("trainings_list"))
+
 # -------------------------------------------------
 # Run (Local Only)
 # -------------------------------------------------
