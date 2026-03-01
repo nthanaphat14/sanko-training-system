@@ -6,9 +6,9 @@
     <h1>Training Record</h1>
     <div class="muted">รายการ Training ทั้งหมด: {{ total }}</div>
   </div>
+
   <div class="actions">
     <a class="btn ghost" href="{{ url_for('trainings_import') }}">Import</a>
-    <a class="btn" href="{{ url_for('trainings_edit', tr_id=r.id) }}">แก้ไข</a>
     <a class="btn ghost" href="{{ url_for('employees_list') }}">Employee Data</a>
   </div>
 </div>
@@ -47,7 +47,7 @@
         <th>Position</th>
         <th>Course Code</th>
         <th>Course Name</th>
-        <th>Category</th>
+        <th>Type</th>
         <th>StartDate</th>
         <th>EndDate</th>
         <th>Hours</th>
@@ -62,49 +62,46 @@
     </thead>
 
     <tbody>
-    {% if rows and rows|length > 0 %}
-      {% for t in rows %}
-      <tr>
-        <td>{{ loop.index }}</td>
-        <td>{{ t.year or "" }}</td>
-        <td>{{ t.month or "" }}</td>
-        <td>{{ t.emp_id or "" }}</td>
-        <td>{{ t.prefix or "" }}</td>
-        <td>{{ t.first_name or "" }}</td>
-        <td>{{ t.last_name or "" }}</td>
-        <td>{{ t.section or "" }}</td>
-        <td>{{ t.position or "" }}</td>
-        <td>{{ t.course_code or "" }}</td>
-        <td>{{ t.course_name or "" }}</td>
-        <td>{{ t.course_type or "" }}</td>
-        <td>{{ t.start_date or "" }}</td>
-        <td>{{ t.end_date or "" }}</td>
-        <td>{{ t.hours or "" }}</td>
-        <td>{{ t.evaluate_method or "" }}</td>
-        <td>{{ t.result or "" }}</td>
-        <td>{{ t.score or "" }}</td>
-        <td>{{ t.evaluator or "" }}</td>
-        <td>{{ t.expire_date or "" }}</td>
-        <td>{{ t.remark or "" }}</td>
+      {% if rows and rows|length > 0 %}
+        {% for t in rows %}
+        <tr>
+          <td>{{ loop.index }}</td>
+          <td>{{ t.year or "" }}</td>
+          <td>{{ t.month or "" }}</td>
+          <td>{{ t.emp_id or "" }}</td>
+          <td>{{ t.prefix or "" }}</td>
+          <td>{{ t.first_name or "" }}</td>
+          <td>{{ t.last_name or "" }}</td>
+          <td>{{ t.section or "" }}</td>
+          <td>{{ t.position or "" }}</td>
+          <td>{{ t.course_code or "" }}</td>
+          <td>{{ t.course_name or "" }}</td>
+          <td>{{ t.course_type or "" }}</td>
+          <td>{{ t.start_date or "" }}</td>
+          <td>{{ t.end_date or "" }}</td>
+          <td>{{ t.hours or "" }}</td>
+          <td>{{ t.evaluate_method or "" }}</td>
+          <td>{{ t.result or "" }}</td>
+          <td>{{ t.score or "" }}</td>
+          <td>{{ t.evaluator or "" }}</td>
+          <td>{{ t.expire_date or "" }}</td>
+          <td>{{ t.remark or "" }}</td>
 
-        <!-- ✅ Actions ต้องอยู่ท้ายสุดของแถว -->
-        <td style="white-space:nowrap;">
-          <a class="btn" href="{{ url_for('trainings_edit', tr_id=t.id) }}">แก้ไข</a>
-
-          <form method="post" action="{{ url_for('trainings_delete', tr_id=t.id) }}" style="display:inline;">
-            <button class="btn danger" type="submit" onclick="return confirm('ลบรายการนี้?')">ลบ</button>
-          </form>
-        </td>
-
-      </tr>
-      {% endfor %}
-    {% else %}
-      <tr>
-        <td colspan="22" class="muted" style="padding:18px;">
-          ยังไม่มีข้อมูล Training Record (ลอง Import ก่อน)
-        </td>
-      </tr>
-    {% endif %}
+          <td>
+            <a class="btn" href="{{ url_for('trainings_edit', tr_id=t.id) }}">แก้ไข</a>
+            <form method="post" action="{{ url_for('trainings_delete', tr_id=t.id) }}" style="display:inline;">
+              <button class="btn danger" type="submit" onclick="return confirm('ลบรายการนี้?')">ลบ</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      {% else %}
+        <tr>
+          <td colspan="22" class="muted" style="padding:18px;">
+            ยังไม่มีข้อมูล Training Record (ลอง Import ก่อน)
+          </td>
+        </tr>
+      {% endif %}
     </tbody>
   </table>
 </div>
