@@ -4,11 +4,10 @@
 <div class="page-head">
   <div>
     <h1>Training Import History</h1>
-    <div class="muted">ประวัติการ Import Training ล่าสุด</div>
+    <div class="muted">ประวัติการ Import ล่าสุด</div>
   </div>
   <div class="actions">
-    <a class="btn ghost" href="{{ url_for('trainings_list') }}">กลับหน้า Training List</a>
-    <a class="btn ghost" href="{{ url_for('trainings_import') }}">ไปหน้า Import</a>
+    <a class="btn ghost" href="{{ url_for('trainings_list') }}">กลับ Training Record</a>
   </div>
 </div>
 
@@ -16,31 +15,37 @@
   <table class="table">
     <thead>
       <tr>
-        <th>Batch</th>
-        <th>เวลา</th>
-        <th>ไฟล์</th>
+        <th>#</th>
+        <th>Filename</th>
+        <th>Created</th>
         <th>Added</th>
         <th>Updated</th>
         <th>Duplicate</th>
         <th>Skipped</th>
-        <th>ดูรายละเอียด</th>
+        <th>Action</th>
       </tr>
     </thead>
     <tbody>
-      {% for b in batches %}
-      <tr>
-        <td>{{ b.id }}</td>
-        <td>{{ b.created_at }}</td>
-        <td>{{ b.filename or "" }}</td>
-        <td>{{ b.added }}</td>
-        <td>{{ b.updated }}</td>
-        <td>{{ b.duplicated }}</td>
-        <td>{{ b.skipped }}</td>
-        <td>
-          <a class="btn" href="{{ url_for('training_import_detail', batch_id=b.id) }}">เปิด</a>
-        </td>
-      </tr>
-      {% endfor %}
+      {% if batches and batches|length > 0 %}
+        {% for b in batches %}
+        <tr>
+          <td>{{ b.id }}</td>
+          <td>{{ b.filename or "" }}</td>
+          <td>{{ b.created_at or "" }}</td>
+          <td>{{ b.added or 0 }}</td>
+          <td>{{ b.updated or 0 }}</td>
+          <td>{{ b.duplicated or 0 }}</td>
+          <td>{{ b.skipped or 0 }}</td>
+          <td>
+            <a class="btn" href="{{ url_for('import_batch_detail', batch_id=b.id) }}">ดูรายละเอียด</a>
+          </td>
+        </tr>
+        {% endfor %}
+      {% else %}
+        <tr>
+          <td colspan="8" class="muted" style="padding:18px;">ยังไม่มีประวัติ Import</td>
+        </tr>
+      {% endif %}
     </tbody>
   </table>
 </div>
