@@ -961,20 +961,29 @@ def trainings_delete(tr_id):
     flash("ลบ Training Record แล้ว", "success")
     return redirect(url_for("trainings_list"))
 
-@app.post("/trainings/bulk-delete")
+@app.route("/trainings/bulk-delete", methods=["POST"])
 def trainings_bulk_delete():
-    ids = request.form.getlist("ids")  # <-- ได้ list ของ id ที่ติ๊ก
+    ids = request.form.getlist("ids")  # ✅ ต้อง getlist เท่านั้น
 
     if not ids:
-        flash("ยังไม่ได้เลือกรายการที่จะลบ", "error")
+        flash("ยังไม่ได้เลือกข้อมูลที่จะลบ", "error")
         return redirect(url_for("trainings_list"))
 
     try:
-        # แปลงเป็น int กันข้อมูลแปลก
-        ids_int = [int(x) for x in ids]
+        # แปลงเป็น int กันค่ามั่ว
+        ids_int = []
+        for x in ids:
+            try:
+                ids_int.append(int(x))
+            except:
+                pass
+
+        if not ids_int:
+            flash("รายการที่เลือกไม่ถูกต้อง", "error")
+            return redirect(url_for("trainings_list"))
 
         deleted = (
-            db.session.query(TrainingRecord)
+            TrainingRecord.query
             .filter(TrainingRecord.id.in_(ids_int))
             .delete(synchronize_session=False)
         )
