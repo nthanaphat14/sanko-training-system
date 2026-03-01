@@ -486,7 +486,7 @@ def trainings_import():
         ALIASES = {
             "emp_id": ["emp id", "empid", "รหัสพนักงาน", "รหัส"],
             "prefix": ["คำนำหน้า", "prefix"],
-            "frist_name": ["ชื่อ", "first name", "firstname", "first name", "ชื่อสกุล", "ชื่อ-สกุล"],
+            "first_name": ["ชื่อ", "first name", "firstname", "first name", "ชื่อสกุล", "ชื่อ-สกุล"],
             "last_name": ["นามสกุล", "last name", "lastname"],
             "section ": ["แผนก", "section", "department"],
             "position": ["ตำแหน่ง", "position"],
