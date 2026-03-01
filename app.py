@@ -603,8 +603,6 @@ def trainings_import():
                 last_name = last_name,
                 section = section,
                 position = position,
-                section=section,
-                position=position,
                 course_code=course_code,
                 course_name=course_name,
                 course_type=course_type,
