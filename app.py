@@ -17,7 +17,10 @@ from openpyxl import load_workbook
 from openpyxl import Workbook
 from sqlalchemy import func  
 from datetime import date
-
+from functools import wraps
+from flask import session, abort
+from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import timedelta
 
 # -------------------------------------------------
 # App Config
@@ -33,6 +36,11 @@ if db_url.startswith("postgres://"):
 
 app.config["SQLALCHEMY_DATABASE_URI"] = db_url or "sqlite:///employee.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+# ถ้ารันบน HTTPS (Render) ให้เปิด True ได้เลย
+app.config["SESSION_COOKIE_SECURE"] = True
+app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(minutes=30)
 
 print("DATABASE =", app.config["SQLALCHEMY_DATABASE_URI"])  # 👈 ใส่ตรงนี้
 
@@ -42,6 +50,69 @@ db = SQLAlchemy(app)
 # -------------------------------------------------
 # Model
 # -------------------------------------------------
+class User(db.Model):
+    __tablename__ = "users"
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(180), unique=True, nullable=False, index=True)
+    password_hash = db.Column(db.String(255), nullable=False)
+    role = db.Column(db.String(20), nullable=False, default="viewer")  # admin / viewer
+    is_active = db.Column(db.Boolean, default=True)
+
+    failed_attempts = db.Column(db.Integer, default=0)
+    locked_until = db.Column(db.DateTime, nullable=True)
+
+    last_login_at = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class AuditLog(db.Model):
+    __tablename__ = "audit_logs"
+    id = db.Column(db.Integer, primary_key=True)
+    actor_email = db.Column(db.String(180), nullable=True)   # ใครทำ
+    action = db.Column(db.String(80), nullable=False)        # เช่น LOGIN_OK, EXPORT, RESET_PASSWORD
+    detail = db.Column(db.Text, nullable=True)               # รายละเอียด
+    ip = db.Column(db.String(80), nullable=True)
+    ua = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+def role_required(*roles):
+    def deco(fn):
+        @wraps(fn)
+        def wrapper(*args, **kwargs):
+            u = get_current_user()
+            if not u or not u.is_active:
+                return redirect(url_for("login"))
+            if u.role not in roles:
+                abort(403)
+            return fn(*args, **kwargs)
+        return wrapper
+    return deco
+
+
+def seed_users_if_missing():
+    """
+    สร้าง user 3 คนตามที่คุณให้
+    - hr02 = admin
+    - hr, hr01 = viewer (ดูอย่างเดียว + export ได้)
+    """
+    defaults = [
+        ("hr02@sankothai.net", "Sanko1996", "admin"),
+        ("hr@sankothai.net", "Sanko1996", "viewer"),
+        ("hr01@sankothai.net", "Sanko1996", "viewer"),
+    ]
+    for email, pw, role in defaults:
+        exists = User.query.filter_by(email=email).first()
+        if not exists:
+            db.session.add(User(
+                email=email,
+                password_hash=generate_password_hash(pw),
+                role=role,
+                is_active=True
+            ))
+    db.session.commit()
+
+
 class Employee(db.Model):
     __tablename__ = "employees"
 
@@ -172,7 +243,10 @@ class ImportItem(db.Model):
 def init_db():
     with app.app_context():
         db.create_all()
-
+def init_db():
+    with app.app_context():
+        db.create_all()
+        seed_users_if_missing()
 
 # -------------------------------------------------
 # Helper Functions
@@ -300,6 +374,133 @@ def safe_date(v):
 # -------------------------------------------------
 # Routes
 # -------------------------------------------------
+@app.get("/login")
+def login():
+    return render_template("login.html")
+
+
+@app.post("/login")
+def login_post():
+    email = (request.form.get("email") or "").strip().lower()
+    password = request.form.get("password") or ""
+
+    u = User.query.filter_by(email=email).first()
+    if not u or not u.is_active:
+        audit("LOGIN_FAIL", f"email={email}")
+        flash("User หรือ Password ไม่ถูกต้อง", "error")
+        return redirect(url_for("login"))
+
+    # lockout เบาๆ ถ้าลองผิดเยอะ
+    if u.locked_until and u.locked_until > datetime.utcnow():
+        audit("LOGIN_LOCKED", f"email={email}")
+        flash("บัญชีถูกล็อกชั่วคราว (ลองใหม่อีกครั้งภายหลัง)", "error")
+        return redirect(url_for("login"))
+
+    if not check_password_hash(u.password_hash, password):
+        u.failed_attempts = (u.failed_attempts or 0) + 1
+        # ล็อก 10 นาที ถ้าผิดครบ 8 ครั้ง
+        if u.failed_attempts >= 8:
+            u.locked_until = datetime.utcnow() + timedelta(minutes=10)
+            u.failed_attempts = 0
+        db.session.commit()
+
+        audit("LOGIN_FAIL", f"email={email}")
+        flash("User หรือ Password ไม่ถูกต้อง", "error")
+        return redirect(url_for("login"))
+
+    # success
+    u.failed_attempts = 0
+    u.locked_until = None
+    u.last_login_at = datetime.utcnow()
+    db.session.commit()
+
+    session.clear()
+    session["user_id"] = u.id
+    session["user_email"] = u.email
+    session["user_role"] = u.role
+    session.permanent = True
+
+    audit("LOGIN_OK", f"email={email}")
+    return redirect(url_for("employees_list"))
+
+
+@app.get("/logout")
+def logout():
+    audit("LOGOUT", "")
+    session.clear()
+    return redirect(url_for("login"))
+
+
+@app.route("/change-password", methods=["GET", "POST"])
+@login_required
+def change_password():
+    u = get_current_user()
+    if request.method == "GET":
+        return render_template("change_password.html", user=u)
+
+    old_pw = request.form.get("old_password") or ""
+    new_pw = request.form.get("new_password") or ""
+    new_pw2 = request.form.get("new_password2") or ""
+
+    if not check_password_hash(u.password_hash, old_pw):
+        flash("รหัสเดิมไม่ถูกต้อง", "error")
+        return redirect(url_for("change_password"))
+
+    if new_pw != new_pw2:
+        flash("ยืนยันรหัสใหม่ไม่ตรงกัน", "error")
+        return redirect(url_for("change_password"))
+
+    if len(new_pw) < 10:
+        flash("รหัสใหม่ต้องยาวอย่างน้อย 10 ตัวอักษร", "error")
+        return redirect(url_for("change_password"))
+
+    u.password_hash = generate_password_hash(new_pw)
+    db.session.commit()
+    audit("CHANGE_PASSWORD", f"user={u.email}")
+    flash("เปลี่ยนรหัสผ่านสำเร็จ", "success")
+    return redirect(url_for("employees_list"))
+
+
+# ---------- Admin: ดูรายชื่อ user + reset ----------
+@app.get("/admin/users")
+@role_required("admin")
+def admin_users():
+    users = User.query.order_by(User.email.asc()).all()
+    return render_template("admin_users.html", users=users)
+
+
+@app.post("/admin/users/<int:user_id>/reset-password")
+@role_required("admin")
+def admin_reset_password(user_id):
+    target = User.query.get_or_404(user_id)
+    new_pw = request.form.get("new_password") or ""
+
+    if len(new_pw) < 10:
+        flash("รหัสใหม่ต้องยาวอย่างน้อย 10 ตัวอักษร", "error")
+        return redirect(url_for("admin_users"))
+
+    target.password_hash = generate_password_hash(new_pw)
+    db.session.commit()
+    audit("RESET_PASSWORD", f"admin={session.get('user_email')} reset={target.email}")
+    flash(f"รีเซ็ตรหัสผ่านให้ {target.email} สำเร็จ", "success")
+    return redirect(url_for("admin_users"))
+
+@app.before_request
+def require_login_globally():
+    open_paths = set(["/login", "/healthz"])
+    if request.path.startswith("/static/"):
+        return None
+    if request.path in open_paths:
+        return None
+
+    # ปล่อยให้ POST /login ผ่าน
+    if request.path == "/login" and request.method == "POST":
+        return None
+
+    u = get_current_user()
+    if not u or not u.is_active:
+        return redirect(url_for("login"))
+
 @app.get("/")
 def root():
     return redirect(url_for("employees_list"))
@@ -311,6 +512,7 @@ def healthz():
 
 
 @app.get("/employees")
+@login_required
 def employees_list():
     q = (request.args.get("q") or "").strip()
 
@@ -410,6 +612,7 @@ def employee_delete(em_id):
     return redirect(url_for("employees_list"))
 
 @app.route("/employees/import", methods=["GET", "POST"])
+@role_required("admin")
 def employees_import():
     if request.method == "GET":
         return render_template("employees_import.html")
@@ -504,6 +707,7 @@ def employees_import():
         return redirect(url_for("employees_import"))
     
 @app.route("/trainings/import", methods=["GET", "POST"])
+@role_required("admin")
 def trainings_import():
     if request.method == "GET":
         return render_template("training_import.html")
@@ -1089,6 +1293,7 @@ def trainings_list():
     return render_template("trainings_list.html", rows=rows, total=total, q=q, year=year, month=month)
 
 @app.route("/trainings/<int:tr_id>/edit", methods=["GET", "POST"])
+@role_required("admin")
 def trainings_edit(tr_id):
     tr = TrainingRecord.query.get_or_404(tr_id)
 
@@ -1164,6 +1369,7 @@ def trainings_new():
     return redirect(url_for("trainings_list"))
 
 @app.route("/trainings/bulk-delete", methods=["POST"])
+@role_required("admin")
 def trainings_bulk_delete():
 
     print("BULK DELETE IDS:", request.form.getlist("ids"))
@@ -1203,6 +1409,7 @@ def trainings_bulk_delete():
         return redirect(url_for("trainings_list"))
 
 @app.route("/trainings/<int:tr_id>/delete", methods=["POST"])
+@role_required("admin")
 def trainings_delete(tr_id):
     tr = TrainingRecord.query.get_or_404(tr_id)
     try:
