@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="page-head">
+  <div>
+    <h1>Training Import History</h1>
+    <div class="muted">ประวัติการ Import Training ล่าสุด</div>
+  </div>
+  <div class="actions">
+    <a class="btn ghost" href="{{ url_for('trainings_list') }}">กลับหน้า Training List</a>
+    <a class="btn ghost" href="{{ url_for('trainings_import') }}">ไปหน้า Import</a>
+  </div>
+</div>
+
+<div class="table-wrap card">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Batch</th>
+        <th>เวลา</th>
+        <th>ไฟล์</th>
+        <th>Added</th>
+        <th>Updated</th>
+        <th>Duplicate</th>
+        <th>Skipped</th>
+        <th>ดูรายละเอียด</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for b in batches %}
+      <tr>
+        <td>{{ b.id }}</td>
+        <td>{{ b.created_at }}</td>
+        <td>{{ b.filename or "" }}</td>
+        <td>{{ b.added }}</td>
+        <td>{{ b.updated }}</td>
+        <td>{{ b.duplicated }}</td>
+        <td>{{ b.skipped }}</td>
+        <td>
+          <a class="btn" href="{{ url_for('training_import_detail', batch_id=b.id) }}">เปิด</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}
