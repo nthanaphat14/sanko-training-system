@@ -3,11 +3,112 @@
 
 <h1>แก้ไข Training Record</h1>
 
-<form method="post" action="{{ url_for('trainings_edit', tr_id=tr.id) }}">
-  <input name="emp_id" value="{{ tr.emp_id }}">
-  <input name="full_name" value="{{ tr.full_name }}">
-  ...
-  <button type="submit">บันทึก</button>
+<form method="post" class="card" style="padding:20px;">
+
+  <div>
+    <label>Year</label>
+    <input name="year" value="{{ tr.year or '' }}">
+  </div>
+
+  <div>
+    <label>Month</label>
+    <input name="month" value="{{ tr.month or '' }}">
+  </div>
+
+  <div>
+    <label>Emp ID</label>
+    <input name="emp_id" value="{{ tr.emp_id }}">
+  </div>
+
+  <div>
+    <label>Prefix</label>
+    <input name="prefix" value="{{ tr.prefix or '' }}">
+  </div>
+
+  <div>
+    <label>First Name</label>
+    <input name="first_name" value="{{ tr.first_name or '' }}">
+  </div>
+
+  <div>
+    <label>Last Name</label>
+    <input name="last_name" value="{{ tr.last_name or '' }}">
+  </div>
+
+  <div>
+    <label>Section</label>
+    <input name="section" value="{{ tr.section or '' }}">
+  </div>
+
+  <div>
+    <label>Position</label>
+    <input name="position" value="{{ tr.position or '' }}">
+  </div>
+
+  <div>
+    <label>Course Code</label>
+    <input name="course_code" value="{{ tr.course_code or '' }}">
+  </div>
+
+  <div>
+    <label>Course Name</label>
+    <input name="course_name" value="{{ tr.course_name or '' }}">
+  </div>
+
+  <div>
+    <label>Course Type</label>
+    <input name="course_type" value="{{ tr.course_type or '' }}">
+  </div>
+
+  <div>
+    <label>Start Date</label>
+    <input type="date" name="start_date" value="{{ tr.start_date }}">
+  </div>
+
+  <div>
+    <label>End Date</label>
+    <input type="date" name="end_date" value="{{ tr.end_date }}">
+  </div>
+
+  <div>
+    <label>Hours</label>
+    <input name="hours" value="{{ tr.hours or '' }}">
+  </div>
+
+  <div>
+    <label>Evaluate Method</label>
+    <input name="evaluate_method" value="{{ tr.evaluate_method or '' }}">
+  </div>
+
+  <div>
+    <label>Result</label>
+    <input name="result" value="{{ tr.result or '' }}">
+  </div>
+
+  <div>
+    <label>Score</label>
+    <input name="score" value="{{ tr.score or '' }}">
+  </div>
+
+  <div>
+    <label>Evaluator</label>
+    <input name="evaluator" value="{{ tr.evaluator or '' }}">
+  </div>
+
+  <div>
+    <label>Expire Date</label>
+    <input type="date" name="expire_date" value="{{ tr.expire_date }}">
+  </div>
+
+  <div>
+    <label>Remark</label>
+    <textarea name="remark">{{ tr.remark or '' }}</textarea>
+  </div>
+
+  <br>
+  <button class="btn">บันทึก</button>
+  <a class="btn ghost" href="{{ url_for('trainings_list') }}">ยกเลิก</a>
+
 </form>
 
 {% endblock %}
