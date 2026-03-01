@@ -3,20 +3,33 @@
 
 <div class="page-head">
   <div>
-    <h1>Training Import Batch #{{ batch.id }}</h1>
+    <h1>Import Detail (Batch #{{ batch.id }})</h1>
     <div class="muted">
-      Added {{ batch.added }} | Updated {{ batch.updated }} | Duplicate {{ batch.duplicated }} | Skipped {{ batch.skipped }}
+      ไฟล์: {{ batch.filename or "" }} | เวลา: {{ batch.created_at or "" }}
     </div>
   </div>
   <div class="actions">
-    <a class="btn ghost" href="{{ url_for('training_imports_list') }}">ย้อนกลับ</a>
-    <a class="btn ghost" href="{{ url_for('trainings_list') }}">หน้า Training List</a>
+    <a class="btn ghost" href="{{ url_for('import_batches_list') }}">กลับ Import History</a>
+    <a class="btn ghost" href="{{ url_for('trainings_list') }}">กลับ Training Record</a>
   </div>
 </div>
 
-{% macro render_table(items, title) %}
+<div class="card" style="padding:14px; margin-bottom:12px;">
+  <div style="display:flex; gap:10px; flex-wrap:wrap;">
+    <div class="pill">Added: <b>{{ batch.added or 0 }}</b></div>
+    <div class="pill">Updated: <b>{{ batch.updated or 0 }}</b></div>
+    <div class="pill">Duplicate: <b>{{ batch.duplicated or 0 }}</b></div>
+    <div class="pill">Skipped: <b>{{ batch.skipped or 0 }}</b></div>
+  </div>
+</div>
+
+{% macro render_table(title, items) %}
   <div class="card" style="margin-bottom:14px;">
-    <h3 style="margin:0 0 10px 0;">{{ title }} ({{ items|length }})</h3>
+    <div style="padding:12px 14px; border-bottom:1px solid rgba(255,255,255,0.06); display:flex; justify-content:space-between; align-items:center;">
+      <div style="font-weight:700;">{{ title }}</div>
+      <div class="muted">จำนวน {{ items|length }}</div>
+    </div>
+
     <div class="table-wrap">
       <table class="table">
         <thead>
@@ -34,29 +47,35 @@
           </tr>
         </thead>
         <tbody>
-          {% for x in items %}
-          <tr>
-            <td>{{ x.row_no or "" }}</td>
-            <td>{{ x.emp_id or "" }}</td>
-            <td>{{ (x.first_name or "") ~ " " ~ (x.last_name or "") }}</td>
-            <td>{{ x.section or "" }}</td>
-            <td>{{ x.position or "" }}</td>
-            <td>{{ x.course_code or "" }}</td>
-            <td>{{ x.course_name or "" }}</td>
-            <td>{{ x.start_date or "" }}</td>
-            <td>{{ x.end_date or "" }}</td>
-            <td>{{ x.reason or "" }}</td>
-          </tr>
-          {% endfor %}
+          {% if items and items|length > 0 %}
+            {% for it in items %}
+            <tr>
+              <td>{{ it.row_no or "" }}</td>
+              <td>{{ it.emp_id or "" }}</td>
+              <td>{{ (it.first_name or "") ~ " " ~ (it.last_name or "") }}</td>
+              <td>{{ it.section or "" }}</td>
+              <td>{{ it.position or "" }}</td>
+              <td>{{ it.course_code or "" }}</td>
+              <td>{{ it.course_name or "" }}</td>
+              <td>{{ it.start_date or "" }}</td>
+              <td>{{ it.end_date or "" }}</td>
+              <td class="muted">{{ it.reason or "" }}</td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="10" class="muted" style="padding:16px;">ไม่มีข้อมูล</td>
+            </tr>
+          {% endif %}
         </tbody>
       </table>
     </div>
   </div>
 {% endmacro %}
 
-{{ render_table(added, "✅ Added") }}
-{{ render_table(updated, "🟡 Updated") }}
-{{ render_table(duplicated, "🔴 Duplicate") }}
-{{ render_table(skipped, "⚪ Skipped") }}
+{{ render_table("✅ Added", added) }}
+{{ render_table("🟡 Updated", updated) }}
+{{ render_table("🟠 Duplicate", duplicated) }}
+{{ render_table("🔴 Skipped", skipped) }}
 
 {% endblock %}
