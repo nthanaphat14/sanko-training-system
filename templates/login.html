@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card" style="max-width:420px; margin:30px auto; padding:18px;">
+  <h2 style="margin:0 0 10px 0;">เข้าสู่ระบบ</h2>
+  <form method="post" action="{{ url_for('login_post') }}">
+    <div class="muted" style="margin:10px 0 6px;">Email</div>
+    <input class="input" name="email" placeholder="hr02@sankothai.net" required>
+
+    <div class="muted" style="margin:10px 0 6px;">Password</div>
+    <input class="input" name="password" type="password" required>
+
+    <button class="btn" type="submit" style="margin-top:14px; width:100%;">Login</button>
+  </form>
+</div>
+{% endblock %}
