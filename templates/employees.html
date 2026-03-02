@@ -48,7 +48,9 @@
         <tr>
           <td>{{ e.no or "" }}</td>
           <td class="nowrap"><b>{{ e.em_id }}</b></td>
-          <td class="nowrap">{{ e.id_card or "" }}</td>
+          <td class="nowrap">
+            {{ mask_id_card(e.id_card) if e.id_card else "" }}
+          </td
           <td>{{ e.th_full() }}</td>
           <td>{{ e.en_full() }}</td>
           <td>{{ e.position or "" }}</td>
