@@ -27,6 +27,7 @@ from datetime import timedelta
 from flask import redirect, url_for, abort, flash
 from flask import request
 from werkzeug.security import check_password_hash
+from sqlalchemy import or_, func
 
 # -------------------------------------------------
 # App Config
@@ -1297,7 +1298,7 @@ def dashboard():
         start_date=start_date,
         end_date=end_date,
     )
-    
+
 @app.get("/trainings")
 def trainings_list():
     q = (request.args.get("q") or "").strip()
@@ -1306,45 +1307,60 @@ def trainings_list():
 
     query = TrainingRecord.query
 
+    # --- SEARCH (q) ---
     if q:
         like = f"%{q}%"
 
-        # -------- ใส่ตรงนี้เลย --------
-        name_field = None
-        for cand in ["full_name", "employee_name", "name", "emp_name"]:
-            if hasattr(TrainingRecord, cand):
-                name_field = getattr(TrainingRecord, cand)
-                break
+        conds = [
+            TrainingRecord.emp_id.ilike(like),
+            TrainingRecord.prefix.ilike(like),
+            TrainingRecord.first_name.ilike(like),
+            TrainingRecord.last_name.ilike(like),
+            TrainingRecord.section.ilike(like),
+            TrainingRecord.position.ilike(like),
+            TrainingRecord.course_code.ilike(like),
+            TrainingRecord.course_name.ilike(like),
+            TrainingRecord.course_type.ilike(like),
+            TrainingRecord.evaluator.ilike(like),
+            TrainingRecord.result.ilike(like),
+            TrainingRecord.remark.ilike(like),
 
-        conds = []
+            # ชื่อเต็ม "ชื่อ นามสกุล"
+            func.concat(
+                func.coalesce(TrainingRecord.first_name, ""),
+                " ",
+                func.coalesce(TrainingRecord.last_name, ""),
+            ).ilike(like),
+        ]
 
-        if hasattr(TrainingRecord, "employee_code"):
-            conds.append(TrainingRecord.employee_code.ilike(like))
+        query = query.filter(or_(*conds))
 
-        if name_field is not None:
-            conds.append(name_field.ilike(like))
-
-        if hasattr(TrainingRecord, "course_name"):
-            conds.append(TrainingRecord.course_name.ilike(like))
-
-        if conds:
-            query = query.filter(or_(*conds))
-
-    
+    # --- FILTER year/month ---
     if year.isdigit():
         query = query.filter(TrainingRecord.year == int(year))
     if month.isdigit():
         query = query.filter(TrainingRecord.month == int(month))
 
-    rows = query.order_by(
-        TrainingRecord.start_date.desc().nullslast(),
-        TrainingRecord.id.desc()
-    ).limit(500).all()
-
+    # total ต้องนับจาก query ที่กรองแล้ว (ยังไม่ limit)
     total = query.count()
 
-    records = query.order_by(TrainingRecord.id.desc()).all()
-    return render_template("trainings_list.html", rows=rows, total=total, q=q, year=year, month=month)
+    rows = (
+        query.order_by(
+            TrainingRecord.start_date.desc().nullslast(),
+            TrainingRecord.id.desc()
+        )
+        .limit(500)
+        .all()
+    )
+
+    return render_template(
+        "trainings_list.html",
+        rows=rows,
+        total=total,
+        q=q,
+        year=year,
+        month=month
+    )
 
 @app.route("/trainings/<int:tr_id>/edit", methods=["GET", "POST"])
 @role_required("admin")
