@@ -30,6 +30,8 @@ from werkzeug.security import check_password_hash
 from sqlalchemy import or_, func
 from sqlalchemy import or_
 from math import ceil
+from datetime import datetime
+from openpyxl import Workbook
 
 # -------------------------------------------------
 # App Config
@@ -219,6 +221,61 @@ def get_current_user():
     if not uid:
         return None
     return db.session.get(User, uid)  # SQLAlchemy 2.x
+
+def build_training_query(args):
+    """
+    ใช้ args = request.args (หรือ dict ที่มี key เหมือนกัน)
+    ทำให้ /trainings และ /trainings/export ใช้ filter ชุดเดียวกัน 100%
+    """
+    q = (args.get("q") or "").strip()
+    year = (args.get("year") or "").strip()
+    month = (args.get("month") or "").strip()
+
+    query = TrainingRecord.query
+
+    if q:
+        like = f"%{q}%"
+
+        # เลือก field ชื่อแบบยืดหยุ่น (กัน model ไม่ตรง)
+        name_field = None
+        for cand in ["full_name", "employee_name", "name", "emp_name", "first_name", "last_name"]:
+            if hasattr(TrainingRecord, cand):
+                name_field = getattr(TrainingRecord, cand)
+                break
+
+        conds = []
+
+        # ✅ สำคัญ: ใช้ชื่อ field ให้ตรงกับ model ของคุณ
+        # จาก template คุณใช้ t.emp_id / t.course_code / t.course_name
+        if hasattr(TrainingRecord, "emp_id"):
+            conds.append(TrainingRecord.emp_id.ilike(like))
+        if hasattr(TrainingRecord, "employee_code"):
+            conds.append(TrainingRecord.employee_code.ilike(like))
+
+        # ค้นหาชื่อ/นามสกุล ถ้ามี
+        if hasattr(TrainingRecord, "first_name"):
+            conds.append(TrainingRecord.first_name.ilike(like))
+        if hasattr(TrainingRecord, "last_name"):
+            conds.append(TrainingRecord.last_name.ilike(like))
+
+        # หรือชื่อรวม (ถ้ามี)
+        if name_field is not None:
+            conds.append(name_field.ilike(like))
+
+        if hasattr(TrainingRecord, "course_code"):
+            conds.append(TrainingRecord.course_code.ilike(like))
+        if hasattr(TrainingRecord, "course_name"):
+            conds.append(TrainingRecord.course_name.ilike(like))
+
+        if conds:
+            query = query.filter(or_(*conds))
+
+    if year.isdigit() and hasattr(TrainingRecord, "year"):
+        query = query.filter(TrainingRecord.year == int(year))
+    if month.isdigit() and hasattr(TrainingRecord, "month"):
+        query = query.filter(TrainingRecord.month == int(month))
+
+    return query, q, year, month
 
 @app.context_processor
 def inject_user():
@@ -1303,83 +1360,110 @@ def dashboard():
 
 @app.get("/trainings")
 def trainings_list():
-    q = (request.args.get("q") or "").strip()
-    year = (request.args.get("year") or "").strip()
-    month = (request.args.get("month") or "").strip()
+    query, q, year, month = build_training_query(request.args)
 
-    # --- Pagination params ---
-    try:
-        page = int(request.args.get("page", 1))
-    except ValueError:
-        page = 1
-    page = max(page, 1)
-
-    try:
-        per_page = int(request.args.get("per_page", 50))
-    except ValueError:
+    # pagination
+    page = int(request.args.get("page", 1) or 1)
+    per_page = int(request.args.get("per_page", 50) or 50)
+    if per_page not in (25, 50, 100, 200):
         per_page = 50
+    if page < 1:
+        page = 1
 
-    # จำกัด per_page กันคนกด 99999 ทำล่ม
-    per_page = 50 if per_page not in (25, 50, 100, 200) else per_page
-
-    query = TrainingRecord.query
-
-    # --- Search (q) ---
-    if q:
-        like = f"%{q}%"
-        conds = []
-
-        # ✅ จากรูป column ของคุณ มี emp_id, first_name, last_name, course_code, course_name, section, position
-        if hasattr(TrainingRecord, "emp_id"):
-            conds.append(TrainingRecord.emp_id.ilike(like))
-        if hasattr(TrainingRecord, "first_name"):
-            conds.append(TrainingRecord.first_name.ilike(like))
-        if hasattr(TrainingRecord, "last_name"):
-            conds.append(TrainingRecord.last_name.ilike(like))
-        if hasattr(TrainingRecord, "course_code"):
-            conds.append(TrainingRecord.course_code.ilike(like))
-        if hasattr(TrainingRecord, "course_name"):
-            conds.append(TrainingRecord.course_name.ilike(like))
-        if hasattr(TrainingRecord, "section"):
-            conds.append(TrainingRecord.section.ilike(like))
-        if hasattr(TrainingRecord, "position"):
-            conds.append(TrainingRecord.position.ilike(like))
-        if hasattr(TrainingRecord, "course_type"):
-            conds.append(TrainingRecord.course_type.ilike(like))
-
-        if conds:
-            query = query.filter(or_(*conds))
-
-    # --- Year / Month filters ---
-    if year.isdigit():
-        query = query.filter(TrainingRecord.year == int(year))
-    if month.isdigit():
-        query = query.filter(TrainingRecord.month == int(month))
-
-    # --- Total BEFORE pagination ---
     total = query.count()
+    total_pages = max(1, (total + per_page - 1) // per_page)
 
-    # --- Ordering ---
-    query = query.order_by(
-        TrainingRecord.start_date.desc().nullslast(),
-        TrainingRecord.id.desc()
+    rows = (query
+        .order_by(TrainingRecord.start_date.desc().nullslast(), TrainingRecord.id.desc())
+        .offset((page - 1) * per_page)
+        .limit(per_page)
+        .all()
     )
-
-    # --- Pagination calc ---
-    total_pages = max(1, ceil(total / per_page))
-    if page > total_pages:
-        page = total_pages
-
-    offset = (page - 1) * per_page
-    rows = query.offset(offset).limit(per_page).all()
 
     return render_template(
         "trainings_list.html",
         rows=rows,
         total=total,
         q=q, year=year, month=month,
-        page=page, per_page=per_page,
-        total_pages=total_pages
+        page=page,
+        per_page=per_page,
+        total_pages=total_pages,
+    )
+
+@app.get("/trainings/export")
+@role_required("admin", "viewer")  # ✅ viewer export ได้
+def trainings_export():
+    query, q, year, month = build_training_query(request.args)
+
+    # กัน export เยอะเกินจนล่ม (ปรับเลขได้)
+    total = query.count()
+    if total > 50000:
+        flash(f"ผลลัพธ์ {total:,} รายการมากเกินไป กรุณากรองเพิ่มก่อน Export", "error")
+        return redirect(url_for("trainings_list", q=q, year=year, month=month))
+
+    # log สำหรับ audit
+    audit("EXPORT_TRAININGS", f"q={q}&year={year}&month={month}&total={total}")
+
+    # ใช้ write_only ลด memory
+    wb = Workbook(write_only=True)
+    ws = wb.create_sheet("TrainingRecord")
+
+    headers = [
+        "Year","Month","Emp ID","Prefix","First Name","Last Name","Section","Position",
+        "Course Code","Course Name","Type","StartDate","EndDate","Hours",
+        "Eval Method","Result","Score","Evaluator","Expire Date","Remark"
+    ]
+    ws.append(headers)
+
+    def val(x):
+        if x is None:
+            return ""
+        # date/datetime -> string
+        try:
+            if hasattr(x, "strftime"):
+                return x.strftime("%Y-%m-%d")
+        except Exception:
+            pass
+        return str(x)
+
+    # ดึงทีละ batch ลด RAM
+    # (yield_per ใช้ได้กับหลาย DB; ถ้าเจอปัญหา ค่อยปรับ)
+    for t in query.order_by(TrainingRecord.id.desc()).yield_per(1000):
+        ws.append([
+            val(getattr(t, "year", "")),
+            val(getattr(t, "month", "")),
+            val(getattr(t, "emp_id", getattr(t, "employee_code", ""))),
+            val(getattr(t, "prefix", "")),
+            val(getattr(t, "first_name", "")),
+            val(getattr(t, "last_name", "")),
+            val(getattr(t, "section", "")),
+            val(getattr(t, "position", "")),
+            val(getattr(t, "course_code", "")),
+            val(getattr(t, "course_name", "")),
+            val(getattr(t, "course_type", "")),
+            val(getattr(t, "start_date", "")),
+            val(getattr(t, "end_date", "")),
+            val(getattr(t, "hours", "")),
+            val(getattr(t, "evaluate_method", "")),
+            val(getattr(t, "result", "")),
+            val(getattr(t, "score", "")),
+            val(getattr(t, "evaluator", "")),
+            val(getattr(t, "expire_date", "")),
+            val(getattr(t, "remark", "")),
+        ])
+
+    bio = BytesIO()
+    wb.save(bio)
+    bio.seek(0)
+
+    stamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    filename = f"training_record_{stamp}.xlsx"
+
+    return send_file(
+        bio,
+        as_attachment=True,
+        download_name=filename,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
 
 @app.route("/trainings/<int:tr_id>/edit", methods=["GET", "POST"])
