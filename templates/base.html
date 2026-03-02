@@ -8,17 +8,43 @@
 </head>
 <body>
   <div class="topbar">
-    <div class="brand">
-      <div class="brand-title">SANKO Training System</div>
-      <div class="brand-sub">Employee Data</div>
-    </div>
-    <div class="top-actions">
-      <a class="btn" href="{{ url_for('employees_list') }}">Employee Data</a>
-      <a class="btn" href="{{ url_for('trainings_import') }}">
-      Training </a>
-      <a class="btn" href="{{ url_for('dashboard') }}">Dashboard</a>
-    </div>
+  <div class="brand">
+    <div class="brand-title">SANKO Training System</div>
+    <div class="brand-sub">Employee Data</div>
   </div>
+    <div class="top-actions" style="display:flex; gap:10px; align-items:center; margin-left:auto;">
+    <a class="btn" href="{{ url_for('employees_list') }}">Employee Data</a>
+    <a class="btn" href="{{ url_for('trainings_import') }}">Training</a>
+    <a class="btn" href="{{ url_for('dashboard') }}">Dashboard</a>
+
+    {% set role = session.get("user_role") %}
+    {% set email = session.get("user_email") %}
+
+    {% if email %}
+      <span class="muted" style="margin-left:15px;">
+        {{ email }} ({{ role }})
+      </span>
+
+      <a class="btn ghost" href="{{ url_for('change_password') }}">
+        Change Password
+      </a>
+
+      {% if role == "admin" %}
+        <a class="btn ghost" href="{{ url_for('admin_users') }}">
+          Admin Users
+        </a>
+      {% endif %}
+
+      <a class="btn danger" href="{{ url_for('logout') }}">
+        Logout
+      </a>
+    {% else %}
+      <a class="btn ghost" href="{{ url_for('login') }}">
+        Login
+      </a>
+    {% endif %}
+  </div>
+</div>
 
   <div class="container">
     {% with messages = get_flashed_messages(with_categories=true) %}
