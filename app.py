@@ -1311,7 +1311,7 @@ def trainings_list():
         query = query.filter(
             db.or_(
                 TrainingRecord.emp_id.ilike(like),
-                TrainingRecord.full_name.ilike(like),
+                TrainingRecord.first_name.ilike(like),
                 TrainingRecord.course_code.ilike(like),
                 TrainingRecord.course_name.ilike(like),
                 TrainingRecord.department.ilike(like),
