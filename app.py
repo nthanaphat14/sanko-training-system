@@ -80,6 +80,70 @@ class AuditLog(db.Model):
     detail = db.Column(db.Text, nullable=True)
     ip = db.Column(db.String(64), nullable=True)
 
+def get_current_user():
+    uid = session.get("uid")
+    if not uid:
+        return None
+    return User.query.get(uid)
+
+def audit(action, detail=None, user_email=None):
+    try:
+        ip = (request.headers.get("X-Forwarded-For") or request.remote_addr or "")
+        ip = ip.split(",")[0].strip() if ip else None
+
+        if user_email is None:
+            u = get_current_user()  # ถ้ามี session อยู่จะได้ email
+            user_email = getattr(u, "email", None) if u else None
+
+        db.session.add(AuditLog(
+            action=str(action),
+            detail=detail,
+            user_email=user_email,
+            ip=ip,
+        ))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        # ห้ามให้ audit ทำให้ระบบล่ม
+        pass
+
+@app.before_request
+def require_login_globally():
+    if request.path.startswith("/static/"):
+        return None
+
+    if request.path in ("/login", "/healthz"):
+        return None
+
+    u = get_current_user()
+    g.user = u
+
+    if not u or not getattr(u, "is_active", True):
+        return redirect(url_for("login"))
+    return None
+
+def role_required(*roles):
+    def deco(fn):
+        @wraps(fn)
+        def wrapper(*args, **kwargs):
+            u = get_current_user()
+            if not u or not u.is_active:
+                return redirect(url_for("login"))
+
+            if roles:
+                if getattr(u, "role", None) not in roles:
+                    abort(403)
+
+            return fn(*args, **kwargs)
+        return wrapper
+    return deco
+
+
+def login_required(fn):
+    # ใช้ role_required แบบไม่กำหนด role (แค่ต้อง login)
+    return role_required()(fn)
+
+
 class Employee(db.Model):
     __tablename__ = "employees"
 
@@ -207,49 +271,6 @@ class ImportItem(db.Model):
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-def get_current_user():
-    uid = session.get("uid")
-    if not uid:
-        return None
-    return User.query.get(uid)
-
-@app.before_request
-def require_login_globally():
-    if request.path.startswith("/static/"):
-        return None
-
-    if request.path in ("/login", "/healthz"):
-        return None
-
-    u = get_current_user()
-    g.user = u
-
-    if not u or not getattr(u, "is_active", True):
-        return redirect(url_for("login"))
-    return None
-
-def role_required(*roles):
-    def deco(fn):
-        @wraps(fn)
-        def wrapper(*args, **kwargs):
-            u = get_current_user()
-            if not u or not u.is_active:
-                return redirect(url_for("login"))
-
-            if roles:
-                if getattr(u, "role", None) not in roles:
-                    abort(403)
-
-            return fn(*args, **kwargs)
-        return wrapper
-    return deco
-
-
-def login_required(fn):
-    # ใช้ role_required แบบไม่กำหนด role (แค่ต้อง login)
-    return role_required()(fn)
-
-
 def init_db():
     with app.app_context():
         db.create_all()
@@ -258,26 +279,6 @@ def init_db():
         db.create_all()
         seed_users_if_missing()
         
-def audit(action, detail=None, user_email=None):
-    try:
-        ip = (request.headers.get("X-Forwarded-For") or request.remote_addr or "")
-        ip = ip.split(",")[0].strip() if ip else None
-
-        if user_email is None:
-            u = get_current_user()  # ถ้ามี session อยู่จะได้ email
-            user_email = getattr(u, "email", None) if u else None
-
-        db.session.add(AuditLog(
-            action=str(action),
-            detail=detail,
-            user_email=user_email,
-            ip=ip,
-        ))
-        db.session.commit()
-    except Exception:
-        db.session.rollback()
-        # ห้ามให้ audit ทำให้ระบบล่ม
-        pass
 # -------------------------------------------------
 # Helper Functions
 # -------------------------------------------------
