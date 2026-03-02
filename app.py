@@ -21,6 +21,7 @@ from sqlalchemy import func
 from datetime import date
 from functools import wraps
 from flask import session, abort
+from flask import session, g
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import timedelta
 from flask import redirect, url_for, abort, flash
@@ -207,38 +208,25 @@ class ImportItem(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 def get_current_user():
-    """
-    อ่าน user จาก session -> โหลดจาก DB
-    จะคืน None ถ้ายังไม่ login
-    """
     uid = session.get("uid")
     if not uid:
         return None
     return User.query.get(uid)
 
-
 @app.before_request
 def require_login_globally():
-    """
-    บังคับ login ทุกหน้า ยกเว้นหน้า login + static + healthz
-    """
-    # กัน static เช่น /static/app.css
     if request.path.startswith("/static/"):
         return None
 
-    # หน้าอนุญาตให้เข้าได้โดยไม่ login
-    allow = {"/login", "/healthz"}
-    if request.path in allow:
+    if request.path in ("/login", "/healthz"):
         return None
 
     u = get_current_user()
-    g.user = u  # เก็บไว้ให้ template ใช้ได้ (optional)
+    g.user = u
 
     if not u or not getattr(u, "is_active", True):
         return redirect(url_for("login"))
-
     return None
-
 
 def role_required(*roles):
     def deco(fn):
