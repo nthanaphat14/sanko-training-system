@@ -1307,28 +1307,28 @@ def trainings_list():
     query = TrainingRecord.query
 
     if q:
-    like = f"%{q}%"
+        like = f"%{q}%"
 
-    # -------- ใส่ตรงนี้เลย --------
-    name_field = None
-    for cand in ["full_name", "employee_name", "name", "emp_name"]:
-        if hasattr(TrainingRecord, cand):
-            name_field = getattr(TrainingRecord, cand)
-            break
+        # -------- ใส่ตรงนี้เลย --------
+        name_field = None
+        for cand in ["full_name", "employee_name", "name", "emp_name"]:
+            if hasattr(TrainingRecord, cand):
+                name_field = getattr(TrainingRecord, cand)
+                break
 
-    conds = []
+        conds = []
 
-    if hasattr(TrainingRecord, "employee_code"):
-        conds.append(TrainingRecord.employee_code.ilike(like))
+        if hasattr(TrainingRecord, "employee_code"):
+            conds.append(TrainingRecord.employee_code.ilike(like))
 
-    if name_field is not None:
-        conds.append(name_field.ilike(like))
+        if name_field is not None:
+            conds.append(name_field.ilike(like))
 
-    if hasattr(TrainingRecord, "course_name"):
-        conds.append(TrainingRecord.course_name.ilike(like))
+        if hasattr(TrainingRecord, "course_name"):
+            conds.append(TrainingRecord.course_name.ilike(like))
 
-    if conds:
-        query = query.filter(or_(*conds))
+        if conds:
+            query = query.filter(or_(*conds))
 
     
     if year.isdigit():
