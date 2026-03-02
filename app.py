@@ -69,16 +69,15 @@ class User(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-
 class AuditLog(db.Model):
     __tablename__ = "audit_logs"
     id = db.Column(db.Integer, primary_key=True)
-    actor_email = db.Column(db.String(180), nullable=True)   # ใครทำ
-    action = db.Column(db.String(80), nullable=False)        # เช่น LOGIN_OK, EXPORT, RESET_PASSWORD
-    detail = db.Column(db.Text, nullable=True)               # รายละเอียด
-    ip = db.Column(db.String(80), nullable=True)
-    ua = db.Column(db.Text, nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    user_email = db.Column(db.String(255), nullable=True, index=True)
+    action = db.Column(db.String(80), nullable=False, index=True)
+    detail = db.Column(db.Text, nullable=True)
+    ip = db.Column(db.String(64), nullable=True)
 
 class Employee(db.Model):
     __tablename__ = "employees"
@@ -257,7 +256,27 @@ def init_db():
     with app.app_context():
         db.create_all()
         seed_users_if_missing()
+        
+def audit(action, detail=None, user_email=None):
+    try:
+        ip = (request.headers.get("X-Forwarded-For") or request.remote_addr or "")
+        ip = ip.split(",")[0].strip() if ip else None
 
+        if user_email is None:
+            u = get_current_user()  # ถ้ามี session อยู่จะได้ email
+            user_email = getattr(u, "email", None) if u else None
+
+        db.session.add(AuditLog(
+            action=str(action),
+            detail=detail,
+            user_email=user_email,
+            ip=ip,
+        ))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        # ห้ามให้ audit ทำให้ระบบล่ม
+        pass
 # -------------------------------------------------
 # Helper Functions
 # -------------------------------------------------
@@ -1435,6 +1454,7 @@ def trainings_delete(tr_id):
 def init_db():
     with app.app_context():
         db.create_all()
+        seed_users_if_missing()
 
 init_db()
 
