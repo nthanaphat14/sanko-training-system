@@ -207,14 +207,6 @@ class ImportItem(db.Model):
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-def init_db():
-    with app.app_context():
-        db.create_all()
-def init_db():
-    with app.app_context():
-        db.create_all()
-        seed_users_if_missing()
-        
 # -------------------------------------------------
 # Helper Functions
 # -------------------------------------------------
