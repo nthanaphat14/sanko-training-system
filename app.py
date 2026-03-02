@@ -421,39 +421,13 @@ def safe_date(v):
 # -------------------------------------------------
 # Routes
 # -------------------------------------------------
-@app.route("/login", methods=["GET", "POST"])
-def login():
-    if request.method == "GET":
-        u = get_current_user()
-        if u and u.is_active:
-            return redirect(url_for("employees_list"))
-        return render_template("login.html")
-
-    email = (request.form.get("email") or "").strip().lower()
-    password = request.form.get("password") or ""
-
-    u = User.query.filter_by(email=email).first()
-
-    if (not u) or (not u.is_active) or (not check_password_hash(u.password_hash, password)):
-        flash("User หรือ Password ไม่ถูกต้อง", "error")
-        audit("LOGIN_FAIL", f"email={email}")
-        return redirect(url_for("login"))
-
-    # สำคัญมาก: ล้าง session เก่าก่อน แล้วค่อย set uid
-    session.clear()
-    session["uid"] = u.id
-    session.permanent = True
-
-    audit("LOGIN_SUCCESS", f"email={email}")
-    flash("เข้าสู่ระบบสำเร็จ", "success")
-    return redirect(url_for("employees_list"))
-
 @app.get("/login")
 def login():
     u = get_current_user()
     if u and u.is_active:
         return redirect(url_for("employees_list"))
     return render_template("login.html")
+
 
 @app.post("/login")
 def login_post():
@@ -466,7 +440,6 @@ def login_post():
         flash("User หรือ Password ไม่ถูกต้อง", "error")
         return redirect(url_for("login"))
 
-    # lockout เบาๆ ถ้าลองผิดเยอะ
     if u.locked_until and u.locked_until > datetime.utcnow():
         audit("LOGIN_LOCKED", f"email={email}")
         flash("บัญชีถูกล็อกชั่วคราว (ลองใหม่อีกครั้งภายหลัง)", "error")
@@ -474,7 +447,6 @@ def login_post():
 
     if not check_password_hash(u.password_hash, password):
         u.failed_attempts = (u.failed_attempts or 0) + 1
-        # ล็อก 10 นาที ถ้าผิดครบ 8 ครั้ง
         if u.failed_attempts >= 8:
             u.locked_until = datetime.utcnow() + timedelta(minutes=10)
             u.failed_attempts = 0
@@ -491,12 +463,11 @@ def login_post():
     db.session.commit()
 
     session.clear()
-    session["user_id"] = u.id
-    session["user_email"] = u.email
-    session["user_role"] = u.role
+    session["uid"] = u.id          # ✅ สำคัญ: ใช้ key ให้ตรงกับ get_current_user()
     session.permanent = True
 
-    audit("LOGIN_OK", f"email={email}")
+    audit("LOGIN_SUCCESS", f"email={email}")
+    flash("เข้าสู่ระบบสำเร็จ", "success")
     return redirect(url_for("employees_list"))
 
 @app.get("/logout")
