@@ -21,6 +21,7 @@ from functools import wraps
 from flask import session, abort
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import timedelta
+from flask import redirect, url_for, abort, flash
 
 # -------------------------------------------------
 # App Config
@@ -83,8 +84,10 @@ def role_required(*roles):
             u = get_current_user()
             if not u or not u.is_active:
                 return redirect(url_for("login"))
-            if u.role not in roles:
-                abort(403)
+            if roles:
+                if getattr(u, "role", None) not in roles:
+                    abort(403)
+
             return fn(*args, **kwargs)
         return wrapper
     return deco
