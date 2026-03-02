@@ -137,3 +137,19 @@ h1{margin:0; font-size:26px}
 }
 .flash.ok{border-color: rgba(34,197,94,.35)}
 .flash.error{border-color: rgba(239,68,68,.35)}
+
+.card form{
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: end;
+}
+
+.card form > div{
+  min-width: 0;   /* สำคัญมาก กัน flex ดันล้น */
+}
+
+.card form .input{
+  width: 100%;
+  box-sizing: border-box;
+}
