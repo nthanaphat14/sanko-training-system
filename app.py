@@ -215,7 +215,11 @@ def get_current_user():
     uid = session.get("uid")
     if not uid:
         return None
-    return User.query.get(uid)
+    return db.session.get(User, uid)  # SQLAlchemy 2.x
+
+@app.context_processor
+def inject_user():
+    return {"current_user": get_current_user()}
 
 def audit(action, detail=None, user_email=None):
     try:
@@ -240,14 +244,23 @@ def audit(action, detail=None, user_email=None):
 
 @app.before_request
 def require_login_globally():
-    allow = {"login", "login_post", "static"}  # ต้องมี login_post ด้วยถ้าแยกฟังก์ชัน
+    # บางครั้ง endpoint เป็น None (เช่น 404) กันพังไว้
+    if request.endpoint is None:
+        return
+
+    allow = {
+        "login",          # /login GET+POST endpoint ชื่อเดียวกัน
+        "logout",
+        "static",
+    }
+
     if request.endpoint in allow:
         return
 
     u = get_current_user()
     if not u or not u.is_active:
         return redirect(url_for("login"))
-
+        
 def role_required(*roles):
     def deco(fn):
         @wraps(fn)
