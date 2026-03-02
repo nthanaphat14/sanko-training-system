@@ -25,6 +25,7 @@ from flask import session, g
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import timedelta
 from flask import redirect, url_for, abort, flash
+from flask import request
 
 # -------------------------------------------------
 # App Config
