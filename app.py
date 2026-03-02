@@ -238,7 +238,7 @@ def audit(action, detail=None, user_email=None):
         # ห้ามให้ audit ทำให้ระบบล่ม
         pass
 
-@@app.before_request
+@app.before_request
 def require_login_globally():
     allow = {"login", "login_post", "static"}  # ต้องมี login_post ด้วยถ้าแยกฟังก์ชัน
     if request.endpoint in allow:
