@@ -1307,18 +1307,30 @@ def trainings_list():
     query = TrainingRecord.query
 
     if q:
-        like = f"%{q}%"
-        query = query.filter(
-            db.or_(
-                TrainingRecord.emp_id.ilike(like),
-                TrainingRecord.first_name.ilike(like),
-                TrainingRecord.course_code.ilike(like),
-                TrainingRecord.course_name.ilike(like),
-                TrainingRecord.department.ilike(like),
-                TrainingRecord.position.ilike(like),
-            )
-        )
+    like = f"%{q}%"
 
+    # -------- ใส่ตรงนี้เลย --------
+    name_field = None
+    for cand in ["full_name", "employee_name", "name", "emp_name"]:
+        if hasattr(TrainingRecord, cand):
+            name_field = getattr(TrainingRecord, cand)
+            break
+
+    conds = []
+
+    if hasattr(TrainingRecord, "employee_code"):
+        conds.append(TrainingRecord.employee_code.ilike(like))
+
+    if name_field is not None:
+        conds.append(name_field.ilike(like))
+
+    if hasattr(TrainingRecord, "course_name"):
+        conds.append(TrainingRecord.course_name.ilike(like))
+
+    if conds:
+        query = query.filter(or_(*conds))
+
+    
     if year.isdigit():
         query = query.filter(TrainingRecord.year == int(year))
     if month.isdigit():
@@ -1331,6 +1343,7 @@ def trainings_list():
 
     total = query.count()
 
+    records = query.order_by(TrainingRecord.id.desc()).all()
     return render_template("trainings_list.html", rows=rows, total=total, q=q, year=year, month=month)
 
 @app.route("/trainings/<int:tr_id>/edit", methods=["GET", "POST"])
