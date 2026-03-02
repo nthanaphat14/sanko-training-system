@@ -421,6 +421,33 @@ def safe_date(v):
 # -------------------------------------------------
 # Routes
 # -------------------------------------------------
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "GET":
+        u = get_current_user()
+        if u and u.is_active:
+            return redirect(url_for("employees_list"))
+        return render_template("login.html")
+
+    email = (request.form.get("email") or "").strip().lower()
+    password = request.form.get("password") or ""
+
+    u = User.query.filter_by(email=email).first()
+
+    if (not u) or (not u.is_active) or (not check_password_hash(u.password_hash, password)):
+        flash("User หรือ Password ไม่ถูกต้อง", "error")
+        audit("LOGIN_FAIL", f"email={email}")
+        return redirect(url_for("login"))
+
+    # สำคัญมาก: ล้าง session เก่าก่อน แล้วค่อย set uid
+    session.clear()
+    session["uid"] = u.id
+    session.permanent = True
+
+    audit("LOGIN_SUCCESS", f"email={email}")
+    flash("เข้าสู่ระบบสำเร็จ", "success")
+    return redirect(url_for("employees_list"))
+
 @app.get("/login")
 def login():
     u = get_current_user()
@@ -477,7 +504,6 @@ def logout():
     audit("LOGOUT", "")
     session.clear()
     return redirect(url_for("login"))
-
 
 @app.route("/change-password", methods=["GET", "POST"])
 @login_required
