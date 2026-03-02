@@ -7,6 +7,8 @@ from flask import (
     redirect,
     url_for,
     flash,
+    session,
+    g,
 )
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import or_, nullslast
@@ -204,6 +206,62 @@ class ImportItem(db.Model):
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+def get_current_user():
+    """
+    อ่าน user จาก session -> โหลดจาก DB
+    จะคืน None ถ้ายังไม่ login
+    """
+    uid = session.get("uid")
+    if not uid:
+        return None
+    return User.query.get(uid)
+
+
+@app.before_request
+def require_login_globally():
+    """
+    บังคับ login ทุกหน้า ยกเว้นหน้า login + static + healthz
+    """
+    # กัน static เช่น /static/app.css
+    if request.path.startswith("/static/"):
+        return None
+
+    # หน้าอนุญาตให้เข้าได้โดยไม่ login
+    allow = {"/login", "/healthz"}
+    if request.path in allow:
+        return None
+
+    u = get_current_user()
+    g.user = u  # เก็บไว้ให้ template ใช้ได้ (optional)
+
+    if not u or not getattr(u, "is_active", True):
+        return redirect(url_for("login"))
+
+    return None
+
+
+def role_required(*roles):
+    def deco(fn):
+        @wraps(fn)
+        def wrapper(*args, **kwargs):
+            u = get_current_user()
+            if not u or not u.is_active:
+                return redirect(url_for("login"))
+
+            if roles:
+                if getattr(u, "role", None) not in roles:
+                    abort(403)
+
+            return fn(*args, **kwargs)
+        return wrapper
+    return deco
+
+
+def login_required(fn):
+    # ใช้ role_required แบบไม่กำหนด role (แค่ต้อง login)
+    return role_required()(fn)
+
+
 def init_db():
     with app.app_context():
         db.create_all()
@@ -334,46 +392,6 @@ def safe_date(v):
             pass
     return None
     
-def role_required(*roles):
-    def deco(fn):
-        @wraps(fn)
-        def wrapper(*args, **kwargs):
-            u = get_current_user()
-            if not u or not u.is_active:
-                return redirect(url_for("login"))
-            if roles:
-                if getattr(u, "role", None) not in roles:
-                    abort(403)
-
-            return fn(*args, **kwargs)
-        return wrapper
-    return deco
-
-def seed_users_if_missing():
-    """
-    สร้าง user 3 คนตามที่คุณให้
-    - hr02 = admin
-    - hr, hr01 = viewer (ดูอย่างเดียว + export ได้)
-    """
-    defaults = [
-        ("hr02@sankothai.net", "Sanko1996", "admin"),
-        ("hr@sankothai.net", "Sanko1996", "viewer"),
-        ("hr01@sankothai.net", "Sanko1996", "viewer"),
-    ]
-    for email, pw, role in defaults:
-        exists = User.query.filter_by(email=email).first()
-        if not exists:
-            db.session.add(User(
-                email=email,
-                password_hash=generate_password_hash(pw),
-                role=role,
-                is_active=True
-            ))
-    db.session.commit()
-
-def login_required(fn):
-    return role_required()(fn)
-
 # -------------------------------------------------
 # Routes
 # -------------------------------------------------
