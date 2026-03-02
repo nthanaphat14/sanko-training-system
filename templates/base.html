@@ -14,7 +14,7 @@
   </div>
     <div class="top-actions" style="display:flex; gap:10px; align-items:center; margin-left:auto;">
     <a class="btn" href="{{ url_for('employees_list') }}">Employee Data</a>
-    <a class="btn" href="{{ url_for('trainings_import') }}">Training</a>
+    <a class="btn" href="{{ url_for('trainings_list') }}">Training</a>
     <a class="btn" href="{{ url_for('dashboard') }}">Dashboard</a>
 
     {% set role = session.get("user_role") %}
