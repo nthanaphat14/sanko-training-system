@@ -268,6 +268,24 @@ def role_required(*roles):
         return wrapper
     return deco
 
+def seed_users_if_missing():
+    defaults = [
+        ("hr02@sankothai.net", "Sanko1996", "admin"),
+        ("hr@sankothai.net", "Sanko1996", "viewer"),
+        ("hr01@sankothai.net", "Sanko1996", "viewer"),
+    ]
+
+    for email, pw, role in defaults:
+        exists = User.query.filter_by(email=email).first()
+        if not exists:
+            db.session.add(User(
+                email=email,
+                password_hash=generate_password_hash(pw),
+                role=role,
+                is_active=True
+            ))
+
+    db.session.commit()
 
 def login_required(fn):
     # ใช้ role_required แบบไม่กำหนด role (แค่ต้อง login)
