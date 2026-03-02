@@ -333,6 +333,7 @@ def safe_date(v):
         except:
             pass
     return None
+    
 def role_required(*roles):
     def deco(fn):
         @wraps(fn)
@@ -370,6 +371,8 @@ def seed_users_if_missing():
             ))
     db.session.commit()
 
+def login_required(fn):
+    return role_required()(fn)
 
 # -------------------------------------------------
 # Routes
@@ -422,7 +425,6 @@ def login_post():
 
     audit("LOGIN_OK", f"email={email}")
     return redirect(url_for("employees_list"))
-
 
 @app.get("/logout")
 def logout():
