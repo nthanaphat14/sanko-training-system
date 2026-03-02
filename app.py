@@ -77,45 +77,6 @@ class AuditLog(db.Model):
     ua = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-def role_required(*roles):
-    def deco(fn):
-        @wraps(fn)
-        def wrapper(*args, **kwargs):
-            u = get_current_user()
-            if not u or not u.is_active:
-                return redirect(url_for("login"))
-            if roles:
-                if getattr(u, "role", None) not in roles:
-                    abort(403)
-
-            return fn(*args, **kwargs)
-        return wrapper
-    return deco
-
-
-def seed_users_if_missing():
-    """
-    สร้าง user 3 คนตามที่คุณให้
-    - hr02 = admin
-    - hr, hr01 = viewer (ดูอย่างเดียว + export ได้)
-    """
-    defaults = [
-        ("hr02@sankothai.net", "Sanko1996", "admin"),
-        ("hr@sankothai.net", "Sanko1996", "viewer"),
-        ("hr01@sankothai.net", "Sanko1996", "viewer"),
-    ]
-    for email, pw, role in defaults:
-        exists = User.query.filter_by(email=email).first()
-        if not exists:
-            db.session.add(User(
-                email=email,
-                password_hash=generate_password_hash(pw),
-                role=role,
-                is_active=True
-            ))
-    db.session.commit()
-
-
 class Employee(db.Model):
     __tablename__ = "employees"
 
@@ -372,6 +333,42 @@ def safe_date(v):
         except:
             pass
     return None
+def role_required(*roles):
+    def deco(fn):
+        @wraps(fn)
+        def wrapper(*args, **kwargs):
+            u = get_current_user()
+            if not u or not u.is_active:
+                return redirect(url_for("login"))
+            if roles:
+                if getattr(u, "role", None) not in roles:
+                    abort(403)
+
+            return fn(*args, **kwargs)
+        return wrapper
+    return deco
+
+def seed_users_if_missing():
+    """
+    สร้าง user 3 คนตามที่คุณให้
+    - hr02 = admin
+    - hr, hr01 = viewer (ดูอย่างเดียว + export ได้)
+    """
+    defaults = [
+        ("hr02@sankothai.net", "Sanko1996", "admin"),
+        ("hr@sankothai.net", "Sanko1996", "viewer"),
+        ("hr01@sankothai.net", "Sanko1996", "viewer"),
+    ]
+    for email, pw, role in defaults:
+        exists = User.query.filter_by(email=email).first()
+        if not exists:
+            db.session.add(User(
+                email=email,
+                password_hash=generate_password_hash(pw),
+                role=role,
+                is_active=True
+            ))
+    db.session.commit()
 
 
 # -------------------------------------------------
