@@ -248,11 +248,7 @@ def require_login_globally():
     if request.endpoint is None:
         return
 
-    allow = {
-        "login",          # /login GET+POST endpoint ชื่อเดียวกัน
-        "logout",
-        "static",
-    }
+    allow = {"login", "login_post", "logout", "static"}
 
     if request.endpoint in allow:
         return
