@@ -290,10 +290,12 @@ def format_id_card(id_card: str):
         return ""
     return f"{id_card[0]}-{id_card[1:5]}-{id_card[5:10]}-{id_card[10:12]}-{id_card[12]}"
 
-def mask_id_card(id_card: str):
-    if not id_card or len(id_card) != 13:
+def mask_id_card(id_card):
+    if not id_card:
         return ""
-    return f"{id_card[0]}-{id_card[1:5]}-XXXXX-{id_card[10:12]}-{id_card[12]}"
+    return id_card[:6] + "XXXXX" + id_card[-3:]
+
+app.jinja_env.globals.update(mask_id_card=mask_id_card)
 
 def audit(action, detail=None, user_email=None):
     try:
