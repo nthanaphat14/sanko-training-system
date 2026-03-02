@@ -1443,12 +1443,9 @@ def trainings_delete(tr_id):
 # -------------------------------------------------
 # Run (Local Only)
 # -------------------------------------------------
-def init_db():
     with app.app_context():
         db.create_all()
         seed_users_if_missing()
-
-init_db()
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
