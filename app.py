@@ -28,6 +28,8 @@ from flask import redirect, url_for, abort, flash
 from flask import request
 from werkzeug.security import check_password_hash
 from sqlalchemy import or_, func
+from sqlalchemy import or_
+from math import ceil
 
 # -------------------------------------------------
 # App Config
@@ -1305,61 +1307,79 @@ def trainings_list():
     year = (request.args.get("year") or "").strip()
     month = (request.args.get("month") or "").strip()
 
+    # --- Pagination params ---
+    try:
+        page = int(request.args.get("page", 1))
+    except ValueError:
+        page = 1
+    page = max(page, 1)
+
+    try:
+        per_page = int(request.args.get("per_page", 50))
+    except ValueError:
+        per_page = 50
+
+    # จำกัด per_page กันคนกด 99999 ทำล่ม
+    per_page = 50 if per_page not in (25, 50, 100, 200) else per_page
+
     query = TrainingRecord.query
 
-    # --- SEARCH (q) ---
+    # --- Search (q) ---
     if q:
         like = f"%{q}%"
+        conds = []
 
-        conds = [
-            TrainingRecord.emp_id.ilike(like),
-            TrainingRecord.prefix.ilike(like),
-            TrainingRecord.first_name.ilike(like),
-            TrainingRecord.last_name.ilike(like),
-            TrainingRecord.section.ilike(like),
-            TrainingRecord.position.ilike(like),
-            TrainingRecord.course_code.ilike(like),
-            TrainingRecord.course_name.ilike(like),
-            TrainingRecord.course_type.ilike(like),
-            TrainingRecord.evaluator.ilike(like),
-            TrainingRecord.result.ilike(like),
-            TrainingRecord.remark.ilike(like),
+        # ✅ จากรูป column ของคุณ มี emp_id, first_name, last_name, course_code, course_name, section, position
+        if hasattr(TrainingRecord, "emp_id"):
+            conds.append(TrainingRecord.emp_id.ilike(like))
+        if hasattr(TrainingRecord, "first_name"):
+            conds.append(TrainingRecord.first_name.ilike(like))
+        if hasattr(TrainingRecord, "last_name"):
+            conds.append(TrainingRecord.last_name.ilike(like))
+        if hasattr(TrainingRecord, "course_code"):
+            conds.append(TrainingRecord.course_code.ilike(like))
+        if hasattr(TrainingRecord, "course_name"):
+            conds.append(TrainingRecord.course_name.ilike(like))
+        if hasattr(TrainingRecord, "section"):
+            conds.append(TrainingRecord.section.ilike(like))
+        if hasattr(TrainingRecord, "position"):
+            conds.append(TrainingRecord.position.ilike(like))
+        if hasattr(TrainingRecord, "course_type"):
+            conds.append(TrainingRecord.course_type.ilike(like))
 
-            # ชื่อเต็ม "ชื่อ นามสกุล"
-            func.concat(
-                func.coalesce(TrainingRecord.first_name, ""),
-                " ",
-                func.coalesce(TrainingRecord.last_name, ""),
-            ).ilike(like),
-        ]
+        if conds:
+            query = query.filter(or_(*conds))
 
-        query = query.filter(or_(*conds))
-
-    # --- FILTER year/month ---
+    # --- Year / Month filters ---
     if year.isdigit():
         query = query.filter(TrainingRecord.year == int(year))
     if month.isdigit():
         query = query.filter(TrainingRecord.month == int(month))
 
-    # total ต้องนับจาก query ที่กรองแล้ว (ยังไม่ limit)
+    # --- Total BEFORE pagination ---
     total = query.count()
 
-    rows = (
-        query.order_by(
-            TrainingRecord.start_date.desc().nullslast(),
-            TrainingRecord.id.desc()
-        )
-        .limit(500)
-        .all()
+    # --- Ordering ---
+    query = query.order_by(
+        TrainingRecord.start_date.desc().nullslast(),
+        TrainingRecord.id.desc()
     )
+
+    # --- Pagination calc ---
+    total_pages = max(1, ceil(total / per_page))
+    if page > total_pages:
+        page = total_pages
+
+    offset = (page - 1) * per_page
+    rows = query.offset(offset).limit(per_page).all()
 
     return render_template(
         "trainings_list.html",
         rows=rows,
         total=total,
-        q=q,
-        year=year,
-        month=month
+        q=q, year=year, month=month,
+        page=page, per_page=per_page,
+        total_pages=total_pages
     )
 
 @app.route("/trainings/<int:tr_id>/edit", methods=["GET", "POST"])
