@@ -278,8 +278,22 @@ def build_training_query(args):
     return query, q, year, month
 
 @app.context_processor
-def inject_user():
-    return {"current_user": get_current_user()}
+def inject_helpers():
+    return {
+        "current_user": get_current_user(),
+        "mask_id_card": mask_id_card,
+        "format_id_card": format_id_card,
+    }
+
+def format_id_card(id_card: str):
+    if not id_card or len(id_card) != 13:
+        return ""
+    return f"{id_card[0]}-{id_card[1:5]}-{id_card[5:10]}-{id_card[10:12]}-{id_card[12]}"
+
+def mask_id_card(id_card: str):
+    if not id_card or len(id_card) != 13:
+        return ""
+    return f"{id_card[0]}-{id_card[1:5]}-XXXXX-{id_card[10:12]}-{id_card[12]}"
 
 def audit(action, detail=None, user_email=None):
     try:
