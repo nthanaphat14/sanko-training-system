@@ -414,8 +414,10 @@ def safe_date(v):
 # -------------------------------------------------
 @app.get("/login")
 def login():
+    u = get_current_user()
+    if u and u.is_active:
+        return redirect(url_for("employees_list"))
     return render_template("login.html")
-
 
 @app.post("/login")
 def login_post():
