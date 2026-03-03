@@ -792,7 +792,7 @@ def employees_import():
             return redirect(url_for("employees_import"))
 
         added = 0
-        skipped = 0
+        updated = 0
 
         # วนอ่านตั้งแต่แถว 2
         for row in ws.iter_rows(min_row=2, values_only=True):
@@ -801,37 +801,35 @@ def employees_import():
 
             if not em_id:
                 continue
+                
+            emp = Employee.query.filter_by(em_id=em_id).first()
 
-            # ✅ กันซ้ำ: ถ้า em_id มีแล้ว ข้าม
-            if Employee.query.filter_by(em_id=em_id).first():
-                skipped += 1
-                continue
+            if not emp:
+                emp = Employee(em_id=em_id)
+                db.session.add(emp)
+                added += 1
+            else:
+                updated += 1  # เปลี่ยนชื่อเป็น updated ก็ได้ถ้าคุณอยาก
 
             # ชื่อไทยในไฟล์เป็น "ชื่อไทย" (รวมชื่อ+สกุล) — ใส่ไว้ใน first_name_th แบบง่ายก่อน
             name_th = safe_str(row[c_name_th]) if c_name_th is not None else ""
             name_en = safe_str(row[c_name_en]) if c_name_en is not None else ""
 
-            emp = Employee(
-                no=safe_int(row[c_no]) if c_no is not None else None,
-                em_id=em_id,
-                id_card=safe_str(row[c_idcard]) if c_idcard is not None else "",
-                first_name_th=name_th,   # ถ้าคุณอยากแยกชื่อ/สกุลไทย เดี๋ยวผมทำเพิ่มให้ได้
-                first_name_en=name_en,
-                position=safe_str(row[c_position]) if c_position is not None else "",
-                section=safe_str(row[c_section]) if c_section is not None else "",
-                department=safe_str(row[c_dept]) if c_dept is not None else "",
-                start_work=safe_date(row[c_start]) if c_start is not None else None,
-                resign=safe_date(row[c_resign]) if c_resign is not None else None,
-                status=safe_str(row[c_status]) if c_status is not None else "",
-                degree=safe_str(row[c_degree]) if c_degree is not None else "",
-                major=safe_str(row[c_major]) if c_major is not None else "",
-            )
-
-            db.session.add(emp)
-            added += 1
-
+            emp.no = safe_int(row[c_no]) if c_no is not None else None
+            emp.id_card = safe_str(row[c_idcard]) if c_idcard is not None else ""
+            emp.first_name_th = name_th
+            emp.first_name_en = name_en
+            emp.position = safe_str(row[c_position]) if c_position is not None else ""
+            emp.section = safe_str(row[c_section]) if c_section is not None else ""
+            emp.department = safe_str(row[c_dept]) if c_dept is not None else ""
+            emp.start_work = safe_date(row[c_start]) if c_start is not None else None
+            emp.resign = safe_date(row[c_resign]) if c_resign is not None else None
+            emp.status = safe_str(row[c_status]) if c_status is not None else ""
+            emp.degree = safe_str(row[c_degree]) if c_degree is not None else ""
+            emp.major = safe_str(row[c_major]) if c_major is not None else ""
+            
         db.session.commit()
-        flash(f"Import Employees สำเร็จ: เพิ่ม {added} แถว | ข้ามซ้ำ {skipped} แถว", "success")
+        flash(f"Import Employees สำเร็จ: เพิ่มใหม่ {added} แถว | อัปเดต {updated} แถว", "success")
         return redirect(url_for("employees_list"))
 
     except Exception as e:
