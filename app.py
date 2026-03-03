@@ -728,6 +728,22 @@ def employee_delete(em_id):
     flash("ลบข้อมูลเรียบร้อย", "success")
     return redirect(url_for("employees_list"))
 
+@app.post("/employees/bulk-delete")
+@role_required("admin")
+def employees_bulk_delete():
+    ids = request.form.getlist("ids")
+
+    if not ids:
+        flash("ยังไม่ได้เลือกพนักงาน", "error")
+        return redirect(url_for("employees_list"))
+
+    Employee.query.filter(Employee.em_id.in_(ids)).delete(synchronize_session=False)
+    db.session.commit()
+
+    audit("EMPLOYEE_BULK_DELETE", f"count={len(ids)}")
+    flash(f"ลบแล้ว {len(ids)} รายการ", "success")
+    return redirect(url_for("employees_list"))
+
 @app.route("/employees/import", methods=["GET", "POST"])
 @role_required("admin")
 def employees_import():
