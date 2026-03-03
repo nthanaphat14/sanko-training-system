@@ -796,15 +796,17 @@ def employees_import():
             c_no = col("no.")
             c_em = col("em. id") or col("em id") or col("employee id")
             c_idcard = col("id card")
-            c_name_th = col("ชื่อไทย")
+            c_title_th = col("Prefix")
+            c_first_th = col("name-TH")
+            c_last_th = col("last-TH")
             c_name_en = col("name-en") or col("name-en ")
             c_position = col("position")
             c_section = col("section")
             c_dept = col("department")
-            c_start = col("start work")
+            c_start = col("start work") or col("วันเริ่มงาน ")
             c_resign = col("resign")
             c_status = col("status")
-            c_degree = col("degree")
+            c_degree = col("Education")
             c_major = col("major")
 
             if c_em is None:
@@ -839,7 +841,9 @@ def employees_import():
 
                 emp.no = safe_int(row[c_no]) if c_no is not None else None
                 emp.id_card = safe_str(row[c_idcard]) if c_idcard is not None else ""
-                emp.first_name_th = name_th
+                emp.title_th = prefix
+                emp.first_name_th = name-th
+                emp.last_name_th = last-th
                 emp.first_name_en = name_en
                 emp.position = safe_str(row[c_position]) if c_position is not None else ""
                 emp.section = safe_str(row[c_section]) if c_section is not None else ""
