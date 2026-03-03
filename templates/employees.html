@@ -23,10 +23,23 @@
 </div>
 
 <div class="card">
-  <div class="table-wrap">
-    <table class="table">
+
+  <form method="post"
+        action="{{ url_for('employees_bulk_delete') }}"
+        onsubmit="return confirm('ยืนยันลบพนักงานที่เลือก?');">
+
+    <div style="display:flex; gap:10px; align-items:center; margin:10px 0;">
+      <button class="btn danger" type="submit">ลบที่เลือก</button>
+      <span class="muted" id="selCount">เลือก 0 คน</span>
+    </div>
+
+    <div class="table-wrap">
+      <table class="table">
       <thead>
         <tr>
+          <th style="width:40px; text-align:center;">
+            <input type="checkbox" id="checkAll">
+          </th>
           <th>No.</th>
           <th>Em. ID</th>
           <th>ID Card</th>
@@ -46,6 +59,9 @@
       <tbody>
         {% for e in employees %}
         <tr>
+          <td style="text-align:center;">
+            <input type="checkbox" name="ids" value="{{ e.em_id }}" class="rowCheck">
+          </td>
           <td>{{ e.no or "" }}</td>
           <td class="nowrap"><b>{{ e.em_id }}</b></td>
           <td class="nowrap">
@@ -85,8 +101,11 @@
         {% endif %}
       </tbody>
     </table>
-  </div>
-</div>
+        </div>
+
+      </form>
+
+    </div>
 
 <!-- ID Card Modal -->
 <div id="idCardModal" class="modal-backdrop" style="display:none;">
@@ -151,6 +170,35 @@
   document.addEventListener("keydown", function(e){
     if (e.key === "Escape") closeIdCardModal();
   });
+</script>
+
+<script>
+  const checkAll = document.getElementById("checkAll");
+  const rowChecks = () => Array.from(document.querySelectorAll(".rowCheck"));
+  const selCount = document.getElementById("selCount");
+
+  function updateCount() {
+    const n = rowChecks().filter(c => c.checked).length;
+    if (selCount) selCount.textContent = `เลือก ${n} คน`;
+  }
+
+  if (checkAll) {
+    checkAll.addEventListener("change", () => {
+      rowChecks().forEach(c => c.checked = checkAll.checked);
+      updateCount();
+    });
+  }
+
+  document.addEventListener("change", (e) => {
+    if (e.target.classList.contains("rowCheck")) {
+      const checks = rowChecks();
+      const allChecked = checks.length > 0 && checks.every(c => c.checked);
+      if (checkAll) checkAll.checked = allChecked;
+      updateCount();
+    }
+  });
+
+  updateCount();
 </script>
 
 {% endblock %}
