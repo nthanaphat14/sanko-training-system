@@ -767,9 +767,23 @@ def employees_import():
             default_status = "Resign" if ("ลาออก" in sheet_title or "resign" in sheet_title) else "Active"
 
             # อ่านหัวตาราง (row 1) ของชีตนี้
+            # หาแถวหัวตารางที่มีคำว่า Em. ID
+            header_row = None
+            for r in range(1, 30):
+                values = [(str(c.value).strip() if c.value else "") for c in ws[r]]
+                if any("em. id" in v.lower() or "em id" in v.lower() for v in values):
+                    header_row = r
+                    break
+
+            if not header_row:
+                flash("ไม่พบแถวหัวตาราง (Em. ID)", "error")
+                return redirect(url_for("employees_import"))
+
+            # อ่านหัวตารางจริง
             headers = []
-            for c in ws[1]:
-                headers.append((str(c.value).strip() if c.value is not None else ""))
+            for c in ws[header_row]:
+                headers.append((str(c.value).strip() if c.value else ""))
+                
 
             def col(name):
                 name = name.strip().lower()
@@ -798,9 +812,15 @@ def employees_import():
                 continue
 
             # วนอ่านตั้งแต่แถว 2
-            for row in ws.iter_rows(min_row=2, values_only=True):
+            for row in ws.iter_rows(min_row=header_row+1, values_only=True):
                 em_id = safe_str(row[c_em]) if c_em is not None else ""
                 em_id = em_id.strip()
+                
+                import re
+
+                # รองรับรหัสขึ้นต้นด้วย M หรือ D เท่านั้น
+                if not re.match(r"^[MD]\d{5,10}$", em_id, re.IGNORECASE):
+                    continue
 
                 if not em_id:
                     skipped += 1
