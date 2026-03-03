@@ -627,14 +627,21 @@ def root():
 def healthz():
     return {"status": "ok"}, 200
 
-
 @app.get("/employees")
 @login_required
 def employees_list():
     q = (request.args.get("q") or "").strip()
 
-    query = Employee.query  # ✅ ต้องอยู่ตรงนี้ (ก่อน if q)
+    # ✅ ค่าเริ่มต้นให้เป็น Active
+    status = (request.args.get("status") or "Active").strip()
 
+    query = Employee.query
+
+    # ✅ filter status ก่อน
+    if status in ("Active", "Resign"):
+        query = query.filter(Employee.status == status)
+
+    # search
     if q:
         like = f"%{q}%"
         query = query.filter(
@@ -657,6 +664,7 @@ def employees_list():
         "employees.html",
         employees=employees,
         q=q,
+        status=status,   # ✅ เพิ่มบรรทัดนี้
         total=len(employees),
     )
     
