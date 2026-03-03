@@ -15,10 +15,13 @@
   <form method="post" enctype="multipart/form-data">
     <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
       <input type="file" name="file" accept=".xlsx" required>
-      <button type="submit">Upload</button>
-      <button class="btn" type="submit">Import</button>
+      <button class="btn primary" type="submit">Import</button>
     </div>
   </form>
+  <div class="muted" style="margin-top:10px;">
+    * ระบบจะอัปเดตทับข้อมูลตามไฟล์ Admin ทุกครั้งที่ Import
+  </div>
+  
 </div>
 
 {% endblock %}
