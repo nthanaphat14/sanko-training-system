@@ -796,18 +796,23 @@ def employees_import():
             c_no = col("no.")
             c_em = col("em. id") or col("em id") or col("employee id")
             c_idcard = col("id card")
-            c_title_th = col("Prefix")
-            c_first_th = col("name-TH")
-            c_last_th = col("last-TH")
-            c_name_en = col("name-en") or col("name-en ")
-            c_position = col("position")
-            c_section = col("section")
-            c_dept = col("department")
-            c_start = col("start work") or col("วันเริ่มงาน ")
-            c_resign = col("resign")
-            c_status = col("status")
+            c_prefix = col("Prefix")
+            c_first_th = col("Name-TH")
+            c_last_th = col("Last-TH")
+            c_name_en = col("Name-EN")
+
+            c_position = col("Position")
+            c_section = col("Section")
+            c_dept = col("Department")
+
+            c_start = col("Hire Date")
+            c_resign = col("Resign")
+
+            c_idcard = col("ID Card")
+
             c_degree = col("Education")
-            c_major = col("major")
+            c_major = col("Major")
+            c_school = col("School Name")
 
             if c_em is None:
                 # ถ้าบางชีตไม่ใช่ข้อมูลพนักงาน ให้ข้ามชีตนั้นไป
@@ -841,22 +846,23 @@ def employees_import():
 
                 emp.no = safe_int(row[c_no]) if c_no is not None else None
                 emp.id_card = safe_str(row[c_idcard]) if c_idcard is not None else ""
-                emp.title_th = prefix
-                emp.first_name_th = name-th
-                emp.last_name_th = last-th
-                emp.first_name_en = name_en
+                emp.title_th = safe_str(row[c_prefix]) if c_prefix is not None else ""
+                emp.first_name_th = safe_str(row[c_first_th]) if c_first_th is not None else ""
+                emp.last_name_th = safe_str(row[c_last_th]) if c_last_th is not None else ""
+
+                emp.first_name_en = safe_str(row[c_name_en]) if c_name_en is not None else ""
+
                 emp.position = safe_str(row[c_position]) if c_position is not None else ""
                 emp.section = safe_str(row[c_section]) if c_section is not None else ""
                 emp.department = safe_str(row[c_dept]) if c_dept is not None else ""
+
                 emp.start_work = safe_date(row[c_start]) if c_start is not None else None
                 emp.resign = safe_date(row[c_resign]) if c_resign is not None else None
 
-                file_status = safe_str(row[c_status]) if c_status is not None else ""
-                emp.status = file_status or default_status
+                emp.id_card = safe_str(row[c_idcard]) if c_idcard is not None else ""
 
                 emp.degree = safe_str(row[c_degree]) if c_degree is not None else ""
                 emp.major = safe_str(row[c_major]) if c_major is not None else ""
-
         db.session.commit()
         flash(f"Import Employees สำเร็จ: เพิ่มใหม่ {added} | อัปเดต {updated} | ข้าม {skipped}", "success")
         return redirect(url_for("employees_list"))
