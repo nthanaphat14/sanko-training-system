@@ -757,79 +757,84 @@ def employees_import():
 
     try:
         wb = load_workbook(f, data_only=True)
-        ws = wb.active
-
-        # อ่านหัวตาราง (row 1)
-        headers = []
-        for c in ws[1]:
-            headers.append((str(c.value).strip() if c.value is not None else ""))
-
-        def col(name):
-            # หา index ของคอลัมน์แบบยืดหยุ่น (รองรับชื่อหลายแบบ)
-            name = name.strip().lower()
-            for i, h in enumerate(headers):
-                if (h or "").strip().lower() == name:
-                    return i
-            return None
-
-        # คอลัมน์ตามไฟล์คุณ
-        c_no = col("no.")
-        c_em = col("em. id") or col("em id") or col("employee id")
-        c_idcard = col("id card")
-        c_name_th = col("ชื่อไทย")  # สำคัญ
-        c_name_en = col("name-en") or col("name-en ")
-        c_position = col("position")
-        c_section = col("section")
-        c_dept = col("department")
-        c_start = col("start work")
-        c_resign = col("resign")
-        c_status = col("status")
-        c_degree = col("degree")
-        c_major = col("major")
-
-        if c_em is None:
-            flash("ไม่พบคอลัมน์ Em. ID ในไฟล์", "error")
-            return redirect(url_for("employees_import"))
 
         added = 0
         updated = 0
+        skipped = 0
 
-        # วนอ่านตั้งแต่แถว 2
-        for row in ws.iter_rows(min_row=2, values_only=True):
-            em_id = safe_str(row[c_em]) if c_em is not None else ""
-            em_id = em_id.strip()
+        for ws in wb.worksheets:
+            sheet_title = (ws.title or "").strip().lower()
+            default_status = "Resign" if ("ลาออก" in sheet_title or "resign" in sheet_title) else "Active"
 
-            if not em_id:
+            # อ่านหัวตาราง (row 1) ของชีตนี้
+            headers = []
+            for c in ws[1]:
+                headers.append((str(c.value).strip() if c.value is not None else ""))
+
+            def col(name):
+                name = name.strip().lower()
+                for i, h in enumerate(headers):
+                    if (h or "").strip().lower() == name:
+                        return i
+                return None
+
+            # คอลัมน์ตามไฟล์คุณ
+            c_no = col("no.")
+            c_em = col("em. id") or col("em id") or col("employee id")
+            c_idcard = col("id card")
+            c_name_th = col("ชื่อไทย")
+            c_name_en = col("name-en") or col("name-en ")
+            c_position = col("position")
+            c_section = col("section")
+            c_dept = col("department")
+            c_start = col("start work")
+            c_resign = col("resign")
+            c_status = col("status")
+            c_degree = col("degree")
+            c_major = col("major")
+
+            if c_em is None:
+                # ถ้าบางชีตไม่ใช่ข้อมูลพนักงาน ให้ข้ามชีตนั้นไป
                 continue
-                
-            emp = Employee.query.filter_by(em_id=em_id).first()
 
-            if not emp:
-                emp = Employee(em_id=em_id)
-                db.session.add(emp)
-                added += 1
-            else:
-                updated += 1  # เปลี่ยนชื่อเป็น updated ก็ได้ถ้าคุณอยาก
+            # วนอ่านตั้งแต่แถว 2
+            for row in ws.iter_rows(min_row=2, values_only=True):
+                em_id = safe_str(row[c_em]) if c_em is not None else ""
+                em_id = em_id.strip()
 
-            # ชื่อไทยในไฟล์เป็น "ชื่อไทย" (รวมชื่อ+สกุล) — ใส่ไว้ใน first_name_th แบบง่ายก่อน
-            name_th = safe_str(row[c_name_th]) if c_name_th is not None else ""
-            name_en = safe_str(row[c_name_en]) if c_name_en is not None else ""
+                if not em_id:
+                    skipped += 1
+                    continue
 
-            emp.no = safe_int(row[c_no]) if c_no is not None else None
-            emp.id_card = safe_str(row[c_idcard]) if c_idcard is not None else ""
-            emp.first_name_th = name_th
-            emp.first_name_en = name_en
-            emp.position = safe_str(row[c_position]) if c_position is not None else ""
-            emp.section = safe_str(row[c_section]) if c_section is not None else ""
-            emp.department = safe_str(row[c_dept]) if c_dept is not None else ""
-            emp.start_work = safe_date(row[c_start]) if c_start is not None else None
-            emp.resign = safe_date(row[c_resign]) if c_resign is not None else None
-            emp.status = safe_str(row[c_status]) if c_status is not None else ""
-            emp.degree = safe_str(row[c_degree]) if c_degree is not None else ""
-            emp.major = safe_str(row[c_major]) if c_major is not None else ""
-            
+                emp = Employee.query.filter_by(em_id=em_id).first()
+                if not emp:
+                    emp = Employee(em_id=em_id)
+                    db.session.add(emp)
+                    added += 1
+                else:
+                    updated += 1
+
+                name_th = safe_str(row[c_name_th]) if c_name_th is not None else ""
+                name_en = safe_str(row[c_name_en]) if c_name_en is not None else ""
+
+                emp.no = safe_int(row[c_no]) if c_no is not None else None
+                emp.id_card = safe_str(row[c_idcard]) if c_idcard is not None else ""
+                emp.first_name_th = name_th
+                emp.first_name_en = name_en
+                emp.position = safe_str(row[c_position]) if c_position is not None else ""
+                emp.section = safe_str(row[c_section]) if c_section is not None else ""
+                emp.department = safe_str(row[c_dept]) if c_dept is not None else ""
+                emp.start_work = safe_date(row[c_start]) if c_start is not None else None
+                emp.resign = safe_date(row[c_resign]) if c_resign is not None else None
+
+                file_status = safe_str(row[c_status]) if c_status is not None else ""
+                emp.status = file_status or default_status
+
+                emp.degree = safe_str(row[c_degree]) if c_degree is not None else ""
+                emp.major = safe_str(row[c_major]) if c_major is not None else ""
+
         db.session.commit()
-        flash(f"Import Employees สำเร็จ: เพิ่มใหม่ {added} แถว | อัปเดต {updated} แถว", "success")
+        flash(f"Import Employees สำเร็จ: เพิ่มใหม่ {added} | อัปเดต {updated} | ข้าม {skipped}", "success")
         return redirect(url_for("employees_list"))
 
     except Exception as e:
