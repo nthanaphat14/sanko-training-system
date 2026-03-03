@@ -755,6 +755,8 @@ def employees_import():
         flash("กรุณาเลือกไฟล์ .xlsx", "error")
         return redirect(url_for("employees_import"))
 
+    import re
+
     try:
         wb = load_workbook(f, data_only=True)
 
@@ -766,70 +768,66 @@ def employees_import():
             sheet_title = (ws.title or "").strip().lower()
             default_status = "Resign" if ("ลาออก" in sheet_title or "resign" in sheet_title) else "Active"
 
-            # อ่านหัวตาราง (row 1) ของชีตนี้
-            # หาแถวหัวตารางที่มีคำว่า Em. ID
+            # -------- หาแถวหัวตารางที่มี Em. ID --------
             header_row = None
             for r in range(1, 30):
-                values = [(str(c.value).strip() if c.value else "") for c in ws[r]]
-                if any("em. id" in v.lower() or "em id" in v.lower() for v in values):
+                values = [(str(c.value).strip() if c.value is not None else "") for c in ws[r]]
+                if any(("em. id" in v.lower() or "em id" in v.lower()) for v in values):
                     header_row = r
                     break
 
-            if not header_row:
-                flash("ไม่พบแถวหัวตาราง (Em. ID)", "error")
-                return redirect(url_for("employees_import"))
-
-            # อ่านหัวตารางจริง
-            headers = []
-            for c in ws[header_row]:
-                headers.append((str(c.value).strip() if c.value else ""))
-                
-
-            def col(name):
-                name = name.strip().lower()
-                for i, h in enumerate(headers):
-                    if (h or "").strip().lower() == name:
-                        return i
-                return None
-
-            # คอลัมน์ตามไฟล์คุณ
-            c_no = col("no.")
-            c_em = col("em. id") or col("em id") or col("employee id")
-            c_idcard = col("id card")
-            c_prefix = col("Prefix")
-            c_first_th = col("Name-TH")
-            c_last_th = col("Last-TH")
-            c_name_en = col("Name-EN")
-
-            c_position = col("Position")
-            c_section = col("Section")
-            c_dept = col("Department")
-
-            c_start = col("Hire Date")
-            c_resign = col("Resign")
-
-            c_idcard = col("ID Card")
-
-            c_degree = col("Education")
-            c_major = col("Major")
-            c_school = col("School Name")
-
-            if c_em is None:
-                # ถ้าบางชีตไม่ใช่ข้อมูลพนักงาน ให้ข้ามชีตนั้นไป
+            if header_row is None:
+                # ชีตนี้ไม่ใช่ employee data -> ข้าม
                 continue
 
-            # วนอ่านตั้งแต่แถว 2
-            for row in ws.iter_rows(min_row=header_row+1, values_only=True):
-                em_id = safe_str(row[c_em]) if c_em is not None else ""
-                em_id = em_id.strip()
-                
-                import re
+            headers = [(str(c.value).strip() if c.value is not None else "") for c in ws[header_row]]
 
-                # รองรับรหัสขึ้นต้นด้วย M หรือ D เท่านั้น
-                if not re.match(r"^[MD]\d{5,10}$", em_id, re.IGNORECASE):
+            def col(*names):
+                """คืน index ของคอลัมน์จากรายชื่อที่เป็นไปได้หลายแบบ"""
+                header_l = [(h or "").strip().lower() for h in headers]
+                for name in names:
+                    key = (name or "").strip().lower()
+                    if key in header_l:
+                        return header_l.index(key)
+                return None
+
+            # -------- map คอลัมน์ (รองรับหลายชื่อ) --------
+            c_no       = col("no.", "no")
+            c_em       = col("em. id", "em id", "employee id", "emp id")
+            c_prefix   = col("prefix")
+            c_first_th = col("name-th", "name th", "first-th", "first th")
+            c_last_th  = col("last-th", "last th", "surname-th", "surname th")
+            c_name_en  = col("name-en", "name en")
+
+            c_position = col("position")
+            c_section  = col("section")
+            c_dept     = col("department", "dept")
+
+            c_start    = col("hire date", "start work", "start date")
+            c_resign   = col("resign", "resign date", "end date")
+
+            c_idcard   = col("id card", "idcard", "citizen id", "citizenid")
+            c_degree   = col("education", "degree")
+            c_major    = col("major")
+            c_school   = col("school name", "institute", "university")
+
+            if c_em is None:
+                continue
+
+            # -------- วนอ่านข้อมูลหลังหัวตาราง --------
+            for row in ws.iter_rows(min_row=header_row + 1, values_only=True):
+                # กันแถวสั้น/ว่าง
+                if not row or c_em >= len(row):
+                    skipped += 1
                     continue
 
+                em_id = safe_str(row[c_em]).strip() if row[c_em] is not None else ""
                 if not em_id:
+                    skipped += 1
+                    continue
+
+                # รองรับรหัสขึ้นต้นด้วย M หรือ D เท่านั้น (ปรับจำนวนหลักได้)
+                if not re.match(r"^[MD]\d{5,10}$", em_id, re.IGNORECASE):
                     skipped += 1
                     continue
 
@@ -841,28 +839,35 @@ def employees_import():
                 else:
                     updated += 1
 
-                name_th = safe_str(row[c_name_th]) if c_name_th is not None else ""
-                name_en = safe_str(row[c_name_en]) if c_name_en is not None else ""
+                # ---- set ค่า (ทับตามไฟล์ Admin) ----
+                emp.no = safe_int(row[c_no]) if c_no is not None and c_no < len(row) else None
 
-                emp.no = safe_int(row[c_no]) if c_no is not None else None
-                emp.id_card = safe_str(row[c_idcard]) if c_idcard is not None else ""
-                emp.title_th = safe_str(row[c_prefix]) if c_prefix is not None else ""
-                emp.first_name_th = safe_str(row[c_first_th]) if c_first_th is not None else ""
-                emp.last_name_th = safe_str(row[c_last_th]) if c_last_th is not None else ""
+                emp.title_th      = safe_str(row[c_prefix])   if c_prefix is not None and c_prefix < len(row) else ""
+                emp.first_name_th = safe_str(row[c_first_th]) if c_first_th is not None and c_first_th < len(row) else ""
+                emp.last_name_th  = safe_str(row[c_last_th])  if c_last_th is not None and c_last_th < len(row) else ""
 
-                emp.first_name_en = safe_str(row[c_name_en]) if c_name_en is not None else ""
+                # อังกฤษในไฟล์เป็น full name ก้อนเดียว -> เก็บไว้ใน first_name_en (แบบที่คุณใช้อยู่)
+                emp.first_name_en = safe_str(row[c_name_en]) if c_name_en is not None and c_name_en < len(row) else ""
 
-                emp.position = safe_str(row[c_position]) if c_position is not None else ""
-                emp.section = safe_str(row[c_section]) if c_section is not None else ""
-                emp.department = safe_str(row[c_dept]) if c_dept is not None else ""
+                emp.position   = safe_str(row[c_position]) if c_position is not None and c_position < len(row) else ""
+                emp.section    = safe_str(row[c_section])  if c_section is not None and c_section < len(row) else ""
+                emp.department = safe_str(row[c_dept])     if c_dept is not None and c_dept < len(row) else ""
 
-                emp.start_work = safe_date(row[c_start]) if c_start is not None else None
-                emp.resign = safe_date(row[c_resign]) if c_resign is not None else None
+                emp.start_work = safe_date(row[c_start])  if c_start is not None and c_start < len(row) else None
+                emp.resign     = safe_date(row[c_resign]) if c_resign is not None and c_resign < len(row) else None
 
-                emp.id_card = safe_str(row[c_idcard]) if c_idcard is not None else ""
+                emp.id_card = safe_str(row[c_idcard]) if c_idcard is not None and c_idcard < len(row) else ""
 
-                emp.degree = safe_str(row[c_degree]) if c_degree is not None else ""
-                emp.major = safe_str(row[c_major]) if c_major is not None else ""
+                emp.degree = safe_str(row[c_degree]) if c_degree is not None and c_degree < len(row) else ""
+                emp.major  = safe_str(row[c_major])  if c_major is not None and c_major < len(row) else ""
+
+                # ถ้าใน Model คุณมีฟิลด์ school_name ให้เปิดใช้บรรทัดนี้
+                if hasattr(emp, "school_name"):
+                    emp.school_name = safe_str(row[c_school]) if c_school is not None and c_school < len(row) else ""
+
+                # status: ใช้จากชื่อชีตเป็นค่าเริ่มต้น แต่ถ้ามี resign date ให้เป็น Resign
+                emp.status = "Resign" if emp.resign else default_status
+
         db.session.commit()
         flash(f"Import Employees สำเร็จ: เพิ่มใหม่ {added} | อัปเดต {updated} | ข้าม {skipped}", "success")
         return redirect(url_for("employees_list"))
