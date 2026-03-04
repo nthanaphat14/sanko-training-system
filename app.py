@@ -32,6 +32,7 @@ from sqlalchemy import or_
 from math import ceil
 from datetime import datetime
 from openpyxl import Workbook
+from sqlalchemy.sql import nullslast
 
 # -------------------------------------------------
 # App Config
@@ -1819,7 +1820,7 @@ def report_training():
     if q:
         like = f"%{q}%"
 
-        # 1) หา Employee จาก q (Emp ID หรือชื่อไทย/อังกฤษ)
+        # หา employee จาก emp_id หรือชื่อ/นามสกุล (ไทย/อังกฤษ)
         emp = Employee.query.filter(
             or_(
                 Employee.em_id.ilike(like),
@@ -1830,16 +1831,48 @@ def report_training():
             )
         ).order_by(Employee.em_id.asc()).first()
 
-        # 2) ถ้าเจอ Employee → ดึง TrainingRecord ด้วย emp_id
+        # ถ้าไม่เจอใน Employee ให้ลองดึงจาก TrainingRecord โดยตรง (กรณีไฟล์ training มีชื่อ แต่ employee ยังไม่ครบ)
+        if not emp:
+            tr = TrainingRecord.query.filter(
+                or_(
+                    TrainingRecord.emp_id.ilike(like),
+                    TrainingRecord.first_name.ilike(like),
+                    TrainingRecord.last_name.ilike(like),
+                )
+            ).order_by(TrainingRecord.emp_id.asc()).first()
+
+            if tr:
+                # สร้าง object แบบง่ายๆ ให้หน้าแสดงได้ (ไม่บังคับต้องมี employee)
+                class TempEmp:
+                    def __init__(self, em_id, th_name, section, position):
+                        self.em_id = em_id
+                        self._th = th_name
+                        self.section = section
+                        self.position = position
+                        self.department = None
+                        self.start_work = None
+                        self.resign = None
+                        self.status = None
+
+                    def th_full(self): return self._th
+                    def en_full(self): return ""
+
+                emp = TempEmp(
+                    tr.emp_id,
+                    f"{tr.prefix or ''}{tr.first_name or ''} {tr.last_name or ''}".strip(),
+                    tr.section,
+                    tr.position,
+                )
+
+        # ดึง training record
         if emp:
-            query = TrainingRecord.query.filter(TrainingRecord.emp_id == emp.em_id)
+            emp_id = emp.em_id
+            query = TrainingRecord.query.filter(TrainingRecord.emp_id == emp_id)
 
-            # ถ้ามี start_date ให้ sort ตาม start_date ก่อน
-            if hasattr(TrainingRecord, "start_date"):
-                query = query.order_by(nullslast(TrainingRecord.start_date.desc()), TrainingRecord.id.desc())
-            else:
-                query = query.order_by(TrainingRecord.id.desc())
-
+            query = query.order_by(
+                nullslast(TrainingRecord.start_date.desc()),
+                TrainingRecord.id.desc()
+            )
             rows = query.all()
 
     return render_template(
@@ -1849,6 +1882,7 @@ def report_training():
         rows=rows,
     )
 
+
 @app.get("/reports/training/print")
 @login_required
 def report_training_print():
@@ -1857,25 +1891,47 @@ def report_training_print():
         flash("กรุณาระบุ Emp ID", "error")
         return redirect(url_for("report_training"))
 
+    # employee อาจมีหรือไม่มีก็ได้
     emp = Employee.query.filter_by(em_id=emp_id).first()
+
+    # fallback: ถ้าไม่มี employee ให้ใช้ข้อมูลจาก training_records
     if not emp:
-        flash("ไม่พบพนักงาน", "error")
-        return redirect(url_for("report_training", q=emp_id))
+        tr = TrainingRecord.query.filter_by(emp_id=emp_id).order_by(TrainingRecord.id.desc()).first()
+        if not tr:
+            flash("ไม่พบข้อมูล Training Record ของพนักงานนี้", "error")
+            return redirect(url_for("report_training", q=emp_id))
 
-    query = TrainingRecord.query.filter(TrainingRecord.emp_id == emp.em_id)
+        class TempEmp:
+            def __init__(self, em_id, th_name, section, position):
+                self.em_id = em_id
+                self._th = th_name
+                self.section = section
+                self.position = position
+                self.department = None
+                self.start_work = None
+                self.resign = None
+                self.status = None
 
-    if hasattr(TrainingRecord, "start_date"):
-        query = query.order_by(nullslast(TrainingRecord.start_date.desc()), TrainingRecord.id.desc())
-    else:
-        query = query.order_by(TrainingRecord.id.desc())
+            def th_full(self): return self._th
+            def en_full(self): return ""
 
-    rows = query.all()
+        emp = TempEmp(
+            tr.emp_id,
+            f"{tr.prefix or ''}{tr.first_name or ''} {tr.last_name or ''}".strip(),
+            tr.section,
+            tr.position,
+        )
+
+    rows = TrainingRecord.query.filter(TrainingRecord.emp_id == emp_id).order_by(
+        nullslast(TrainingRecord.start_date.asc()),
+        TrainingRecord.id.asc()
+    ).all()
 
     return render_template(
         "report_training_print.html",
         emp=emp,
         rows=rows,
-        today=datetime.utcnow(),
+        print_date=datetime.utcnow(),
     )
     
 # -------------------------------------------------
