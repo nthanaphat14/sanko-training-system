@@ -1,303 +1,333 @@
-{% extends "base.html" %}
-{% block content %}
-
-<style>
-  @media print{
-    .no-print{ display:none !important; }
-    body{ background:#fff !important; }
-    .print-page{ box-shadow:none !important; border:none !important; }
-    @page{
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <title>Training Report Print</title>
+  <style>
+    /* --------- Page setup (A4 Landscape) --------- */
+    @page {
       size: A4 landscape;
       margin: 10mm;
     }
-  }
+    @media print {
+      html, body { background:#fff !important; }
+      * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
 
-  /* 1 หน้า (กระดาษ) */
-  .print-page{
-    background:#fff;
-    color:#111;
-    border:1px solid #111;
-    padding:0;
-    overflow:hidden;
-    border-radius:0;
-    box-shadow: 0 10px 30px rgba(0,0,0,.15);
-    margin-bottom: 14px;
-  }
-  .page-break{
-    page-break-after: always;
-    break-after: page;
-  }
+    body{
+      margin:0;
+      background:#fff;
+      color:#000;
+      font-family: "Times New Roman", "TH Sarabun New", serif;
+      font-size: 12px;
+      line-height: 1.15;
+    }
 
-  /* Excel grid background */
-  .grid-bg{
-    position:relative;
-    padding:10px 10px 8px;
-    background:
-      linear-gradient(to right, rgba(0,0,0,.10) 1px, transparent 1px) 0 0/24px 24px,
-      linear-gradient(to bottom, rgba(0,0,0,.10) 1px, transparent 1px) 0 0/24px 24px;
-  }
+    .sheet{
+      width: 100%;
+      background:#fff;
+    }
 
-  .wm{
-    position:absolute;
-    inset:0;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-size:88px;
-    font-weight:900;
-    color: rgba(0,0,0,.12);
-    pointer-events:none;
-    transform: translateY(20px);
-  }
+    /* --------- Common table look (form style) --------- */
+    table{
+      width:100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+    td, th{
+      border: 1px solid #000;
+      padding: 4px 6px;
+      vertical-align: middle;
+      word-wrap: break-word;
+    }
+    .no-border { border:none !important; }
+    .center { text-align:center; }
+    .right { text-align:right; }
+    .bold { font-weight:700; }
+    .nowrap { white-space:nowrap; }
 
-  .hdr{
-    display:flex;
-    align-items:flex-start;
-    gap:12px;
-    border-bottom:2px solid #111;
-    padding-bottom:8px;
-    background: rgba(255,255,255,.7);
-  }
-  .hdr .logo{
-    width:72px; height:72px;
-    border:1px solid #111;
-    background:#fff;
-    display:flex; align-items:center; justify-content:center;
-    overflow:hidden;
-  }
-  .hdr .logo img{ max-width:100%; max-height:100%; }
-  .hdr .htext{ flex:1; line-height:1.15; }
-  .hdr .htext .title1{ font-weight:900; font-size:16px; letter-spacing:.2px; }
-  .hdr .htext .title2{ font-size:12px; margin-top:4px; }
-  .hdr .htext .title3{ font-size:12px; margin-top:4px; }
+    /* --------- Header area --------- */
+    .hdr td, .hdr th{ padding:6px; }
+    .logo-wrap{
+      width: 92px;
+      text-align:center;
+    }
+    .logo-wrap img{
+      height: 62px;
+      display:block;
+      margin: 0 auto;
+      border: none;          /* ✅ ไม่มีกรอบ */
+      outline: none;         /* ✅ ไม่มีกรอบ */
+    }
+    .company-name{
+      font-weight:700;
+      font-size:16px;
+      letter-spacing:.2px;
+    }
+    .company-sub{
+      font-size:12px;
+    }
 
-  .doc-title{
-    text-align:center;
-    font-weight:900;
-    font-size:16px;
-    margin:10px 0 8px;
-  }
+    .title{
+      font-size:18px;
+      font-weight:700;
+      text-align:center;
+      padding: 10px 0;
+    }
 
-  .info{
-    display:grid;
-    grid-template-columns: 220px 1fr;
-    gap:6px 12px;
-    margin:6px 0 10px;
-    background: rgba(255,255,255,.7);
-  }
-  .info-row{ display:flex; gap:10px; align-items:center; }
-  .label{ width:120px; font-size:12px; font-weight:700; }
-  .line{
-    flex:1;
-    height:22px;
-    border:1px solid #111;
-    background:#fff;
-    padding:2px 8px;
-    font-size:12px;
-    display:flex;
-    align-items:center;
-  }
-  .line.mono{ font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    /* --------- Employee info block --------- */
+    .emp td{ height: 26px; }
+    .emp .label{
+      width: 160px;
+      font-weight:700;
+    }
+    /* ช่องข้อมูลต้อง “ยาว” และ “ไม่มีกล่องดำ” => ใช้ขีดเส้นล่างแทน */
+    .emp .value{
+      border-left: none;
+      border-right: none;
+      border-top: none;
+      border-bottom: 1px solid #000;
+      font-weight: 400;
+      padding-left: 10px;
+    }
+    .emp .value span{
+      display:inline-block;
+      min-width: 10px;
+    }
+    /* ปิดเส้นกรอบของ cell ด้านซ้าย-ขวาให้ดูเหมือนฟอร์ม */
+    .emp .label{
+      border-right: none;
+    }
 
-  table.formtbl{
-    width:100%;
-    border-collapse:collapse;
-    background:#fff;
-  }
-  table.formtbl th, table.formtbl td{
-    border:1px solid #111;
-    padding:6px 6px;
-    font-size:12px;
-    vertical-align:top;
-  }
-  table.formtbl th{
-    text-align:center;
-    font-weight:900;
-    background: rgba(255,255,255,.85);
-  }
-  .w-no{ width:50px; text-align:center; }
-  .w-date{ width:120px; }
-  .w-hr{ width:120px; text-align:center; }
-  .w-type{ width:140px; }
-  .w-topic{ width:auto; }
-  .w-trainer{ width:160px; }
-  .w-result{ width:120px; text-align:center; }
+    /* --------- Training table --------- */
+    .train th{
+      font-weight:700;
+      text-align:center;
+    }
+    .train td{
+      height: 26px;
+      font-size: 12px;
+    }
+    .train .c1{ width: 52px;  text-align:center; }
+    .train .c2{ width: 120px; text-align:center; }
+    .train .c3{ width: 110px; text-align:center; }
+    .train .c4{ width: 120px; text-align:center; }
+    .train .c5{ width: auto; }
+    .train .c6{ width: 190px; }
+    .train .c7{ width: 110px; text-align:center; }
 
-  .footer{ margin-top:10px; background: rgba(255,255,255,.75); }
-  .rev-head{
-    display:grid;
-    grid-template-columns: 120px 1fr 160px 160px 160px;
-    border:1px solid #111;
-    border-bottom:none;
-  }
-  .rev-head > div{
-    border-right:1px solid #111;
-    padding:6px 8px;
-    font-size:12px;
-    font-weight:900;
-    text-align:center;
-  }
-  .rev-head > div:last-child{ border-right:none; }
+    /* --------- Revision Review block --------- */
+    .rev-head{
+      font-weight:700;
+      text-align:center;
+      padding: 6px 0;
+    }
+    .rev td, .rev th{
+      height: 28px;
+      font-size: 12px;
+    }
+    .rev .w-revno{ width:70px; text-align:center; }
+    .rev .w-date{ width:110px; text-align:center; }
+    .rev .w-details{ width:240px; }
+    .rev .w-issued{ width:130px; text-align:center; }
+    .rev .w-confirm{ width:130px; text-align:center; }
+    .rev .w-approved{ width:130px; text-align:center; }
 
-  table.rev{ width:100%; border-collapse:collapse; background:#fff; }
-  table.rev td{ border:1px solid #111; padding:6px 8px; font-size:12px; }
+    .sign td, .sign th{
+      height: 44px;
+      text-align:center;
+    }
 
-  .footline{
-    display:flex;
-    justify-content:space-between;
-    gap:10px;
-    margin-top:6px;
-    font-size:12px;
-  }
-  .footline .left, .footline .right{ display:flex; gap:18px; align-items:center; }
-  .tiny{ font-size:11px; }
-</style>
+    /* --------- Footer line --------- */
+    .footer td{
+      font-size: 11px;
+      padding: 6px;
+    }
 
-<div class="no-print" style="display:flex; gap:10px; align-items:center; margin: 0 0 12px;">
-  <a class="btn" href="{{ url_for('report_training', q=emp.em_id if emp else '') }}">กลับ</a>
-  <button class="btn primary" onclick="window.print()">พิมพ์</button>
-</div>
+    /* Hide anything interactive on print */
+    .no-print { display:none; }
 
-{# ===== PAGINATION ===== #}
-{% set max_rows = 10 %}
-{% set total_rows = rows|length %}
-{% set total_pages = ((total_rows + max_rows - 1) // max_rows) if total_rows else 1 %}
+    /* Make sure it stays one page as much as possible */
+    .sheet { page-break-inside: avoid; }
+  </style>
+</head>
 
-{% for p in range(total_pages) %}
-  {% set start = p * max_rows %}
-  {% set end = start + max_rows %}
-  {% set page_rows = rows[start:end] %}
+<body>
+  <div class="sheet">
 
-  <div class="print-page {% if not loop.last %}page-break{% endif %}">
-    <div class="grid-bg">
+    <!-- HEADER -->
+    <table class="hdr">
+      <tr>
+        <td class="logo-wrap">
+          <!-- ✅ ใช้ไฟล์ที่คุณมีใน static -->
+          <img src="{{ url_for('static', filename='sanko_logo.png.gif') }}" alt="SANKO Logo">
+        </td>
+        <td>
+          <div class="company-name">SANKO DIECASTING (THAILAND) PUBLIC COMPANY LIMITED.</div>
+          <div class="company-sub">FACTORY : Rojana Industrial Park Rayong 3/14 Moo.2 , T.Nongbua , A.Bankhai Rayong 21120</div>
+          <div class="company-sub">Tel. : (033) 010701-705&nbsp;&nbsp;Fax : (033) 010706-708</div>
+        </td>
+      </tr>
+    </table>
 
-      <div class="wm">Page {{ p+1 }}</div>
+    <!-- TITLE -->
+    <div class="title">ประวัติการฝึกอบรมพนักงานบริษัท</div>
 
-      <!-- HEADER -->
-      <div class="hdr">
-        <div class="logo">
-          <!-- ✅ วางโลโก้ไว้ที่ static/logo.png -->
-          <img src="{{ url_for('static', filename='logo.png') }}" alt="logo">
-        </div>
-        <div class="htext">
-          <div class="title1">SANKO DIECASTING (THAILAND) PUBLIC COMPANY LIMITED.</div>
-          <div class="title2">FACTORY : Rojana Industrial Park Rayong 3/14 Moo 2, T.Nongbua, A.Bankhai Rayong 21120</div>
-          <div class="title3">Tel : (033) 010701-5 &nbsp;&nbsp; Fax : (033) 010706-8</div>
-        </div>
-      </div>
+    <!-- EMPLOYEE INFO -->
+    <table class="emp">
+      <tr>
+        <td class="label">ชื่อ - นามสกุล</td>
+        <td class="value">
+          <span>
+            {{ emp.th_full() if emp else "" }}
+          </span>
+        </td>
+      </tr>
+      <tr>
+        <td class="label">รหัสพนักงาน</td>
+        <td class="value"><span>{{ emp.em_id if emp else "" }}</span></td>
+      </tr>
+      <tr>
+        <td class="label">ตำแหน่ง</td>
+        <td class="value"><span>{{ emp.position if emp else "" }}</span></td>
+      </tr>
+      <tr>
+        <td class="label">แผนก</td>
+        <td class="value"><span>{{ emp.section if emp else "" }}</span></td>
+      </tr>
+      <tr>
+        <td class="label">วันที่เริ่มงาน</td>
+        <td class="value">
+          <span>
+            {% if emp and emp.start_work %}
+              {{ emp.start_work.strftime("%d/%m/%Y") }}
+            {% endif %}
+          </span>
+        </td>
+      </tr>
+    </table>
 
-      <div class="doc-title">ประวัติการฝึกอบรมพนักงานบริษัท</div>
-
-      <!-- INFO -->
-      <div class="info">
-        <div class="info-row">
-          <div class="label">ชื่อ - นามสกุล</div>
-          <div class="line">{{ emp.th_full() if emp else "" }}</div>
-        </div>
-        <div></div>
-
-        <div class="info-row">
-          <div class="label">รหัสพนักงาน</div>
-          <div class="line mono">{{ emp.em_id if emp else "" }}</div>
-        </div>
-        <div></div>
-
-        <div class="info-row">
-          <div class="label">ตำแหน่ง</div>
-          <div class="line">{{ emp.position if emp else "" }}</div>
-        </div>
-        <div></div>
-
-        <div class="info-row">
-          <div class="label">แผนก</div>
-          <div class="line">{{ emp.section if emp else "" }}</div>
-        </div>
-        <div></div>
-
-        <div class="info-row">
-          <div class="label">วันที่เริ่มงาน</div>
-          <div class="line">{% if emp and emp.start_work %}{{ emp.start_work }}{% endif %}</div>
-        </div>
-        <div></div>
-      </div>
-
-      <!-- TABLE -->
-      <table class="formtbl">
-        <thead>
+    <!-- TRAINING TABLE -->
+    <table class="train" style="margin-top:10px;">
+      <thead>
+        <tr>
+          <th class="c1">ลำดับ</th>
+          <th class="c2">วันที่ฝึกอบรม</th>
+          <th class="c3">เวลาที่ใช้ฝึกอบรม</th>
+          <th class="c4">ชนิดการอบรม</th>
+          <th class="c5">หัวข้อการฝึกอบรม</th>
+          <th class="c6">วิทยากร</th>
+          <th class="c7">ผลการอบรม</th>
+        </tr>
+      </thead>
+      <tbody>
+        {# ✅ โชว์สูงสุด 10 แถวให้เหมือนฟอร์ม (ถ้ามีเกิน 10 ตอนนี้ยังไม่ทำหน้า 2) #}
+        {% set show_rows = (rows[:10] if rows else []) %}
+        {% for r in show_rows %}
           <tr>
-            <th class="w-no">ลำดับ</th>
-            <th class="w-date">วันที่ฝึกอบรม</th>
-            <th class="w-hr">เวลาที่ใช้ฝึกอบรม</th>
-            <th class="w-type">ชนิดการอบรม</th>
-            <th class="w-topic">หัวข้อการฝึกอบรม</th>
-            <th class="w-trainer">วิทยากร</th>
-            <th class="w-result">ผลการอบรม</th>
+            <td class="c1">{{ loop.index }}</td>
+            <td class="c2">
+              {% if r.start_date %}{{ r.start_date.strftime("%d/%m/%Y") }}{% endif %}
+            </td>
+            <td class="c3">{{ "%.1f"|format(r.hours) if r.hours is not none else "" }}</td>
+            <td class="c4">{{ r.course_type or "" }}</td>
+            <td class="c5">{{ r.course_name or "" }}</td>
+            <td class="c6">{{ r.evaluator or "" }}</td>
+            <td class="c7">{{ r.result or "" }}</td>
           </tr>
-        </thead>
-        <tbody>
-          {% for i in range(max_rows) %}
-            {% set r = page_rows[i] if page_rows and i < (page_rows|length) else None %}
-            <tr style="height:30px;">
-              <td class="w-no">{{ start + i + 1 }}</td>
-              <td class="w-date">{% if r and r.start_date %}{{ r.start_date }}{% endif %}</td>
-              <td class="w-hr">{% if r and r.hours is not none %}{{ r.hours }}{% endif %}</td>
-              <td class="w-type">{% if r %}{{ r.course_type or "" }}{% endif %}</td>
-              <td class="w-topic">{% if r %}{{ r.course_name or "" }}{% endif %}</td>
-              <td class="w-trainer">{% if r %}{{ r.evaluator or "" }}{% endif %}</td>
-              <td class="w-result">{% if r %}{{ r.result or "" }}{% endif %}</td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+        {% endfor %}
 
-      <!-- FOOTER -->
-      <div class="footer">
-        <div class="rev-head">
-          <div>Rev.No</div>
-          <div>Details</div>
-          <div>Issued</div>
-          <div>Confirm</div>
-          <div>Approved</div>
-        </div>
-
-        <table class="rev">
+        {# เติมแถวเปล่าให้ครบ 10 #}
+        {% for i in range(10 - (show_rows|length)) %}
           <tr>
-            <td style="width:120px; text-align:center;">△</td>
-            <td> </td>
-            <td style="width:160px;"></td>
-            <td style="width:160px;"></td>
-            <td style="width:160px;"></td>
+            <td class="c1">{{ (show_rows|length) + i + 1 }}</td>
+            <td class="c2"></td>
+            <td class="c3"></td>
+            <td class="c4"></td>
+            <td class="c5"></td>
+            <td class="c6"></td>
+            <td class="c7"></td>
           </tr>
-          <tr>
-            <td style="text-align:center;">③</td>
-            <td>28/5/2025 &nbsp;&nbsp; REVIEW ALL</td>
-            <td style="text-align:center;">-</td>
-            <td style="text-align:center;">Pimpon</td>
-            <td style="text-align:center;">-</td>
-          </tr>
-          <tr>
-            <td style="text-align:center;">②</td>
-            <td>21/7/2012 &nbsp;&nbsp; REVIEW ALL</td>
-            <td style="text-align:center;">Saowarot</td>
-            <td style="text-align:center;">-</td>
-            <td style="text-align:center;">Pimpon</td>
-          </tr>
-        </table>
+        {% endfor %}
+      </tbody>
+    </table>
 
-        <div class="footline tiny">
-          <div class="left">
-            <div>Doc No. : <b>FM-PN013</b></div>
-            <div>Rev. : <b>3</b></div>
-            <div>Page {{ p+1 }} / {{ total_pages }}</div>
-          </div>
-          <div class="right">
-            <div>Effective Date : <b>28 MAY 2025</b></div>
-          </div>
-        </div>
-      </div>
+    <!-- REVISION REVIEW (เหมือนภาพ) -->
+    <table style="margin-top:10px;">
+      <tr>
+        <td class="center bold" style="width:70%; border-bottom:none;">Revision Review</td>
+        <td class="center bold" style="width:10%; border-bottom:none;">Prepared</td>
+        <td class="center bold" style="width:10%; border-bottom:none;">Checked</td>
+        <td class="center bold" style="width:10%; border-bottom:none;">Approved</td>
+      </tr>
+    </table>
 
-    </div>
+    <table class="rev">
+      <tr>
+        <th class="w-revno">Rev.No</th>
+        <th class="w-date">Date</th>
+        <th class="w-details">Details</th>
+        <th class="w-issued">Issued</th>
+        <th class="w-confirm">Confirm</th>
+        <th class="w-approved">Approved</th>
+
+        <th style="width:10%;">&nbsp;</th>
+        <th style="width:10%;">&nbsp;</th>
+        <th style="width:10%;">&nbsp;</th>
+      </tr>
+
+      <!-- แถวสัญลักษณ์ -->
+      <tr>
+        <td class="w-revno center">△</td>
+        <td class="w-date"></td>
+        <td class="w-details"></td>
+        <td class="w-issued"></td>
+        <td class="w-confirm"></td>
+        <td class="w-approved"></td>
+
+        <td rowspan="3" class="center"><i>Thanaphat T.</i></td>
+        <td rowspan="3" class="center">-</td>
+        <td rowspan="3" class="center"><i>Pinpon</i></td>
+      </tr>
+
+      <!-- แถว Rev 3 -->
+      <tr>
+        <td class="w-revno center">3</td>
+        <td class="w-date center">28/5/2025</td>
+        <td class="w-details bold">REVIEW ALL</td>
+        <td class="w-issued center"><i>Thanaphat T.</i></td>
+        <td class="w-confirm center">-</td>
+        <td class="w-approved center"><i>Pinpon</i></td>
+      </tr>
+
+      <!-- แถว Rev 2 -->
+      <tr>
+        <td class="w-revno center">2</td>
+        <td class="w-date center">21/7/2012</td>
+        <td class="w-details bold">REVIEW ALL</td>
+        <td class="w-issued center"><i>Soawarat</i></td>
+        <td class="w-confirm center">-</td>
+        <td class="w-approved center"><i>Pinpon</i></td>
+      </tr>
+    </table>
+
+    <!-- FOOTER -->
+    <table class="footer">
+      <tr>
+        <td style="width:25%;">Doc No. : <b>FM-PN013</b></td>
+        <td style="width:15%;">Rev. : <b>3</b></td>
+        <td style="width:20%;" class="center">Page 1 / 1</td>
+        <td style="width:40%;" class="right">Effective Date : <b>28 MAY 2025</b></td>
+      </tr>
+    </table>
+
   </div>
-{% endfor %}
 
-{% endblock %}
+  <script>
+    // ✅ เปิดแล้วสั่งพิมพ์ทันที
+    window.onload = function(){
+      window.print();
+    }
+  </script>
+</body>
+</html>
