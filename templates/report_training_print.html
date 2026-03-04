@@ -1,0 +1,78 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Training Report - {{ emp.em_id }}</title>
+  <style>
+    body{ font-family: Arial, sans-serif; margin: 24px; color:#111; }
+    .no-print{ margin-bottom: 12px; }
+    .box{ border:1px solid #333; padding:12px; margin-bottom:12px; }
+    table{ width:100%; border-collapse:collapse; font-size:12px; }
+    th, td{ border:1px solid #333; padding:6px; text-align:left; vertical-align:top; }
+    th{ background:#f2f2f2; }
+    .muted{ color:#555; font-size:12px; }
+    @media print {
+      .no-print{ display:none; }
+      body{ margin: 10mm; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="no-print">
+    <button onclick="window.print()">Print</button>
+    <button onclick="window.close()">Close</button>
+  </div>
+
+  <h2 style="margin:0 0 10px 0;">Training Record Report</h2>
+  <div class="muted">Print Date: {{ today.strftime("%Y-%m-%d") if today else "" }}</div>
+
+  <div class="box">
+    <b>Emp ID:</b> {{ emp.em_id }}<br>
+    <b>Name (TH):</b> {{ emp.th_full() }}<br>
+    <b>Name (EN):</b> {{ emp.en_full() }}<br>
+    <b>Department:</b> {{ emp.department or "-" }} |
+    <b>Section:</b> {{ emp.section or "-" }} |
+    <b>Position:</b> {{ emp.position or "-" }}<br>
+    <b>Start Work:</b> {{ emp.start_work or "-" }} |
+    <b>Resign:</b> {{ emp.resign or "-" }} |
+    <b>Status:</b> {{ emp.status or "-" }}
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:40px;">#</th>
+        <th style="width:60px;">Year</th>
+        <th style="width:60px;">Month</th>
+        <th style="width:90px;">Start</th>
+        <th style="width:120px;">Course Code</th>
+        <th>Course Name</th>
+        <th style="width:90px;">Type</th>
+        <th style="width:70px;">Hours</th>
+        <th style="width:80px;">Result</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in rows %}
+      <tr>
+        <td>{{ loop.index }}</td>
+        <td>{{ t.year or "" }}</td>
+        <td>{{ t.month or "" }}</td>
+        <td>{{ getattr(t, "start_date", "") or "" }}</td>
+        <td>{{ getattr(t, "course_code", "") or "" }}</td>
+        <td>{{ getattr(t, "course_name", "") or "" }}</td>
+        <td>{{ getattr(t, "course_type", "") or "" }}</td>
+        <td>{{ getattr(t, "hours", "") or "" }}</td>
+        <td>{{ getattr(t, "result", "") or "" }}</td>
+      </tr>
+      {% endfor %}
+
+      {% if rows|length == 0 %}
+      <tr><td colspan="9" class="muted">ไม่พบข้อมูล Training Record</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+
+</body>
+</html>
