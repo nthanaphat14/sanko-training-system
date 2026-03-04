@@ -14,6 +14,27 @@
   </div>
 </div>
 
+<!-- 🔽 วางตรงนี้ -->
+
+<div class="card">
+  <div style="display:flex; gap:30px; font-weight:600;">
+    <div>
+      Active&nbsp;&nbsp;
+      <span>{{ total_active }}</span>
+    </div>
+
+    <div>
+      Resign&nbsp;&nbsp;
+      <span>{{ total_resign }}</span>
+    </div>
+
+    <div>
+      Employees&nbsp;&nbsp;
+      <span>{{ total_all }}</span>
+    </div>
+  </div>
+</div>
+
 <div class="card">
   <form class="searchbar" action="{{ url_for('employees_list') }}" method="get">
     
