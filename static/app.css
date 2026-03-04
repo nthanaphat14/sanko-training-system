@@ -156,3 +156,22 @@ h1{margin:0; font-size:26px}
 .card form > div[style*="width:120px"]{
   flex: 0 0 120px;
 }
+
+/* employee status badge */
+.badge{
+padding:4px 10px;
+border-radius:6px;
+font-size:12px;
+font-weight:600;
+display:inline-block;
+}
+
+.badge.green{
+background:#22c55e;
+color:white;
+}
+
+.badge.red{
+background:#ef4444;
+color:white;
+}
