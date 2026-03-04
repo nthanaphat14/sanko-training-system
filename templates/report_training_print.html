@@ -4,13 +4,14 @@
   <meta charset="utf-8">
   <title>Training Report - {{ emp.em_id }}</title>
   <style>
-    body{ font-family: Arial, sans-serif; margin: 24px; color:#111; }
-    .no-print{ margin-bottom: 12px; }
-    .box{ border:1px solid #333; padding:12px; margin-bottom:12px; }
-    table{ width:100%; border-collapse:collapse; font-size:12px; }
-    th, td{ border:1px solid #333; padding:6px; text-align:left; vertical-align:top; }
-    th{ background:#f2f2f2; }
-    .muted{ color:#555; font-size:12px; }
+    body{ font-family: Arial, sans-serif; margin: 18px; color:#111; }
+    .no-print{ margin-bottom: 10px; display:flex; gap:8px; }
+    .box{ border:1px solid #000; padding:10px; margin-bottom:10px; }
+    .title{ font-size:16px; font-weight:900; text-align:center; margin:0 0 10px 0; }
+    table{ width:100%; border-collapse:collapse; font-size:11px; }
+    th, td{ border:1px solid #000; padding:5px; text-align:left; vertical-align:top; }
+    th{ background:#f0f0f0; text-align:center; }
+    .muted{ color:#444; font-size:11px; }
     @media print {
       .no-print{ display:none; }
       body{ margin: 10mm; }
@@ -24,55 +25,71 @@
     <button onclick="window.close()">Close</button>
   </div>
 
-  <h2 style="margin:0 0 10px 0;">Training Record Report</h2>
-  <div class="muted">Print Date: {{ today.strftime("%Y-%m-%d") if today else "" }}</div>
+  <div class="title">TRAINING RECORD REPORT</div>
+  <div class="muted" style="text-align:right; margin-bottom:6px;">
+    Print date: {{ print_date.strftime("%Y-%m-%d") if print_date else "" }}
+  </div>
 
   <div class="box">
-    <b>Emp ID:</b> {{ emp.em_id }}<br>
-    <b>Name (TH):</b> {{ emp.th_full() }}<br>
-    <b>Name (EN):</b> {{ emp.en_full() }}<br>
-    <b>Department:</b> {{ emp.department or "-" }} |
-    <b>Section:</b> {{ emp.section or "-" }} |
-    <b>Position:</b> {{ emp.position or "-" }}<br>
-    <b>Start Work:</b> {{ emp.start_work or "-" }} |
-    <b>Resign:</b> {{ emp.resign or "-" }} |
-    <b>Status:</b> {{ emp.status or "-" }}
+    <div><b>Emp ID:</b> {{ emp.em_id }}</div>
+    <div><b>Name:</b> {{ emp.th_full() }}</div>
+    {% if emp.en_full() %}<div><b>Name (EN):</b> {{ emp.en_full() }}</div>{% endif %}
+    <div><b>Section:</b> {{ emp.section or "-" }} &nbsp;&nbsp; <b>Position:</b> {{ emp.position or "-" }}</div>
+    {% if emp.department %}<div><b>Department:</b> {{ emp.department }}</div>{% endif %}
+    {% if emp.start_work %}<div><b>Start work:</b> {{ emp.start_work }}</div>{% endif %}
+    {% if emp.resign %}<div><b>Resign:</b> {{ emp.resign }}</div>{% endif %}
+    {% if emp.status %}<div><b>Status:</b> {{ emp.status }}</div>{% endif %}
   </div>
 
   <table>
     <thead>
       <tr>
-        <th style="width:40px;">#</th>
-        <th style="width:60px;">Year</th>
-        <th style="width:60px;">Month</th>
-        <th style="width:90px;">Start</th>
-        <th style="width:120px;">Course Code</th>
+        <th style="width:30px;">No.</th>
+        <th style="width:45px;">Year</th>
+        <th style="width:45px;">Month</th>
+        <th style="width:90px;">Course Code</th>
         <th>Course Name</th>
-        <th style="width:90px;">Type</th>
-        <th style="width:70px;">Hours</th>
-        <th style="width:80px;">Result</th>
+        <th style="width:70px;">Type</th>
+        <th style="width:75px;">Start</th>
+        <th style="width:75px;">End</th>
+        <th style="width:45px;">Hours</th>
+        <th style="width:85px;">Eval</th>
+        <th style="width:55px;">Result</th>
+        <th style="width:45px;">Score</th>
+        <th style="width:90px;">Evaluator</th>
+        <th style="width:75px;">Expire</th>
       </tr>
     </thead>
     <tbody>
       {% for t in rows %}
       <tr>
-        <td>{{ loop.index }}</td>
-        <td>{{ t.year or "" }}</td>
-        <td>{{ t.month or "" }}</td>
-        <td>{{ getattr(t, "start_date", "") or "" }}</td>
-        <td>{{ getattr(t, "course_code", "") or "" }}</td>
-        <td>{{ getattr(t, "course_name", "") or "" }}</td>
-        <td>{{ getattr(t, "course_type", "") or "" }}</td>
-        <td>{{ getattr(t, "hours", "") or "" }}</td>
-        <td>{{ getattr(t, "result", "") or "" }}</td>
+        <td style="text-align:center;">{{ loop.index }}</td>
+        <td style="text-align:center;">{{ t.year or "" }}</td>
+        <td style="text-align:center;">{{ t.month or "" }}</td>
+        <td>{{ t.course_code or "" }}</td>
+        <td>{{ t.course_name or "" }}</td>
+        <td>{{ t.course_type or "" }}</td>
+        <td style="text-align:center;">{{ t.start_date or "" }}</td>
+        <td style="text-align:center;">{{ t.end_date or "" }}</td>
+        <td style="text-align:center;">{{ t.hours or "" }}</td>
+        <td>{{ t.evaluate_method or "" }}</td>
+        <td style="text-align:center;">{{ t.result or "" }}</td>
+        <td style="text-align:center;">{{ t.score or "" }}</td>
+        <td>{{ t.evaluator or "" }}</td>
+        <td style="text-align:center;">{{ t.expire_date or "" }}</td>
       </tr>
       {% endfor %}
 
       {% if rows|length == 0 %}
-      <tr><td colspan="9" class="muted">ไม่พบข้อมูล Training Record</td></tr>
+      <tr><td colspan="14" class="muted">ไม่พบข้อมูล Training Record</td></tr>
       {% endif %}
     </tbody>
   </table>
+
+  <div class="box" style="margin-top:10px;">
+    <b>Remark:</b>
+    <div class="muted">*หมายเหตุรวม: (ถ้าต้องการให้สรุปรวม remark ทุกแถว เดี๋ยวผมทำให้ต่อได้)</div>
+  </div>
 
 </body>
 </html>
