@@ -175,3 +175,25 @@ color:white;
 background:#ef4444;
 color:white;
 }
+
+.badge{
+  display:inline-flex;
+  align-items:center;
+  padding:4px 10px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:800;
+  border:1px solid rgba(255,255,255,.12);
+}
+
+.badge.green{
+  background: rgba(34,197,94,.18);
+  color: #86efac;
+  border-color: rgba(34,197,94,.35);
+}
+
+.badge.red{
+  background: rgba(239,68,68,.18);
+  color: #fca5a5;
+  border-color: rgba(239,68,68,.35);
+}
