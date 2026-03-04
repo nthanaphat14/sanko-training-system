@@ -2,48 +2,84 @@
 <html lang="th">
 <head>
   <meta charset="utf-8">
-  <title>Training Report</title>
+  <title>FM-PN013 Training Record</title>
 
   <style>
-    /* ====== PRINT LOCK ====== */
+    /* =============================
+       PRINT SETUP
+    ============================= */
     @page{
       size: A4 landscape;
       margin: 8mm;
     }
-
     html, body{
       margin:0;
       padding:0;
       background:#fff !important;
-      color:#000;
-      font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+      color:#000 !important;
+      font-family: "TH Sarabun New", "Sarabun", Tahoma, Arial, sans-serif;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
-
-    /* กดปริ้นแล้วไม่เอาปุ่ม/ลิงก์ */
     @media print{
       .no-print{ display:none !important; }
     }
 
-    /* ====== LAYOUT ====== */
-    .sheet{
+    .printbar{
+      margin:10px 0;
+      display:flex;
+      justify-content:flex-end;
+      gap:10px;
+    }
+    .btn{
+      border:1px solid #222;
+      padding:8px 12px;
+      border-radius:8px;
       background:#fff;
-      width: 100%;
-      page-break-after: always;     /* ✅ แยกหน้าอัตโนมัติ */
+      cursor:pointer;
+      font-weight:700;
+    }
+
+    /* =============================
+       PAGE CONTAINER
+    ============================= */
+    .sheet{
+      width:100%;
+      background:#fff;
+      page-break-after: always;
       break-after: page;
     }
-
-    .header{
-      display:flex;
-      justify-content:space-between;
-      align-items:flex-start;
-      gap:12px;
-      margin-bottom: 6mm;
+    .sheet:last-child{
+      page-break-after: auto;
+      break-after: auto;
     }
 
-    .logo{
-      height: 22mm;                 /* ✅ ปรับได้ */
+    /* =============================
+       FORM OUTER BORDER
+    ============================= */
+    .form{
+      border:2px solid #000;
+      padding:0;
+    }
+
+    /* =============================
+       TOP HEADER BOX
+    ============================= */
+    .top{
+      display:grid;
+      grid-template-columns: 42mm 1fr;
+      border-bottom:2px solid #000;
+      min-height: 22mm;
+    }
+    .logoBox{
+      border-right:2px solid #000;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:3mm;
+    }
+    .logoBox img{
+      height:16mm;
       width:auto;
       display:block;
       border:none !important;
@@ -51,193 +87,257 @@
       box-shadow:none !important;
       background:transparent !important;
     }
+    .companyBox{
+      padding:3mm 4mm;
+      line-height: 1.15;
+      font-size: 12pt;
+    }
+    .companyName{
+      font-weight:800;
+      font-size: 13pt;
+    }
+    .companyLine{
+      font-size: 10.5pt;
+      margin-top:1mm;
+    }
 
+    /* =============================
+       TITLE + EMP INFO AREA
+    ============================= */
+    .mid{
+      border-bottom:2px solid #000;
+      padding:3mm 4mm 4mm;
+    }
     .title{
       text-align:center;
-      flex:1;
-      padding-top: 1mm;
-    }
-    .title h1{
-      margin:0;
+      font-weight:800;
       font-size: 16pt;
-      font-weight: 800;
-      letter-spacing: .2px;
-    }
-    .title .sub{
-      margin-top: 2mm;
-      font-size: 11pt;
+      margin: 2mm 0 3mm;
     }
 
-    .revbox{
-      width: 70mm;                 /* ให้เหมือนช่อง Revision/Review */
-      text-align:right;
-      font-size: 10pt;
-      line-height: 1.2;
+    .empGrid{
+      display:grid;
+      grid-template-columns: 42mm 1fr;
+      gap: 2mm 6mm;
+      font-size: 12pt;
+      align-items:center;
+      max-width: 110mm; /* ให้เหมือนฟอร์ม ช่องกรอกอยู่ฝั่งซ้าย */
     }
-
-    /* ====== EMP INFO (ไม่มีกรอบดำ, ไม่ขึ้น 2 บรรทัด) ====== */
-    .empinfo{
-      font-size: 11pt;
-      margin-bottom: 4mm;
+    .empLabel{
+      font-weight:700;
+      white-space:nowrap;
     }
-    .emp-row{
+    .lineField{
+      border-bottom:2px solid #000;
+      height: 7mm;
       display:flex;
-      gap:18mm;
-      margin-bottom: 2mm;
-      flex-wrap: nowrap;           /* ✅ ไม่ให้ตัดบรรทัด */
-      white-space: nowrap;         /* ✅ ยาวไปเลย */
+      align-items:flex-end;
+      padding-bottom: 1mm;
+      font-size: 12pt;
+      overflow:hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
     }
-    .emp-item{
-      min-width: 0;
-    }
-    .lbl{ font-weight:700; }
 
-    /* ====== TABLE ====== */
+    /* =============================
+       TRAINING TABLE
+    ============================= */
+    .tblWrap{
+      padding:0;
+    }
     table{
+      width:100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      font-size: 11pt;
+    }
+    thead th{
+      border:2px solid #000;
+      padding: 2mm 1mm;
+      text-align:center;
+      font-weight:800;
+    }
+    tbody td{
+      border:1.5px solid #000;
+      padding: 2mm 1.5mm;
+      vertical-align: top;
+      height: 9mm; /* สูงพอ ๆ กับฟอร์ม */
+    }
+
+    /* column widths (ใกล้เคียงฟอร์ม) */
+    .c-seq{ width: 14mm; text-align:center; }
+    .c-date{ width: 32mm; text-align:center; }
+    .c-hrs{ width: 38mm; text-align:center; }
+    .c-type{ width: 32mm; text-align:center; }
+    .c-topic{ width: auto; }
+    .c-trainer{ width: 52mm; }
+    .c-result{ width: 26mm; text-align:center; }
+
+    /* =============================
+       BOTTOM REVISION AREA
+    ============================= */
+    .bottom{
+      border-top:2px solid #000;
+      display:grid;
+      grid-template-columns: 1fr 55mm 35mm 45mm;
+      align-items: stretch;
+    }
+
+    .revTitle{
+      text-align:center;
+      font-weight:700;
+      padding: 2mm 0;
+      border-right:2px solid #000;
+      font-size: 11pt;
+    }
+
+    .revTable{
+      border-right:2px solid #000;
+    }
+    .revTable table{
       width:100%;
       border-collapse: collapse;
       table-layout: fixed;
       font-size: 10pt;
     }
-    thead th{
-      border: 1px solid #000;      /* เส้นดำตามฟอร์ม */
-      padding: 2mm 2mm;
+    .revTable th, .revTable td{
+      border:1.5px solid #000;
+      padding: 1.5mm 1mm;
       text-align:center;
-      font-weight:800;
+      height: 8mm;
     }
-    tbody td{
-      border: 1px solid #000;
-      padding: 2mm 2mm;
-      vertical-align: top;
+    .revTable .left{
+      text-align:left;
     }
 
-    /* ให้ไม่ล้นหน้า */
-    .tbl-wrap{
-      width:100%;
-      overflow:hidden;
+    .signBox{
+      display:flex;
+      flex-direction:column;
+      border-right:2px solid #000;
+    }
+    .signBox:last-child{ border-right:none; }
+
+    .signHead{
+      border-bottom:1.5px solid #000;
+      text-align:center;
+      padding: 2mm 0;
+      font-weight:700;
+      font-size: 11pt;
+      height: 10mm;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .signBody{
+      flex:1;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size: 11pt;
+      font-style: italic;
+      min-height: 22mm;
     }
 
-    /* กำหนดความกว้างคอลัมน์ให้คุมหน้า */
-    .c-no{ width: 10mm; text-align:center; }
-    .c-date{ width: 28mm; text-align:center; }
-    .c-hour{ width: 18mm; text-align:center; }
-    .c-type{ width: 30mm; text-align:center; }
-    .c-name{ width: auto; }
-    .c-eval{ width: 45mm; }
-    .c-result{ width: 22mm; text-align:center; }
-
-    /* ====== FOOTER ====== */
-    .footer{
-      margin-top: 4mm;
+    /* =============================
+       DOC FOOTER LINE
+    ============================= */
+    .docFooter{
       display:flex;
       justify-content: space-between;
-      align-items:center;
+      padding: 2mm 0 0;
       font-size: 10pt;
     }
 
-    .page-no{
-      text-align:right;
-      white-space: nowrap;
-    }
-
-    /* ปุ่มพิมพ์ */
-    .printbar{
-      margin: 10px 0;
-      display:flex;
-      gap:10px;
-      justify-content:flex-end;
-    }
-    .btn{
-      border:1px solid #333;
-      padding:8px 12px;
-      border-radius:8px;
-      background:#fff;
-      cursor:pointer;
-      font-weight:700;
+    .pageNo{
+      text-align:center;
+      flex:1;
     }
   </style>
 </head>
 
 <body>
 
-  <!-- ปุ่มพิมพ์ (ไม่ออกตอน print) -->
-  <div class="printbar no-print">
-    <button class="btn" onclick="window.print()">Print / Save PDF</button>
-  </div>
+<div class="printbar no-print">
+  <button class="btn" onclick="window.print()">Print / Save PDF</button>
+</div>
 
-  {% for page_rows in pages %}
-  <div class="sheet">
+{% for page_rows in pages %}
+{% set page_index = loop.index %}
+{% set offset = (page_index - 1) * per_page %}
 
-    <!-- HEADER -->
-    <div class="header">
-      <div style="width:70mm;">
-        <img src="{{ url_for('static', filename='logo.png') }}" class="logo" alt="logo">
+<div class="sheet">
+  <div class="form">
+
+    <!-- TOP HEADER -->
+    <div class="top">
+      <div class="logoBox">
+        <img src="{{ url_for('static', filename='logo.png') }}" alt="SANKO logo">
       </div>
-
-      <div class="title">
-        <h1>TRAINING RECORD REPORT</h1>
-        <div class="sub">รายงานประวัติการฝึกอบรมพนักงาน</div>
-      </div>
-
-      <!-- Revision / Review ให้หน้าตาแบบที่คุณส่ง -->
-      <div class="revbox">
-        <div><b>Revision / Review</b></div>
-        <div>FM-PN013</div>
-        <div>Rev. 00</div>
-        <div>Effective: 01/01/2026</div>
+      <div class="companyBox">
+        <div class="companyName">SANKO DIECASTING (THAILAND) PUBLIC COMPANY LIMITED.</div>
+        <div class="companyLine">FACTORY : Rojana Industrial Park&nbsp; 3/14 Moo.2 , T.Nongbua , A. Bankhai Rayong 21120</div>
+        <div class="companyLine">Tel. : (033) 010701-705&nbsp; Fax : (033) 010706-708</div>
       </div>
     </div>
 
-    <!-- EMP INFO (ยาว ไม่ตัดบรรทัด, ไม่มีกล่อง) -->
-    <div class="empinfo">
-      <div class="emp-row">
-        <div class="emp-item"><span class="lbl">Emp ID:</span> {{ emp.em_id }}</div>
-        <div class="emp-item"><span class="lbl">Name:</span> {{ emp.th_full() }}</div>
-        <div class="emp-item"><span class="lbl">Position:</span> {{ emp.position or "" }}</div>
-        <div class="emp-item"><span class="lbl">Section:</span> {{ emp.section or "" }}</div>
-        <div class="emp-item"><span class="lbl">Start work:</span> {{ emp.start_work or "" }}</div>
+    <!-- TITLE + EMP INFO -->
+    <div class="mid">
+      <div class="title">ประวัติการฝึกอบรมพนักงานบริษัท</div>
+
+      <div class="empGrid">
+        <div class="empLabel">ชื่อ - นามสกุล</div>
+        <div class="lineField">{{ emp.th_full() }}</div>
+
+        <div class="empLabel">รหัสพนักงาน</div>
+        <div class="lineField">{{ emp.em_id }}</div>
+
+        <div class="empLabel">ตำแหน่ง</div>
+        <div class="lineField">{{ emp.position or "" }}</div>
+
+        <div class="empLabel">แผนก</div>
+        <div class="lineField">{{ emp.section or "" }}</div>
+
+        <div class="empLabel">วันที่เริ่มงาน</div>
+        <div class="lineField">{{ emp.start_work or "" }}</div>
       </div>
     </div>
 
-    <!-- TABLE -->
-    <div class="tbl-wrap">
+    <!-- TRAINING TABLE -->
+    <div class="tblWrap">
       <table>
         <thead>
           <tr>
-            <th class="c-no">No</th>
-            <th class="c-date">Start Date</th>
-            <th class="c-date">End Date</th>
-            <th class="c-hour">Hours</th>
-            <th class="c-type">Type</th>
-            <th class="c-name">Course Name</th>
-            <th class="c-eval">Evaluator</th>
-            <th class="c-result">Result</th>
+            <th class="c-seq">ลำดับ</th>
+            <th class="c-date">วันที่ฝึกอบรม</th>
+            <th class="c-hrs">เวลาที่ใช้ฝึกอบรม</th>
+            <th class="c-type">ชนิดการอบรม</th>
+            <th class="c-topic">หัวข้อการฝึกอบรม</th>
+            <th class="c-trainer">วิทยากร</th>
+            <th class="c-result">ผลการอบรม</th>
           </tr>
         </thead>
         <tbody>
           {% for r in page_rows %}
           <tr>
-            <td class="c-no">{{ loop.index + (loop.index0 // 999999) }}</td>
+            <td class="c-seq">{{ offset + loop.index }}</td>
             <td class="c-date">{{ r.start_date or "" }}</td>
-            <td class="c-date">{{ r.end_date or "" }}</td>
-            <td class="c-hour">{{ r.hours or "" }}</td>
+            <td class="c-hrs">{{ r.hours or "" }}</td>
             <td class="c-type">{{ r.course_type or "" }}</td>
-            <td class="c-name">{{ r.course_name or "" }}</td>
-            <td class="c-eval">{{ r.evaluator or "" }}</td>
+            <td class="c-topic">{{ r.course_name or "" }}</td>
+            <td class="c-trainer">{{ r.evaluator or "" }}</td>
             <td class="c-result">{{ r.result or "" }}</td>
           </tr>
           {% endfor %}
 
-          <!-- เติมแถวว่างให้ครบ 10 แถว เพื่อ “หน้าตาแบบฟอร์มเหมือนกันทุกหน้า” -->
-          {% for _ in range(10 - (page_rows|length)) %}
+          {# เติมแถวให้ครบ 10 แถว/หน้าเหมือนฟอร์ม #}
+          {% for _ in range(per_page - (page_rows|length)) %}
           <tr>
-            <td class="c-no">&nbsp;</td>
+            <td class="c-seq">&nbsp;</td>
             <td class="c-date"></td>
-            <td class="c-date"></td>
-            <td class="c-hour"></td>
+            <td class="c-hrs"></td>
             <td class="c-type"></td>
-            <td class="c-name"></td>
-            <td class="c-eval"></td>
+            <td class="c-topic"></td>
+            <td class="c-trainer"></td>
             <td class="c-result"></td>
           </tr>
           {% endfor %}
@@ -245,16 +345,82 @@
       </table>
     </div>
 
-    <!-- FOOTER -->
-    <div class="footer">
-      <div>Print Date: {{ print_date.strftime("%Y-%m-%d %H:%M") }}</div>
-      <div class="page-no">
-        Page {{ loop.index }} / {{ total_pages }}
+    <!-- REVISION + SIGNATURE -->
+    <div class="bottom">
+
+      <div>
+        <div class="revTitle">Revision Review</div>
+
+        <div class="revTable">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:16mm;">Rev.No</th>
+                <th style="width:20mm;">Date</th>
+                <th>Details</th>
+                <th style="width:26mm;">Issued</th>
+                <th style="width:28mm;">Confirm</th>
+                <th style="width:28mm;">Approved</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>△</td>
+                <td></td>
+                <td class="left"></td>
+                <td></td>
+                <td></td>
+                <td></td>
+              </tr>
+              <tr>
+                <td>3</td>
+                <td>28/5/2025</td>
+                <td class="left"><b>REVIEW ALL</b></td>
+                <td><i>Thanaphat T.</i></td>
+                <td>-</td>
+                <td><i>Pinpon</i></td>
+              </tr>
+              <tr>
+                <td>2</td>
+                <td>21/7/2012</td>
+                <td class="left"><b>REVIEW ALL</b></td>
+                <td><i>Soawarot</i></td>
+                <td>-</td>
+                <td><i>Pinpon</i></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="docFooter">
+          <div>Doc No. : <b>FM-PN013</b></div>
+          <div>Rev. : <b>3</b></div>
+          <div class="pageNo">Page {{ page_index }} / {{ total_pages }}</div>
+          <div>Effective Date : <b>28 MAY 2025</b></div>
+        </div>
       </div>
+
+      <div class="signBox">
+        <div class="signHead">Prepared</div>
+        <div class="signBody"><i>Thanaphat T.</i></div>
+      </div>
+
+      <div class="signBox">
+        <div class="signHead">Checked</div>
+        <div class="signBody">-</div>
+      </div>
+
+      <div class="signBox">
+        <div class="signHead">Approved</div>
+        <div class="signBody"><i>Pinpon</i></div>
+      </div>
+
     </div>
 
   </div>
-  {% endfor %}
+</div>
+
+{% endfor %}
 
 </body>
 </html>
