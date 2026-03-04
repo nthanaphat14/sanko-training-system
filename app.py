@@ -1277,84 +1277,64 @@ def import_batch_detail(batch_id):
     )                    
 
 @app.get("/employees/export")
+@login_required
 def employees_export():
-    # รองรับ export ตามคำค้นเหมือนหน้า list
     q = (request.args.get("q") or "").strip()
-    status = (request.args.get("status") or "").strip().upper()  # optional: W / RS
+    status = (request.args.get("status") or "Active").strip()
+    dept = (request.args.get("dept") or "").strip()
+    section = (request.args.get("section") or "").strip()
+    sort = (request.args.get("sort") or "no").strip()
+    direction = (request.args.get("direction") or "asc").strip()
 
-    query = Employee.query
+    query = build_employee_query(q=q, status=status, dept=dept, section=section, sort=sort, direction=direction)
+    rows = query.all()
 
-    if q:
-        like = f"%{q}%"
-        query = query.filter(
-            or_(
-                Employee.em_id.ilike(like),
-                Employee.id_card.ilike(like),
-                Employee.first_name_th.ilike(like),
-                Employee.last_name_th.ilike(like),
-                Employee.first_name_en.ilike(like),
-                Employee.last_name_en.ilike(like),
-                Employee.position.ilike(like),
-                Employee.section.ilike(like),
-                Employee.department.ilike(like),
-                Employee.status.ilike(like),
-            )
-        )
-
-    if status in ("W", "RS"):
-        query = query.filter(Employee.status == status)
-
-    employees = query.order_by(nullslast(Employee.no.asc()), Employee.em_id.asc()).all()
-
-    # สร้าง Excel
     wb = Workbook()
     ws = wb.active
     ws.title = "Employees"
 
     headers = [
-        "No", "Em ID", "ID Card",
-        "Title TH", "First TH", "Last TH",
-        "Title EN", "First EN", "Last EN",
+        "No", "Em. ID", "ID Card",
+        "Prefix-TH", "First-TH", "Last-TH",
+        "Name-EN",  # ถ้าคุณแยก first/last EN ก็เปลี่ยนหัวได้
         "Position", "Section", "Department",
-        "Start Work", "Resign", "Status",
-        "Degree", "Major",
+        "Start work", "Resign", "Status",
+        "Degree", "Major"
     ]
     ws.append(headers)
 
-    for e in employees:
+    for e in rows:
         ws.append([
-            e.no,
-            e.em_id,
-            e.id_card,
-            e.title_th,
-            e.first_name_th,
-            e.last_name_th,
-            e.title_en,
-            e.first_name_en,
-            e.last_name_en,
-            e.position,
-            e.section,
-            e.department,
+            e.no or "",
+            e.em_id or "",
+            e.id_card or "",
+            e.title_th or "",
+            e.first_name_th or "",
+            e.last_name_th or "",
+            (e.first_name_en or "") + (" " + e.last_name_en if getattr(e, "last_name_en", None) else ""),
+            e.position or "",
+            e.section or "",
+            e.department or "",
             e.start_work.isoformat() if e.start_work else "",
             e.resign.isoformat() if e.resign else "",
-            e.status,
-            e.degree,
-            e.major,
+            e.status or "",
+            e.degree or "",
+            e.major or "",
         ])
 
-    # ทำไฟล์เป็น bytes ส่งกลับ
-    output = BytesIO()
-    wb.save(output)
-    output.seek(0)
+    bio = BytesIO()
+    wb.save(bio)
+    bio.seek(0)
 
-    filename = "employees_export.xlsx"
+    stamp = datetime.now().strftime("%Y%m%d_%H%M")
+    filename = f"employees_{status}_{stamp}.xlsx"
+
     return send_file(
-        output,
+        bio,
         as_attachment=True,
         download_name=filename,
-        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-
 
 @app.get("/dashboard")
 def dashboard():
