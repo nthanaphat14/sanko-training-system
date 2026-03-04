@@ -1,95 +1,303 @@
-<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>Training Report - {{ emp.em_id }}</title>
-  <style>
-    body{ font-family: Arial, sans-serif; margin: 18px; color:#111; }
-    .no-print{ margin-bottom: 10px; display:flex; gap:8px; }
-    .box{ border:1px solid #000; padding:10px; margin-bottom:10px; }
-    .title{ font-size:16px; font-weight:900; text-align:center; margin:0 0 10px 0; }
-    table{ width:100%; border-collapse:collapse; font-size:11px; }
-    th, td{ border:1px solid #000; padding:5px; text-align:left; vertical-align:top; }
-    th{ background:#f0f0f0; text-align:center; }
-    .muted{ color:#444; font-size:11px; }
-    @media print {
-      .no-print{ display:none; }
-      body{ margin: 10mm; }
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+  @media print{
+    .no-print{ display:none !important; }
+    body{ background:#fff !important; }
+    .print-page{ box-shadow:none !important; border:none !important; }
+    @page{
+      size: A4 landscape;
+      margin: 10mm;
     }
-  </style>
-</head>
-<body>
+  }
 
-  <div class="no-print">
-    <button onclick="window.print()">Print</button>
-    <button onclick="window.close()">Close</button>
+  /* 1 หน้า (กระดาษ) */
+  .print-page{
+    background:#fff;
+    color:#111;
+    border:1px solid #111;
+    padding:0;
+    overflow:hidden;
+    border-radius:0;
+    box-shadow: 0 10px 30px rgba(0,0,0,.15);
+    margin-bottom: 14px;
+  }
+  .page-break{
+    page-break-after: always;
+    break-after: page;
+  }
+
+  /* Excel grid background */
+  .grid-bg{
+    position:relative;
+    padding:10px 10px 8px;
+    background:
+      linear-gradient(to right, rgba(0,0,0,.10) 1px, transparent 1px) 0 0/24px 24px,
+      linear-gradient(to bottom, rgba(0,0,0,.10) 1px, transparent 1px) 0 0/24px 24px;
+  }
+
+  .wm{
+    position:absolute;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:88px;
+    font-weight:900;
+    color: rgba(0,0,0,.12);
+    pointer-events:none;
+    transform: translateY(20px);
+  }
+
+  .hdr{
+    display:flex;
+    align-items:flex-start;
+    gap:12px;
+    border-bottom:2px solid #111;
+    padding-bottom:8px;
+    background: rgba(255,255,255,.7);
+  }
+  .hdr .logo{
+    width:72px; height:72px;
+    border:1px solid #111;
+    background:#fff;
+    display:flex; align-items:center; justify-content:center;
+    overflow:hidden;
+  }
+  .hdr .logo img{ max-width:100%; max-height:100%; }
+  .hdr .htext{ flex:1; line-height:1.15; }
+  .hdr .htext .title1{ font-weight:900; font-size:16px; letter-spacing:.2px; }
+  .hdr .htext .title2{ font-size:12px; margin-top:4px; }
+  .hdr .htext .title3{ font-size:12px; margin-top:4px; }
+
+  .doc-title{
+    text-align:center;
+    font-weight:900;
+    font-size:16px;
+    margin:10px 0 8px;
+  }
+
+  .info{
+    display:grid;
+    grid-template-columns: 220px 1fr;
+    gap:6px 12px;
+    margin:6px 0 10px;
+    background: rgba(255,255,255,.7);
+  }
+  .info-row{ display:flex; gap:10px; align-items:center; }
+  .label{ width:120px; font-size:12px; font-weight:700; }
+  .line{
+    flex:1;
+    height:22px;
+    border:1px solid #111;
+    background:#fff;
+    padding:2px 8px;
+    font-size:12px;
+    display:flex;
+    align-items:center;
+  }
+  .line.mono{ font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+  table.formtbl{
+    width:100%;
+    border-collapse:collapse;
+    background:#fff;
+  }
+  table.formtbl th, table.formtbl td{
+    border:1px solid #111;
+    padding:6px 6px;
+    font-size:12px;
+    vertical-align:top;
+  }
+  table.formtbl th{
+    text-align:center;
+    font-weight:900;
+    background: rgba(255,255,255,.85);
+  }
+  .w-no{ width:50px; text-align:center; }
+  .w-date{ width:120px; }
+  .w-hr{ width:120px; text-align:center; }
+  .w-type{ width:140px; }
+  .w-topic{ width:auto; }
+  .w-trainer{ width:160px; }
+  .w-result{ width:120px; text-align:center; }
+
+  .footer{ margin-top:10px; background: rgba(255,255,255,.75); }
+  .rev-head{
+    display:grid;
+    grid-template-columns: 120px 1fr 160px 160px 160px;
+    border:1px solid #111;
+    border-bottom:none;
+  }
+  .rev-head > div{
+    border-right:1px solid #111;
+    padding:6px 8px;
+    font-size:12px;
+    font-weight:900;
+    text-align:center;
+  }
+  .rev-head > div:last-child{ border-right:none; }
+
+  table.rev{ width:100%; border-collapse:collapse; background:#fff; }
+  table.rev td{ border:1px solid #111; padding:6px 8px; font-size:12px; }
+
+  .footline{
+    display:flex;
+    justify-content:space-between;
+    gap:10px;
+    margin-top:6px;
+    font-size:12px;
+  }
+  .footline .left, .footline .right{ display:flex; gap:18px; align-items:center; }
+  .tiny{ font-size:11px; }
+</style>
+
+<div class="no-print" style="display:flex; gap:10px; align-items:center; margin: 0 0 12px;">
+  <a class="btn" href="{{ url_for('report_training', q=emp.em_id if emp else '') }}">กลับ</a>
+  <button class="btn primary" onclick="window.print()">พิมพ์</button>
+</div>
+
+{# ===== PAGINATION ===== #}
+{% set max_rows = 10 %}
+{% set total_rows = rows|length %}
+{% set total_pages = ((total_rows + max_rows - 1) // max_rows) if total_rows else 1 %}
+
+{% for p in range(total_pages) %}
+  {% set start = p * max_rows %}
+  {% set end = start + max_rows %}
+  {% set page_rows = rows[start:end] %}
+
+  <div class="print-page {% if not loop.last %}page-break{% endif %}">
+    <div class="grid-bg">
+
+      <div class="wm">Page {{ p+1 }}</div>
+
+      <!-- HEADER -->
+      <div class="hdr">
+        <div class="logo">
+          <!-- ✅ วางโลโก้ไว้ที่ static/logo.png -->
+          <img src="{{ url_for('static', filename='logo.png') }}" alt="logo">
+        </div>
+        <div class="htext">
+          <div class="title1">SANKO DIECASTING (THAILAND) PUBLIC COMPANY LIMITED.</div>
+          <div class="title2">FACTORY : Rojana Industrial Park Rayong 3/14 Moo 2, T.Nongbua, A.Bankhai Rayong 21120</div>
+          <div class="title3">Tel : (033) 010701-5 &nbsp;&nbsp; Fax : (033) 010706-8</div>
+        </div>
+      </div>
+
+      <div class="doc-title">ประวัติการฝึกอบรมพนักงานบริษัท</div>
+
+      <!-- INFO -->
+      <div class="info">
+        <div class="info-row">
+          <div class="label">ชื่อ - นามสกุล</div>
+          <div class="line">{{ emp.th_full() if emp else "" }}</div>
+        </div>
+        <div></div>
+
+        <div class="info-row">
+          <div class="label">รหัสพนักงาน</div>
+          <div class="line mono">{{ emp.em_id if emp else "" }}</div>
+        </div>
+        <div></div>
+
+        <div class="info-row">
+          <div class="label">ตำแหน่ง</div>
+          <div class="line">{{ emp.position if emp else "" }}</div>
+        </div>
+        <div></div>
+
+        <div class="info-row">
+          <div class="label">แผนก</div>
+          <div class="line">{{ emp.section if emp else "" }}</div>
+        </div>
+        <div></div>
+
+        <div class="info-row">
+          <div class="label">วันที่เริ่มงาน</div>
+          <div class="line">{% if emp and emp.start_work %}{{ emp.start_work }}{% endif %}</div>
+        </div>
+        <div></div>
+      </div>
+
+      <!-- TABLE -->
+      <table class="formtbl">
+        <thead>
+          <tr>
+            <th class="w-no">ลำดับ</th>
+            <th class="w-date">วันที่ฝึกอบรม</th>
+            <th class="w-hr">เวลาที่ใช้ฝึกอบรม</th>
+            <th class="w-type">ชนิดการอบรม</th>
+            <th class="w-topic">หัวข้อการฝึกอบรม</th>
+            <th class="w-trainer">วิทยากร</th>
+            <th class="w-result">ผลการอบรม</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for i in range(max_rows) %}
+            {% set r = page_rows[i] if page_rows and i < (page_rows|length) else None %}
+            <tr style="height:30px;">
+              <td class="w-no">{{ start + i + 1 }}</td>
+              <td class="w-date">{% if r and r.start_date %}{{ r.start_date }}{% endif %}</td>
+              <td class="w-hr">{% if r and r.hours is not none %}{{ r.hours }}{% endif %}</td>
+              <td class="w-type">{% if r %}{{ r.course_type or "" }}{% endif %}</td>
+              <td class="w-topic">{% if r %}{{ r.course_name or "" }}{% endif %}</td>
+              <td class="w-trainer">{% if r %}{{ r.evaluator or "" }}{% endif %}</td>
+              <td class="w-result">{% if r %}{{ r.result or "" }}{% endif %}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <!-- FOOTER -->
+      <div class="footer">
+        <div class="rev-head">
+          <div>Rev.No</div>
+          <div>Details</div>
+          <div>Issued</div>
+          <div>Confirm</div>
+          <div>Approved</div>
+        </div>
+
+        <table class="rev">
+          <tr>
+            <td style="width:120px; text-align:center;">△</td>
+            <td> </td>
+            <td style="width:160px;"></td>
+            <td style="width:160px;"></td>
+            <td style="width:160px;"></td>
+          </tr>
+          <tr>
+            <td style="text-align:center;">③</td>
+            <td>28/5/2025 &nbsp;&nbsp; REVIEW ALL</td>
+            <td style="text-align:center;">-</td>
+            <td style="text-align:center;">Pimpon</td>
+            <td style="text-align:center;">-</td>
+          </tr>
+          <tr>
+            <td style="text-align:center;">②</td>
+            <td>21/7/2012 &nbsp;&nbsp; REVIEW ALL</td>
+            <td style="text-align:center;">Saowarot</td>
+            <td style="text-align:center;">-</td>
+            <td style="text-align:center;">Pimpon</td>
+          </tr>
+        </table>
+
+        <div class="footline tiny">
+          <div class="left">
+            <div>Doc No. : <b>FM-PN013</b></div>
+            <div>Rev. : <b>3</b></div>
+            <div>Page {{ p+1 }} / {{ total_pages }}</div>
+          </div>
+          <div class="right">
+            <div>Effective Date : <b>28 MAY 2025</b></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
   </div>
+{% endfor %}
 
-  <div class="title">TRAINING RECORD REPORT</div>
-  <div class="muted" style="text-align:right; margin-bottom:6px;">
-    Print date: {{ print_date.strftime("%Y-%m-%d") if print_date else "" }}
-  </div>
-
-  <div class="box">
-    <div><b>Emp ID:</b> {{ emp.em_id }}</div>
-    <div><b>Name:</b> {{ emp.th_full() }}</div>
-    {% if emp.en_full() %}<div><b>Name (EN):</b> {{ emp.en_full() }}</div>{% endif %}
-    <div><b>Section:</b> {{ emp.section or "-" }} &nbsp;&nbsp; <b>Position:</b> {{ emp.position or "-" }}</div>
-    {% if emp.department %}<div><b>Department:</b> {{ emp.department }}</div>{% endif %}
-    {% if emp.start_work %}<div><b>Start work:</b> {{ emp.start_work }}</div>{% endif %}
-    {% if emp.resign %}<div><b>Resign:</b> {{ emp.resign }}</div>{% endif %}
-    {% if emp.status %}<div><b>Status:</b> {{ emp.status }}</div>{% endif %}
-  </div>
-
-  <table>
-    <thead>
-      <tr>
-        <th style="width:30px;">No.</th>
-        <th style="width:45px;">Year</th>
-        <th style="width:45px;">Month</th>
-        <th style="width:90px;">Course Code</th>
-        <th>Course Name</th>
-        <th style="width:70px;">Type</th>
-        <th style="width:75px;">Start</th>
-        <th style="width:75px;">End</th>
-        <th style="width:45px;">Hours</th>
-        <th style="width:85px;">Eval</th>
-        <th style="width:55px;">Result</th>
-        <th style="width:45px;">Score</th>
-        <th style="width:90px;">Evaluator</th>
-        <th style="width:75px;">Expire</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for t in rows %}
-      <tr>
-        <td style="text-align:center;">{{ loop.index }}</td>
-        <td style="text-align:center;">{{ t.year or "" }}</td>
-        <td style="text-align:center;">{{ t.month or "" }}</td>
-        <td>{{ t.course_code or "" }}</td>
-        <td>{{ t.course_name or "" }}</td>
-        <td>{{ t.course_type or "" }}</td>
-        <td style="text-align:center;">{{ t.start_date or "" }}</td>
-        <td style="text-align:center;">{{ t.end_date or "" }}</td>
-        <td style="text-align:center;">{{ t.hours or "" }}</td>
-        <td>{{ t.evaluate_method or "" }}</td>
-        <td style="text-align:center;">{{ t.result or "" }}</td>
-        <td style="text-align:center;">{{ t.score or "" }}</td>
-        <td>{{ t.evaluator or "" }}</td>
-        <td style="text-align:center;">{{ t.expire_date or "" }}</td>
-      </tr>
-      {% endfor %}
-
-      {% if rows|length == 0 %}
-      <tr><td colspan="14" class="muted">ไม่พบข้อมูล Training Record</td></tr>
-      {% endif %}
-    </tbody>
-  </table>
-
-  <div class="box" style="margin-top:10px;">
-    <b>Remark:</b>
-    <div class="muted">*หมายเหตุรวม: (ถ้าต้องการให้สรุปรวม remark ทุกแถว เดี๋ยวผมทำให้ต่อได้)</div>
-  </div>
-
-</body>
-</html>
+{% endblock %}
