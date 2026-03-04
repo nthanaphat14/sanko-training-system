@@ -6,58 +6,91 @@
     <h1>Employee Data</h1>
     <div class="muted">รวมทั้งหมด: <b>{{ total }}</b> คน</div>
   </div>
+
   <div class="actions">
     <a class="btn primary" href="{{ url_for('employee_new') }}">+ เพิ่มพนักงาน</a>
-    <a class="btn" href="{{ url_for('employees_list') }}">Employees</a>
     <a class="btn ghost" href="{{ url_for('employees_import') }}">Import Excel</a>
-    <a class="btn" href="{{ url_for('employees_export', q=q) }}">Export Excel</a>
+    <a class="btn"
+       href="{{ url_for('employees_export', q=q, status=status, dept=dept, section=section, sort=sort, direction=direction) }}">
+      Export Excel
+    </a>
   </div>
 </div>
 
-<!-- 🔽 วางตรงนี้ -->
-
+<!-- Summary -->
 <div class="card">
   <div style="display:flex; gap:30px; font-weight:600;">
-    <div>
-      Active&nbsp;&nbsp;
-      <span>{{ total_active }}</span>
-    </div>
-
-    <div>
-      Resign&nbsp;&nbsp;
-      <span>{{ total_resign }}</span>
-    </div>
-
-    <div>
-      Employees&nbsp;&nbsp;
-      <span>{{ total_all }}</span>
-    </div>
+    <div>Active&nbsp;&nbsp;<span>{{ total_active }}</span></div>
+    <div>Resign&nbsp;&nbsp;<span>{{ total_resign }}</span></div>
+    <div>Employees&nbsp;&nbsp;<span>{{ total_all }}</span></div>
   </div>
 </div>
 
+<!-- Status Tabs -->
+<div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
+
+  <a class="btn {% if status=='Active' %}primary{% endif %}"
+     href="{{ url_for('employees_list', status='Active', q=q, dept=dept, section=section, sort=sort, direction=direction) }}">
+     Active
+  </a>
+
+  <a class="btn {% if status=='Resign' %}primary{% endif %}"
+     href="{{ url_for('employees_list', status='Resign', q=q, dept=dept, section=section, sort=sort, direction=direction) }}">
+     Resign
+  </a>
+
+  <a class="btn ghost {% if status not in ['Active','Resign'] %}primary{% endif %}"
+     href="{{ url_for('employees_list', status='All', q=q, dept=dept, section=section, sort=sort, direction=direction) }}">
+     All
+  </a>
+
+</div>
+
+<!-- Search / Filter -->
 <div class="card">
-  <form class="searchbar" action="{{ url_for('employees_list') }}" method="get">
-    
-    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
-      <a class="btn {% if status=='Active' %}primary{% endif %}"
-         href="{{ url_for('employees_list', q=q, status='Active') }}">Active</a>
+  <form class="searchbar" action="{{ url_for('employees_list') }}" method="get" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
 
-      <a class="btn {% if status=='Resign' %}primary{% endif %}"
-         href="{{ url_for('employees_list', q=q, status='Resign') }}">Resign</a>
-
-      <a class="btn ghost {% if status not in ['Active','Resign'] %}primary{% endif %}"
-         href="{{ url_for('employees_list', q=q, status='All') }}">All</a>
-    </div>
-    
+    <!-- keep status when searching -->
     <input type="hidden" name="status" value="{{ status }}">
-    <input name="q" value="{{ q }}" placeholder="ค้นหาเร็ว: Em.ID / ชื่อไทย / ชื่ออังกฤษ / แผนก / ตำแหน่ง / สถานะ / ID Card">
-    <button class="btn">ค้นหา</button>
+
+    <select name="sort" class="input" style="width:180px;">
+      <option value="no" {% if sort=='no' %}selected{% endif %}>Sort: No</option>
+      <option value="em_id" {% if sort=='em_id' %}selected{% endif %}>Sort: Em. ID</option>
+      <option value="department" {% if sort=='department' %}selected{% endif %}>Sort: Department</option>
+      <option value="section" {% if sort=='section' %}selected{% endif %}>Sort: Section</option>
+    </select>
+
+    <select name="direction" class="input" style="width:140px;">
+      <option value="asc" {% if direction=='asc' %}selected{% endif %}>ASC</option>
+      <option value="desc" {% if direction=='desc' %}selected{% endif %}>DESC</option>
+    </select>
+
+    <select name="dept" class="input" style="width:220px;">
+      <option value="">Department (All)</option>
+      {% for d in dept_options %}
+        <option value="{{ d }}" {% if dept == d %}selected{% endif %}>{{ d }}</option>
+      {% endfor %}
+    </select>
+
+    <select name="section" class="input" style="width:220px;">
+      <option value="">Section (All)</option>
+      {% for s in section_options %}
+        <option value="{{ s }}" {% if section == s %}selected{% endif %}>{{ s }}</option>
+      {% endfor %}
+    </select>
+
+    <input class="input" name="q" value="{{ q or '' }}"
+           placeholder="ค้นหาเร็ว: Em.ID / ชื่อไทย / ชื่ออังกฤษ / แผนก / ตำแหน่ง / ID Card"
+           style="flex:1; min-width:260px;">
+
+    <button class="btn" type="submit">ค้นหา</button>
+
     <a class="btn ghost" href="{{ url_for('employees_list') }}">ล้าง</a>
   </form>
 </div>
 
+<!-- Table + Bulk delete -->
 <div class="card">
-
   <form method="post"
         action="{{ url_for('employees_bulk_delete') }}"
         onsubmit="return confirm('ยืนยันลบพนักงานที่เลือก?');">
@@ -69,83 +102,91 @@
 
     <div class="table-wrap">
       <table class="table">
-      <thead>
-        <tr>
-          <th style="width:40px; text-align:center;">
-            <input type="checkbox" id="checkAll">
-          </th>
-          <th>No.</th>
-          <th>Em. ID</th>
-          <th>ID Card</th>
-          <th>ชื่อไทย</th>
-          <th>Name-EN</th>
-          <th>Position</th>
-          <th>Section</th>
-          <th>Department</th>
-          <th>Start work</th>
-          <th>Resign</th>
-          <th>Status</th>
-          <th>Degree</th>
-          <th>Major</th>
-          <th class="nowrap">Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for e in employees %}
-        <tr>
-          <td style="text-align:center;">
-            <input type="checkbox" name="ids" value="{{ e.em_id }}" class="rowCheck">
-          </td>
-          <td>{{ e.no or "" }}</td>
-          <td class="nowrap"><b>{{ e.em_id }}</b></td>
-          <td class="nowrap">
-            {{ mask_id_card(e.id_card) if e.id_card else "" }}
+        <thead>
+          <tr>
+            <th style="width:40px; text-align:center;">
+              <input type="checkbox" id="checkAll">
+            </th>
+            <th>No.</th>
+            <th>Em. ID</th>
+            <th>ID Card</th>
+            <th>ชื่อไทย</th>
+            <th>Name-EN</th>
+            <th>Position</th>
+            <th>Section</th>
+            <th>Department</th>
+            <th>Start work</th>
+            <th>Resign</th>
+            <th>Status</th>
+            <th>Degree</th>
+            <th>Major</th>
+            <th class="nowrap">Action</th>
+          </tr>
+        </thead>
 
-            {% if e.id_card and current_user and current_user.role == "admin" %}
-              <button type="button"
-                      class="btn sm ghost"
-                      style="margin-left:8px;"
-                      onclick="openIdCardModal('{{ e.em_id }}', '{{ e.id_card }}')">
-              ดูเต็ม
-              </button>
-            {% endif %}
-          </td>
-          <td>{{ e.th_full() }}</td>
-          <td>{{ e.en_full() }}</td>
-          <td>{{ e.position or "" }}</td>
-          <td>{{ e.section or "" }}</td>
-          <td>{{ e.department or "" }}</td>
-          <td class="nowrap">{{ e.start_work or "" }}</td>
-          <td class="nowrap">{{ e.resign or "" }}</td>
-          <td class="nowrap">
-          {% if e.status == "Active" %}
-          <span class="badge green">Active</span>
-          {% else %}
-          <span class="badge red">Resign</span>
+        <tbody>
+          {% for e in employees %}
+          <tr>
+            <td style="text-align:center;">
+              <input type="checkbox" name="ids" value="{{ e.em_id }}" class="rowCheck">
+            </td>
+
+            <td>{{ e.no or "" }}</td>
+            <td class="nowrap"><b>{{ e.em_id }}</b></td>
+
+            <td class="nowrap">
+              {{ mask_id_card(e.id_card) if e.id_card else "" }}
+
+              {% if e.id_card and current_user and current_user.role == "admin" %}
+                <button type="button"
+                        class="btn sm ghost"
+                        style="margin-left:8px;"
+                        onclick="openIdCardModal('{{ e.em_id }}', '{{ e.id_card }}')">
+                  ดูเต็ม
+                </button>
+              {% endif %}
+            </td>
+
+            <td>{{ e.th_full() }}</td>
+            <td>{{ e.en_full() }}</td>
+            <td>{{ e.position or "" }}</td>
+            <td>{{ e.section or "" }}</td>
+            <td>{{ e.department or "" }}</td>
+            <td class="nowrap">{{ e.start_work or "" }}</td>
+            <td class="nowrap">{{ e.resign or "" }}</td>
+
+            <td class="nowrap">
+              {% if e.status == "Active" %}
+                <span class="badge green">Active</span>
+              {% else %}
+                <span class="badge red">Resign</span>
+              {% endif %}
+            </td>
+
+            <td class="nowrap">{{ e.degree or "" }}</td>
+            <td>{{ e.major or "" }}</td>
+
+            <td class="nowrap">
+              <a class="btn sm" href="{{ url_for('employee_edit', em_id=e.em_id) }}">แก้ไข</a>
+
+              <form class="inline" method="post"
+                    action="{{ url_for('employee_delete', em_id=e.em_id) }}"
+                    onsubmit="return confirm('ยืนยันลบ {{ e.em_id }} ?');">
+                <button class="btn sm danger" type="submit">ลบ</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+
+          {% if employees|length == 0 %}
+            <tr><td colspan="15" class="muted center">ไม่พบข้อมูล</td></tr>
           {% endif %}
-          </td>
-          <td class="nowrap">{{ e.degree or "" }}</td>
-          <td>{{ e.major or "" }}</td>
-          <td class="nowrap">
-            <a class="btn sm" href="{{ url_for('employee_edit', em_id=e.em_id) }}">แก้ไข</a>
-            <form class="inline" method="post" action="{{ url_for('employee_delete', em_id=e.em_id) }}"
-                  onsubmit="return confirm('ยืนยันลบ {{ e.em_id }} ?');">
-              <button class="btn sm danger" type="submit">ลบ</button>
-            </form>
-          </td>
-        </tr>
-        {% endfor %}
-
-        {% if employees|length == 0 %}
-          <tr><td colspan="14" class="muted center">ไม่พบข้อมูล</td></tr>
-        {% endif %}
-      </tbody>
-    </table>
-        </div>
-
-      </form>
-
+        </tbody>
+      </table>
     </div>
+
+  </form>
+</div>
 
 <!-- ID Card Modal -->
 <div id="idCardModal" class="modal-backdrop" style="display:none;">
@@ -230,7 +271,7 @@
   }
 
   document.addEventListener("change", (e) => {
-    if (e.target.classList.contains("rowCheck")) {
+    if (e.target.classList && e.target.classList.contains("rowCheck")) {
       const checks = rowChecks();
       const allChecked = checks.length > 0 && checks.every(c => c.checked);
       if (checkAll) checkAll.checked = allChecked;
