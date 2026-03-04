@@ -1,333 +1,298 @@
 <!doctype html>
-<html lang="th">
+<html>
 <head>
   <meta charset="utf-8">
-  <title>Training Report Print</title>
+  <title>Training Record Print</title>
+
   <style>
-    /* --------- Page setup (A4 Landscape) --------- */
-    @page {
+    /* ===== Print Setup ===== */
+    @page{
       size: A4 landscape;
       margin: 10mm;
-    }
-    @media print {
-      html, body { background:#fff !important; }
-      * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     }
 
     body{
       margin:0;
-      background:#fff;
-      color:#000;
       font-family: "Times New Roman", "TH Sarabun New", serif;
-      font-size: 12px;
-      line-height: 1.15;
+      color:#000;
+      background:#fff;
     }
 
-    .sheet{
+    /* ซ่อนสิ่งที่ไม่ต้องการตอนปริ้น */
+    .no-print{ display:block; }
+    @media print{
+      .no-print{ display:none !important; }
+    }
+
+    /* ===== Page ===== */
+    .page{
       width: 100%;
       background:#fff;
+      page-break-after: always;
+    }
+    .page:last-child{ page-break-after: auto; }
+
+    /* ===== Layout blocks ===== */
+    .header{
+      border:1px solid #000;
+      padding:6px 8px;
+      display:flex;
+      gap:10px;
+      align-items:flex-start;
     }
 
-    /* --------- Common table look (form style) --------- */
-    table{
-      width:100%;
-      border-collapse: collapse;
-      table-layout: fixed;
-    }
-    td, th{
-      border: 1px solid #000;
-      padding: 4px 6px;
-      vertical-align: middle;
-      word-wrap: break-word;
-    }
-    .no-border { border:none !important; }
-    .center { text-align:center; }
-    .right { text-align:right; }
-    .bold { font-weight:700; }
-    .nowrap { white-space:nowrap; }
-
-    /* --------- Header area --------- */
-    .hdr td, .hdr th{ padding:6px; }
-    .logo-wrap{
-      width: 92px;
-      text-align:center;
-    }
-    .logo-wrap img{
-      height: 62px;
+    .logo{
+      width:70px;
+      height:70px;
+      object-fit:contain;
       display:block;
-      margin: 0 auto;
-      border: none;          /* ✅ ไม่มีกรอบ */
-      outline: none;         /* ✅ ไม่มีกรอบ */
+      /* ไม่มีกรอบดำ */
+      border:none;
     }
-    .company-name{
+
+    .company{
+      flex:1;
+      font-size:14px;
+      line-height:1.2;
+    }
+    .company .name{
       font-weight:700;
       font-size:16px;
-      letter-spacing:.2px;
-    }
-    .company-sub{
-      font-size:12px;
     }
 
     .title{
+      text-align:center;
+      font-weight:700;
       font-size:18px;
+      margin:8px 0 6px;
+    }
+
+    /* ===== Employee info (ไม่มีกรอบ) ===== */
+    .emp-info{
+      width:100%;
+      border:1px solid #000;
+      border-top:none;
+      padding:8px;
+      display:grid;
+      grid-template-columns: 140px 1fr;
+      row-gap:6px;
+      column-gap:10px;
+      font-size:14px;
+    }
+    .emp-label{ font-weight:700; }
+    .emp-value{
+      /* ไม่มีกรอบดำ */
+      border:none;
+      padding:0;
+      min-height:18px;
+      white-space:nowrap;   /* ไม่ให้ขึ้นบรรทัดใหม่ */
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    /* ===== Table ===== */
+    table{
+      width:100%;
+      border-collapse:collapse;
+      table-layout:fixed;
+      font-size:13px;
+    }
+    th, td{
+      border:1px solid #000;
+      padding:6px 6px;
+      vertical-align:top;
+      word-wrap:break-word;
+      background:#fff; /* พื้นหลังขาว */
+    }
+    th{
       font-weight:700;
       text-align:center;
-      padding: 10px 0;
     }
 
-    /* --------- Employee info block --------- */
-    .emp td{ height: 26px; }
-    .emp .label{
-      width: 160px;
-      font-weight:700;
-    }
-    /* ช่องข้อมูลต้อง “ยาว” และ “ไม่มีกล่องดำ” => ใช้ขีดเส้นล่างแทน */
-    .emp .value{
-      border-left: none;
-      border-right: none;
-      border-top: none;
-      border-bottom: 1px solid #000;
-      font-weight: 400;
-      padding-left: 10px;
-    }
-    .emp .value span{
-      display:inline-block;
-      min-width: 10px;
-    }
-    /* ปิดเส้นกรอบของ cell ด้านซ้าย-ขวาให้ดูเหมือนฟอร์ม */
-    .emp .label{
-      border-right: none;
-    }
+    .col-no{ width:50px; text-align:center; }
+    .col-date{ width:120px; text-align:center; }
+    .col-hrs{ width:120px; text-align:center; }
+    .col-type{ width:140px; }
+    .col-topic{ width:auto; }
+    .col-trainer{ width:180px; }
+    .col-result{ width:120px; text-align:center; }
 
-    /* --------- Training table --------- */
-    .train th{
-      font-weight:700;
-      text-align:center;
+    /* ===== Revision Review ===== */
+    .rev-wrap{
+      border:1px solid #000;
+      border-top:none;
+      margin-top:10px;
     }
-    .train td{
-      height: 26px;
-      font-size: 12px;
-    }
-    .train .c1{ width: 52px;  text-align:center; }
-    .train .c2{ width: 120px; text-align:center; }
-    .train .c3{ width: 110px; text-align:center; }
-    .train .c4{ width: 120px; text-align:center; }
-    .train .c5{ width: auto; }
-    .train .c6{ width: 190px; }
-    .train .c7{ width: 110px; text-align:center; }
-
-    /* --------- Revision Review block --------- */
     .rev-head{
+      text-align:center;
       font-weight:700;
+      padding:6px 0;
+      border-bottom:1px solid #000;
+    }
+    .rev-table th, .rev-table td{
+      border:1px solid #000;
+      padding:6px;
+      font-size:12px;
+    }
+    .footer-line{
+      display:flex;
+      justify-content:space-between;
+      font-size:12px;
+      padding:6px 8px;
+      border-top:1px solid #000;
+    }
+
+    .page-no{
       text-align:center;
-      padding: 6px 0;
+      font-size:12px;
+      margin-top:4px;
     }
-    .rev td, .rev th{
-      height: 28px;
-      font-size: 12px;
-    }
-    .rev .w-revno{ width:70px; text-align:center; }
-    .rev .w-date{ width:110px; text-align:center; }
-    .rev .w-details{ width:240px; }
-    .rev .w-issued{ width:130px; text-align:center; }
-    .rev .w-confirm{ width:130px; text-align:center; }
-    .rev .w-approved{ width:130px; text-align:center; }
-
-    .sign td, .sign th{
-      height: 44px;
-      text-align:center;
-    }
-
-    /* --------- Footer line --------- */
-    .footer td{
-      font-size: 11px;
-      padding: 6px;
-    }
-
-    /* Hide anything interactive on print */
-    .no-print { display:none; }
-
-    /* Make sure it stays one page as much as possible */
-    .sheet { page-break-inside: avoid; }
   </style>
 </head>
 
 <body>
-  <div class="sheet">
 
-    <!-- HEADER -->
-    <table class="hdr">
-      <tr>
-        <td class="logo-wrap">
-          <!-- ✅ ใช้ไฟล์ที่คุณมีใน static -->
-          <img src="{{ url_for('static', filename='sanko_logo.png.gif') }}" alt="SANKO Logo">
-        </td>
-        <td>
-          <div class="company-name">SANKO DIECASTING (THAILAND) PUBLIC COMPANY LIMITED.</div>
-          <div class="company-sub">FACTORY : Rojana Industrial Park Rayong 3/14 Moo.2 , T.Nongbua , A.Bankhai Rayong 21120</div>
-          <div class="company-sub">Tel. : (033) 010701-705&nbsp;&nbsp;Fax : (033) 010706-708</div>
-        </td>
-      </tr>
-    </table>
+  <!-- แบ่งหน้าละ 10 แถว -->
+  {% set pages = rows|batch(10, none) %}
+  {% set total_pages = pages|length %}
 
-    <!-- TITLE -->
+  {% for page_rows in pages %}
+  <div class="page">
+
+    <!-- ===== Header ===== -->
+    <div class="header">
+      <img class="logo" src="{{ url_for('static', filename='logo.png.') }}" alt="logo">
+      <div class="company">
+        <div class="name">SANKO DIECASTING (THAILAND) PUBLIC COMPANY LIMITED.</div>
+        <div>FACTORY : Rojana Industrial Park Rayong 3/14 Moo.2 , T.Nongbua , A.Bankhai Rayong 21120</div>
+        <div>Tel : (033) 010701-705 &nbsp; Fax : (033) 010706-708</div>
+      </div>
+    </div>
+
     <div class="title">ประวัติการฝึกอบรมพนักงานบริษัท</div>
 
-    <!-- EMPLOYEE INFO -->
-    <table class="emp">
-      <tr>
-        <td class="label">ชื่อ - นามสกุล</td>
-        <td class="value">
-          <span>
-            {{ emp.th_full() if emp else "" }}
-          </span>
-        </td>
-      </tr>
-      <tr>
-        <td class="label">รหัสพนักงาน</td>
-        <td class="value"><span>{{ emp.em_id if emp else "" }}</span></td>
-      </tr>
-      <tr>
-        <td class="label">ตำแหน่ง</td>
-        <td class="value"><span>{{ emp.position if emp else "" }}</span></td>
-      </tr>
-      <tr>
-        <td class="label">แผนก</td>
-        <td class="value"><span>{{ emp.section if emp else "" }}</span></td>
-      </tr>
-      <tr>
-        <td class="label">วันที่เริ่มงาน</td>
-        <td class="value">
-          <span>
-            {% if emp and emp.start_work %}
-              {{ emp.start_work.strftime("%d/%m/%Y") }}
-            {% endif %}
-          </span>
-        </td>
-      </tr>
-    </table>
+    <!-- ===== Employee Info (ไม่มีกล่องดำ) ===== -->
+    <div class="emp-info">
+      <div class="emp-label">ชื่อ - นามสกุล</div>
+      <div class="emp-value">{{ emp.th_full() }}</div>
 
-    <!-- TRAINING TABLE -->
-    <table class="train" style="margin-top:10px;">
+      <div class="emp-label">รหัสพนักงาน</div>
+      <div class="emp-value">{{ emp.em_id }}</div>
+
+      <div class="emp-label">ตำแหน่ง</div>
+      <div class="emp-value">{{ emp.position or "" }}</div>
+
+      <div class="emp-label">แผนก</div>
+      <div class="emp-value">{{ emp.section or "" }}</div>
+
+      <div class="emp-label">วันที่เริ่มงาน</div>
+      <div class="emp-value">{{ emp.start_work or "" }}</div>
+    </div>
+
+    <!-- ===== Training Table ===== -->
+    <table>
       <thead>
         <tr>
-          <th class="c1">ลำดับ</th>
-          <th class="c2">วันที่ฝึกอบรม</th>
-          <th class="c3">เวลาที่ใช้ฝึกอบรม</th>
-          <th class="c4">ชนิดการอบรม</th>
-          <th class="c5">หัวข้อการฝึกอบรม</th>
-          <th class="c6">วิทยากร</th>
-          <th class="c7">ผลการอบรม</th>
+          <th class="col-no">ลำดับ</th>
+          <th class="col-date">วันที่ฝึกอบรม</th>
+          <th class="col-hrs">เวลาที่ใช้ฝึกอบรม</th>
+          <th class="col-type">ชนิดการอบรม</th>
+          <th class="col-topic">หัวข้อการฝึกอบรม</th>
+          <th class="col-trainer">วิทยากร</th>
+          <th class="col-result">ผลการอบรม</th>
         </tr>
       </thead>
       <tbody>
-        {# ✅ โชว์สูงสุด 10 แถวให้เหมือนฟอร์ม (ถ้ามีเกิน 10 ตอนนี้ยังไม่ทำหน้า 2) #}
-        {% set show_rows = (rows[:10] if rows else []) %}
-        {% for r in show_rows %}
+        {% for r in page_rows %}
+          {% if r %}
           <tr>
-            <td class="c1">{{ loop.index }}</td>
-            <td class="c2">
-              {% if r.start_date %}{{ r.start_date.strftime("%d/%m/%Y") }}{% endif %}
-            </td>
-            <td class="c3">{{ "%.1f"|format(r.hours) if r.hours is not none else "" }}</td>
-            <td class="c4">{{ r.course_type or "" }}</td>
-            <td class="c5">{{ r.course_name or "" }}</td>
-            <td class="c6">{{ r.evaluator or "" }}</td>
-            <td class="c7">{{ r.result or "" }}</td>
+            <td class="col-no">{{ ((loop.index0) + 1) + ((loop.parent.index0) * 10) }}</td>
+            <td class="col-date">{{ r.start_date or "" }}</td>
+            <td class="col-hrs">{{ r.hours or "" }}</td>
+            <td class="col-type">{{ r.course_type or "" }}</td>
+            <td class="col-topic">{{ r.course_name or "" }}</td>
+            <td class="col-trainer">{{ r.evaluator or "" }}</td>
+            <td class="col-result">{{ r.result or "" }}</td>
           </tr>
-        {% endfor %}
-
-        {# เติมแถวเปล่าให้ครบ 10 #}
-        {% for i in range(10 - (show_rows|length)) %}
+          {% else %}
+          <!-- แถวว่างเติมให้ครบ 10 -->
           <tr>
-            <td class="c1">{{ (show_rows|length) + i + 1 }}</td>
-            <td class="c2"></td>
-            <td class="c3"></td>
-            <td class="c4"></td>
-            <td class="c5"></td>
-            <td class="c6"></td>
-            <td class="c7"></td>
+            <td class="col-no">&nbsp;</td>
+            <td class="col-date"></td>
+            <td class="col-hrs"></td>
+            <td class="col-type"></td>
+            <td class="col-topic"></td>
+            <td class="col-trainer"></td>
+            <td class="col-result"></td>
           </tr>
+          {% endif %}
         {% endfor %}
       </tbody>
     </table>
 
-    <!-- REVISION REVIEW (เหมือนภาพ) -->
-    <table style="margin-top:10px;">
-      <tr>
-        <td class="center bold" style="width:70%; border-bottom:none;">Revision Review</td>
-        <td class="center bold" style="width:10%; border-bottom:none;">Prepared</td>
-        <td class="center bold" style="width:10%; border-bottom:none;">Checked</td>
-        <td class="center bold" style="width:10%; border-bottom:none;">Approved</td>
-      </tr>
-    </table>
+    <!-- ===== Revision Review (หน้าตาเหมือนฟอร์ม) ===== -->
+    <div class="rev-wrap">
+      <div class="rev-head">Revision Review</div>
 
-    <table class="rev">
-      <tr>
-        <th class="w-revno">Rev.No</th>
-        <th class="w-date">Date</th>
-        <th class="w-details">Details</th>
-        <th class="w-issued">Issued</th>
-        <th class="w-confirm">Confirm</th>
-        <th class="w-approved">Approved</th>
+      <table class="rev-table" style="width:100%; border-collapse:collapse;">
+        <thead>
+          <tr>
+            <th style="width:70px;">Rev.No</th>
+            <th style="width:120px;">Date</th>
+            <th>Details</th>
+            <th style="width:140px;">Issued</th>
+            <th style="width:140px;">Confirm</th>
+            <th style="width:140px;">Approved</th>
+            <th style="width:140px;">Prepared</th>
+            <th style="width:140px;">Checked</th>
+            <th style="width:140px;">Approved</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="text-align:center;">△</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td rowspan="3" style="text-align:center;">Thanaphat T.</td>
+            <td rowspan="3" style="text-align:center;">-</td>
+            <td rowspan="3" style="text-align:center;">Pimpon</td>
+          </tr>
+          <tr>
+            <td style="text-align:center;">3</td>
+            <td style="text-align:center;">28/5/2025</td>
+            <td><b>REVIEW ALL</b></td>
+            <td style="text-align:center;"><i>Thanaphat T.</i></td>
+            <td style="text-align:center;">-</td>
+            <td style="text-align:center;"><i>Pimpon</i></td>
+          </tr>
+          <tr>
+            <td style="text-align:center;">2</td>
+            <td style="text-align:center;">21/7/2012</td>
+            <td><b>REVIEW ALL</b></td>
+            <td style="text-align:center;"><i>Soawarot</i></td>
+            <td style="text-align:center;">-</td>
+            <td style="text-align:center;"><i>Pimpon</i></td>
+          </tr>
+        </tbody>
+      </table>
 
-        <th style="width:10%;">&nbsp;</th>
-        <th style="width:10%;">&nbsp;</th>
-        <th style="width:10%;">&nbsp;</th>
-      </tr>
-
-      <!-- แถวสัญลักษณ์ -->
-      <tr>
-        <td class="w-revno center">△</td>
-        <td class="w-date"></td>
-        <td class="w-details"></td>
-        <td class="w-issued"></td>
-        <td class="w-confirm"></td>
-        <td class="w-approved"></td>
-
-        <td rowspan="3" class="center"><i>Thanaphat T.</i></td>
-        <td rowspan="3" class="center">-</td>
-        <td rowspan="3" class="center"><i>Pinpon</i></td>
-      </tr>
-
-      <!-- แถว Rev 3 -->
-      <tr>
-        <td class="w-revno center">3</td>
-        <td class="w-date center">28/5/2025</td>
-        <td class="w-details bold">REVIEW ALL</td>
-        <td class="w-issued center"><i>Thanaphat T.</i></td>
-        <td class="w-confirm center">-</td>
-        <td class="w-approved center"><i>Pinpon</i></td>
-      </tr>
-
-      <!-- แถว Rev 2 -->
-      <tr>
-        <td class="w-revno center">2</td>
-        <td class="w-date center">21/7/2012</td>
-        <td class="w-details bold">REVIEW ALL</td>
-        <td class="w-issued center"><i>Soawarat</i></td>
-        <td class="w-confirm center">-</td>
-        <td class="w-approved center"><i>Pinpon</i></td>
-      </tr>
-    </table>
-
-    <!-- FOOTER -->
-    <table class="footer">
-      <tr>
-        <td style="width:25%;">Doc No. : <b>FM-PN013</b></td>
-        <td style="width:15%;">Rev. : <b>3</b></td>
-        <td style="width:20%;" class="center">Page 1 / 1</td>
-        <td style="width:40%;" class="right">Effective Date : <b>28 MAY 2025</b></td>
-      </tr>
-    </table>
+      <div class="footer-line">
+        <div>Doc No. : <b>FM-PN013</b> &nbsp;&nbsp; Rev. : <b>3</b></div>
+        <div>Page {{ loop.index }} / {{ total_pages }}</div>
+        <div>Effective Date : <b>28 MAY 2025</b></div>
+      </div>
+    </div>
 
   </div>
+  {% endfor %}
 
   <script>
-    // ✅ เปิดแล้วสั่งพิมพ์ทันที
-    window.onload = function(){
-      window.print();
-    }
+    // เปิดหน้าปริ้นทันที
+    window.onload = () => window.print();
   </script>
+
 </body>
 </html>
