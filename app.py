@@ -680,46 +680,110 @@ def healthz():
 @login_required
 def employees_list():
     q = (request.args.get("q") or "").strip()
-    status = (request.args.get("status") or "Active").strip()  # ✅ default เปิดมาเห็น Active
 
-    base = Employee.query
+    # ✅ รับค่า filter/sort จาก URL
+    status = (request.args.get("status") or "Active").strip()
+    dept = (request.args.get("dept") or "").strip()
+    section = (request.args.get("section") or "").strip()
+    sort = (request.args.get("sort") or "no").strip()
+    direction = (request.args.get("direction") or "asc").strip().lower()
 
-    # ✅ คำนวณสรุป (นับทั้งหมด/active/resign) แบบไม่ขึ้นกับ filter
-    total_all = base.count()
-    total_active = base.filter(Employee.status == "Active").count()
-    total_resign = base.filter(Employee.status == "Resign").count()
+    query = Employee.query
 
-    # ✅ query หลัก (ตามแท็บ status)
-    query = base
-    if status in ("Active", "Resign"):
+    # ✅ Filter: Status
+    if status in ["Active", "Resign"]:
         query = query.filter(Employee.status == status)
+    # ถ้าเป็น All หรือค่าอื่น → ไม่กรอง
 
-    # ✅ ค้นหา
+    # ✅ Filter: Department / Section
+    if dept:
+        query = query.filter(Employee.department == dept)
+    if section:
+        query = query.filter(Employee.section == section)
+
+    # ✅ Search
     if q:
         like = f"%{q}%"
-        query = query.filter(or_(
-            Employee.em_id.ilike(like),
-            Employee.id_card.ilike(like),
-            Employee.first_name_th.ilike(like),
-            Employee.last_name_th.ilike(like),
-            Employee.first_name_en.ilike(like),
-            Employee.last_name_en.ilike(like),
-            Employee.position.ilike(like),
-            Employee.section.ilike(like),
-            Employee.department.ilike(like),
-        ))
+        query = query.filter(
+            or_(
+                Employee.em_id.ilike(like),
+                Employee.id_card.ilike(like),
+                Employee.first_name_th.ilike(like),
+                Employee.last_name_th.ilike(like),
+                Employee.first_name_en.ilike(like),
+                Employee.last_name_en.ilike(like),
+                Employee.position.ilike(like),
+                Employee.section.ilike(like),
+                Employee.department.ilike(like),
+                Employee.status.ilike(like),
+            )
+        )
 
-    employees = query.order_by(nullslast(Employee.no.asc()), Employee.em_id.asc()).all()
+    # ✅ Dropdown options (ต้องเป็น list ของ string)
+    dept_options = [
+        d[0] for d in db.session.query(Employee.department)
+        .filter(Employee.department.isnot(None))
+        .filter(Employee.department != "")
+        .distinct()
+        .order_by(Employee.department.asc())
+        .all()
+    ]
+
+    section_options = [
+        s[0] for s in db.session.query(Employee.section)
+        .filter(Employee.section.isnot(None))
+        .filter(Employee.section != "")
+        .distinct()
+        .order_by(Employee.section.asc())
+        .all()
+    ]
+
+    # ✅ Sort
+    sort_map = {
+        "no": Employee.no,
+        "em_id": Employee.em_id,
+        "department": Employee.department,
+        "section": Employee.section,
+    }
+    sort_col = sort_map.get(sort, Employee.no)
+
+    if direction == "desc":
+        query = query.order_by(nullslast(sort_col.desc()))
+    else:
+        query = query.order_by(nullslast(sort_col.asc()))
+
+    # เสริมเรียง em_id ต่อท้ายกันข้อมูลกระโดด
+    if sort != "em_id":
+        query = query.order_by(
+            nullslast(sort_col.desc() if direction == "desc" else sort_col.asc()),
+            Employee.em_id.asc()
+        )
+
+    employees = query.all()
+
+    # ✅ Summary counts (นับจากฐานจริง ไม่ใช่จาก filter)
+    total_active = Employee.query.filter(Employee.status == "Active").count()
+    total_resign = Employee.query.filter(Employee.status == "Resign").count()
+    total_all = Employee.query.count()
 
     return render_template(
         "employees.html",
         employees=employees,
+        total=len(employees),
         q=q,
-        status=status,                 # ✅ ส่งไป template
-        total=len(employees),          # ✅ จำนวนตาม filter ปัจจุบัน
-        total_all=total_all,           # ✅ จำนวนทั้งหมด
-        total_active=total_active,     # ✅ จำนวน Active ทั้งหมด
-        total_resign=total_resign,     # ✅ จำนวน Resign ทั้งหมด
+
+        status=status,
+        dept=dept,
+        section=section,
+        sort=sort,
+        direction=direction,
+
+        dept_options=dept_options,
+        section_options=section_options,
+
+        total_active=total_active,
+        total_resign=total_resign,
+        total_all=total_all,
     )
     
 @app.route("/employees/new", methods=["GET", "POST"])
@@ -1284,39 +1348,78 @@ def employees_export():
     dept = (request.args.get("dept") or "").strip()
     section = (request.args.get("section") or "").strip()
     sort = (request.args.get("sort") or "no").strip()
-    direction = (request.args.get("direction") or "asc").strip()
+    direction = (request.args.get("direction") or "asc").strip().lower()
 
-    query = build_employee_query(q=q, status=status, dept=dept, section=section, sort=sort, direction=direction)
+    query = Employee.query
+
+    if status in ["Active", "Resign"]:
+        query = query.filter(Employee.status == status)
+
+    if dept:
+        query = query.filter(Employee.department == dept)
+    if section:
+        query = query.filter(Employee.section == section)
+
+    if q:
+        like = f"%{q}%"
+        query = query.filter(
+            or_(
+                Employee.em_id.ilike(like),
+                Employee.id_card.ilike(like),
+                Employee.first_name_th.ilike(like),
+                Employee.last_name_th.ilike(like),
+                Employee.first_name_en.ilike(like),
+                Employee.last_name_en.ilike(like),
+                Employee.position.ilike(like),
+                Employee.section.ilike(like),
+                Employee.department.ilike(like),
+                Employee.status.ilike(like),
+            )
+        )
+
+    sort_map = {
+        "no": Employee.no,
+        "em_id": Employee.em_id,
+        "department": Employee.department,
+        "section": Employee.section,
+    }
+    sort_col = sort_map.get(sort, Employee.no)
+
+    if direction == "desc":
+        query = query.order_by(nullslast(sort_col.desc()))
+    else:
+        query = query.order_by(nullslast(sort_col.asc()))
+
+    if sort != "em_id":
+        query = query.order_by(
+            nullslast(sort_col.desc() if direction == "desc" else sort_col.asc()),
+            Employee.em_id.asc()
+        )
+
     rows = query.all()
 
     wb = Workbook()
     ws = wb.active
     ws.title = "Employees"
 
-    headers = [
-        "No", "Em. ID", "ID Card",
-        "Prefix-TH", "First-TH", "Last-TH",
-        "Name-EN",  # ถ้าคุณแยก first/last EN ก็เปลี่ยนหัวได้
-        "Position", "Section", "Department",
-        "Start work", "Resign", "Status",
-        "Degree", "Major"
-    ]
-    ws.append(headers)
+    ws.append([
+        "No", "Em. ID", "ID Card", "ชื่อไทย", "Name-EN",
+        "Position", "Section", "Department", "Start work",
+        "Resign", "Status", "Degree", "Major"
+    ])
 
     for e in rows:
         ws.append([
             e.no or "",
             e.em_id or "",
             e.id_card or "",
-            e.title_th or "",
-            e.first_name_th or "",
-            e.last_name_th or "",
-            (e.first_name_en or "") + (" " + e.last_name_en if getattr(e, "last_name_en", None) else ""),
+            e.th_full() if hasattr(e, "th_full") else f"{e.first_name_th or ''} {e.last_name_th or ''}".strip(),
+            e.en_full() if hasattr(e, "en_full") else f"{e.first_name_en or ''} {e.last_name_en or ''}".strip(),
             e.position or "",
             e.section or "",
             e.department or "",
-            e.start_work.isoformat() if e.start_work else "",
-            e.resign.isoformat() if e.resign else "",
+            str(e.start_work) if e.start_work else "",
+            str(e.resign) if e.resign else "",
             e.status or "",
             e.degree or "",
             e.major or "",
@@ -1326,14 +1429,12 @@ def employees_export():
     wb.save(bio)
     bio.seek(0)
 
-    stamp = datetime.now().strftime("%Y%m%d_%H%M")
-    filename = f"employees_{status}_{stamp}.xlsx"
-
+    filename = f"employees_{status or 'All'}.xlsx"
     return send_file(
         bio,
         as_attachment=True,
         download_name=filename,
-        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
 
 @app.get("/dashboard")
