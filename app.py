@@ -33,6 +33,7 @@ from math import ceil
 from datetime import datetime
 from openpyxl import Workbook
 from sqlalchemy.sql import nullslast
+from sqlalchemy.sql import func
 
 # -------------------------------------------------
 # App Config
@@ -1831,7 +1832,7 @@ def report_training():
             )
         ).order_by(Employee.em_id.asc()).first()
 
-        # ถ้าไม่เจอใน Employee ให้ลองดึงจาก TrainingRecord โดยตรง (กรณีไฟล์ training มีชื่อ แต่ employee ยังไม่ครบ)
+        # ถ้าไม่เจอใน Employee ให้ลองดึงจาก TrainingRecord โดยตรง
         if not emp:
             tr = TrainingRecord.query.filter(
                 or_(
@@ -1842,7 +1843,6 @@ def report_training():
             ).order_by(TrainingRecord.emp_id.asc()).first()
 
             if tr:
-                # สร้าง object แบบง่ายๆ ให้หน้าแสดงได้ (ไม่บังคับต้องมี employee)
                 class TempEmp:
                     def __init__(self, em_id, th_name, section, position):
                         self.em_id = em_id
@@ -1858,16 +1858,19 @@ def report_training():
                     def en_full(self): return ""
 
                 emp = TempEmp(
-                    tr.emp_id,
+                    (tr.emp_id or "").strip(),
                     f"{tr.prefix or ''}{tr.first_name or ''} {tr.last_name or ''}".strip(),
                     tr.section,
                     tr.position,
                 )
 
-        # ดึง training record
+        # ✅ ดึง training record (แก้ให้ match แบบ trim+upper)
         if emp:
-            emp_id = emp.em_id
-            query = TrainingRecord.query.filter(TrainingRecord.emp_id == emp_id)
+            emp_id = (emp.em_id or "").strip().upper()
+
+            query = TrainingRecord.query.filter(
+                func.upper(func.trim(TrainingRecord.emp_id)) == emp_id
+            )
 
             query = query.order_by(
                 nullslast(TrainingRecord.start_date.desc()),
@@ -1882,21 +1885,24 @@ def report_training():
         rows=rows,
     )
 
-
 @app.get("/reports/training/print")
 @login_required
 def report_training_print():
-    emp_id = (request.args.get("emp_id") or "").strip()
+    emp_id = (request.args.get("emp_id") or "").strip().upper()
     if not emp_id:
         flash("กรุณาระบุ Emp ID", "error")
         return redirect(url_for("report_training"))
 
-    # employee อาจมีหรือไม่มีก็ได้
-    emp = Employee.query.filter_by(em_id=emp_id).first()
+    # employee อาจมีหรือไม่มีก็ได้ (แก้ให้หาแบบ case-insensitive)
+    emp = Employee.query.filter(func.upper(func.trim(Employee.em_id)) == emp_id).first()
 
     # fallback: ถ้าไม่มี employee ให้ใช้ข้อมูลจาก training_records
     if not emp:
-        tr = TrainingRecord.query.filter_by(emp_id=emp_id).order_by(TrainingRecord.id.desc()).first()
+        tr = (TrainingRecord.query
+              .filter(func.upper(func.trim(TrainingRecord.emp_id)) == emp_id)
+              .order_by(TrainingRecord.id.desc())
+              .first())
+
         if not tr:
             flash("ไม่พบข้อมูล Training Record ของพนักงานนี้", "error")
             return redirect(url_for("report_training", q=emp_id))
@@ -1916,16 +1922,17 @@ def report_training_print():
             def en_full(self): return ""
 
         emp = TempEmp(
-            tr.emp_id,
+            (tr.emp_id or "").strip(),
             f"{tr.prefix or ''}{tr.first_name or ''} {tr.last_name or ''}".strip(),
             tr.section,
             tr.position,
         )
 
-    rows = TrainingRecord.query.filter(TrainingRecord.emp_id == emp_id).order_by(
-        nullslast(TrainingRecord.start_date.asc()),
-        TrainingRecord.id.asc()
-    ).all()
+    # ✅ ดึง rows แบบ trim+upper (นี่คือจุดที่ทำให้จาก 6 -> 18)
+    rows = (TrainingRecord.query
+            .filter(func.upper(func.trim(TrainingRecord.emp_id)) == emp_id)
+            .order_by(nullslast(TrainingRecord.start_date.asc()), TrainingRecord.id.asc())
+            .all())
 
     return render_template(
         "report_training_print.html",
