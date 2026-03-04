@@ -16,6 +16,7 @@
     <a class="btn" href="{{ url_for('employees_list') }}">Employee Data</a>
     <a class="btn" href="{{ url_for('trainings_list') }}">Training</a>
     <a class="btn" href="{{ url_for('dashboard') }}">Dashboard</a>
+    <a class="btn" href="{{ url_for('report_training') }}">Report</a>
 
     {% set role = session.get("user_role") %}
     {% set email = session.get("user_email") %}
