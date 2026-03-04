@@ -376,6 +376,55 @@ def safe_str(v):
     if v is None:
         return ""
     return str(v).strip()
+    
+def build_employee_query(q="", status="Active", dept="", section="", sort="no", direction="asc"):
+    query = Employee.query
+
+    # ---- status filter ----
+    if status and status != "All":
+        query = query.filter(Employee.status == status)
+
+    # ---- dept/section filter ----
+    if dept:
+        query = query.filter(Employee.department == dept)
+    if section:
+        query = query.filter(Employee.section == section)
+
+    # ---- search filter ----
+    if q:
+        like = f"%{q}%"
+        query = query.filter(
+            or_(
+                Employee.em_id.ilike(like),
+                Employee.id_card.ilike(like),
+                Employee.first_name_th.ilike(like),
+                Employee.last_name_th.ilike(like),
+                Employee.first_name_en.ilike(like),
+                Employee.last_name_en.ilike(like),
+                Employee.position.ilike(like),
+                Employee.section.ilike(like),
+                Employee.department.ilike(like),
+            )
+        )
+
+    # ---- sorting ----
+    sort_map = {
+        "no": Employee.no,
+        "em_id": Employee.em_id,
+        "department": Employee.department,
+        "section": Employee.section,
+    }
+    sort_col = sort_map.get(sort or "no", Employee.no)
+
+    if (direction or "asc").lower() == "desc":
+        query = query.order_by(nullslast(sort_col.desc()))
+    else:
+        query = query.order_by(nullslast(sort_col.asc()))
+
+    # tie-breaker ให้เสถียร
+    query = query.order_by(Employee.em_id.asc())
+
+    return query
 
 def safe_int(x):
     try:
