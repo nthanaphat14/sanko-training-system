@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="page-head">
+  <div>
+    <h1>Report Training (By Employee)</h1>
+    <div class="muted">พิมพ์ Emp ID หรือชื่อ เพื่อดึงประวัติการฝึกอบรมก่อนกดปริ้น</div>
+  </div>
+  <div class="actions">
+    <a class="btn ghost" href="{{ url_for('trainings_list') }}">กลับ Training</a>
+  </div>
+</div>
+
+<div class="card">
+  <form method="get" action="{{ url_for('report_training') }}" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+    <input class="input" name="q" value="{{ q or '' }}"
+           placeholder="ค้นหา: Emp ID / ชื่อไทย / ชื่ออังกฤษ"
+           style="flex:1; min-width:260px;">
+    <button class="btn" type="submit">ค้นหา</button>
+    <a class="btn ghost" href="{{ url_for('report_training') }}">ล้าง</a>
+  </form>
+</div>
+
+{% if emp %}
+  <div class="card" style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:center;">
+    <div>
+      <div style="font-weight:900; font-size:16px;">{{ emp.em_id }} — {{ emp.th_full() }}</div>
+      <div class="muted">{{ emp.en_full() }}</div>
+      <div class="muted">Department: {{ emp.department or "-" }} | Section: {{ emp.section or "-" }} | Position: {{ emp.position or "-" }}</div>
+    </div>
+
+    <div class="actions">
+      <a class="btn primary"
+         href="{{ url_for('report_training_print', emp_id=emp.em_id) }}"
+         target="_blank">
+        ปริ้นรายงาน
+      </a>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="muted" style="margin-bottom:8px;">Training Records: {{ rows|length }}</div>
+
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Year</th>
+            <th>Month</th>
+            <th>Start Date</th>
+            <th>Course Code</th>
+            <th>Course Name</th>
+            <th>Type</th>
+            <th>Hours</th>
+            <th>Result</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in rows %}
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td>{{ t.year or "" }}</td>
+            <td>{{ t.month or "" }}</td>
+            <td class="nowrap">{{ getattr(t, "start_date", "") or "" }}</td>
+            <td>{{ getattr(t, "course_code", "") or "" }}</td>
+            <td>{{ getattr(t, "course_name", "") or "" }}</td>
+            <td>{{ getattr(t, "course_type", "") or "" }}</td>
+            <td>{{ getattr(t, "hours", "") or "" }}</td>
+            <td>{{ getattr(t, "result", "") or "" }}</td>
+          </tr>
+          {% endfor %}
+
+          {% if rows|length == 0 %}
+            <tr><td colspan="9" class="muted center" style="padding:16px;">ไม่พบ Training Record</td></tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+{% else %}
+  {% if q %}
+    <div class="card">
+      <div class="muted">ไม่พบพนักงานจากคำค้น: <b>{{ q }}</b></div>
+    </div>
+  {% endif %}
+{% endif %}
+
+{% endblock %}
