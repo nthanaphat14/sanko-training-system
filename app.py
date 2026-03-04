@@ -1808,6 +1808,76 @@ def trainings_delete(tr_id):
         flash(f"ลบไม่สำเร็จ: {e}", "error")
     return redirect(url_for("trainings_list"))
 
+@app.get("/reports/training")
+@login_required
+def report_training():
+    q = (request.args.get("q") or "").strip()
+
+    emp = None
+    rows = []
+
+    if q:
+        like = f"%{q}%"
+
+        # 1) หา Employee จาก q (Emp ID หรือชื่อไทย/อังกฤษ)
+        emp = Employee.query.filter(
+            or_(
+                Employee.em_id.ilike(like),
+                Employee.first_name_th.ilike(like),
+                Employee.last_name_th.ilike(like),
+                Employee.first_name_en.ilike(like),
+                Employee.last_name_en.ilike(like),
+            )
+        ).order_by(Employee.em_id.asc()).first()
+
+        # 2) ถ้าเจอ Employee → ดึง TrainingRecord ด้วย emp_id
+        if emp:
+            query = TrainingRecord.query.filter(TrainingRecord.emp_id == emp.em_id)
+
+            # ถ้ามี start_date ให้ sort ตาม start_date ก่อน
+            if hasattr(TrainingRecord, "start_date"):
+                query = query.order_by(nullslast(TrainingRecord.start_date.desc()), TrainingRecord.id.desc())
+            else:
+                query = query.order_by(TrainingRecord.id.desc())
+
+            rows = query.all()
+
+    return render_template(
+        "report_training.html",
+        q=q,
+        emp=emp,
+        rows=rows,
+    )
+
+@app.get("/reports/training/print")
+@login_required
+def report_training_print():
+    emp_id = (request.args.get("emp_id") or "").strip()
+    if not emp_id:
+        flash("กรุณาระบุ Emp ID", "error")
+        return redirect(url_for("report_training"))
+
+    emp = Employee.query.filter_by(em_id=emp_id).first()
+    if not emp:
+        flash("ไม่พบพนักงาน", "error")
+        return redirect(url_for("report_training", q=emp_id))
+
+    query = TrainingRecord.query.filter(TrainingRecord.emp_id == emp.em_id)
+
+    if hasattr(TrainingRecord, "start_date"):
+        query = query.order_by(nullslast(TrainingRecord.start_date.desc()), TrainingRecord.id.desc())
+    else:
+        query = query.order_by(TrainingRecord.id.desc())
+
+    rows = query.all()
+
+    return render_template(
+        "report_training_print.html",
+        emp=emp,
+        rows=rows,
+        today=datetime.utcnow(),
+    )
+    
 # -------------------------------------------------
 # Run (Local Only)
 # -------------------------------------------------
