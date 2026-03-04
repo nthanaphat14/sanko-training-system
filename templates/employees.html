@@ -16,6 +16,19 @@
 
 <div class="card">
   <form class="searchbar" action="{{ url_for('employees_list') }}" method="get">
+    
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;">
+      <a class="btn {% if status=='Active' %}primary{% endif %}"
+         href="{{ url_for('employees_list', q=q, status='Active') }}">Active</a>
+
+      <a class="btn {% if status=='Resign' %}primary{% endif %}"
+         href="{{ url_for('employees_list', q=q, status='Resign') }}">Resign</a>
+
+      <a class="btn ghost {% if status not in ['Active','Resign'] %}primary{% endif %}"
+         href="{{ url_for('employees_list', q=q, status='All') }}">All</a>
+    </div>
+    
+    <input type="hidden" name="status" value="{{ status }}">
     <input name="q" value="{{ q }}" placeholder="ค้นหาเร็ว: Em.ID / ชื่อไทย / ชื่ออังกฤษ / แผนก / ตำแหน่ง / สถานะ / ID Card">
     <button class="btn">ค้นหา</button>
     <a class="btn ghost" href="{{ url_for('employees_list') }}">ล้าง</a>
@@ -83,7 +96,13 @@
           <td>{{ e.department or "" }}</td>
           <td class="nowrap">{{ e.start_work or "" }}</td>
           <td class="nowrap">{{ e.resign or "" }}</td>
-          <td class="nowrap">{{ e.status or "" }}</td>
+          <td class="nowrap">
+          {% if e.status == "Active" %}
+          <span class="badge green">Active</span>
+          {% else %}
+          <span class="badge red">Resign</span>
+          {% endif %}
+          </td>
           <td class="nowrap">{{ e.degree or "" }}</td>
           <td>{{ e.major or "" }}</td>
           <td class="nowrap">
