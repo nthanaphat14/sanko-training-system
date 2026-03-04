@@ -631,32 +631,34 @@ def healthz():
 @login_required
 def employees_list():
     q = (request.args.get("q") or "").strip()
+    status = (request.args.get("status") or "Active").strip()  # ✅ default เปิดมาเห็น Active
 
-    # ✅ ค่าเริ่มต้นให้เป็น Active
-    status = (request.args.get("status") or "Active").strip()
+    base = Employee.query
 
-    query = Employee.query
+    # ✅ คำนวณสรุป (นับทั้งหมด/active/resign) แบบไม่ขึ้นกับ filter
+    total_all = base.count()
+    total_active = base.filter(Employee.status == "Active").count()
+    total_resign = base.filter(Employee.status == "Resign").count()
 
-    # ✅ filter status ก่อน
+    # ✅ query หลัก (ตามแท็บ status)
+    query = base
     if status in ("Active", "Resign"):
         query = query.filter(Employee.status == status)
 
-    # search
+    # ✅ ค้นหา
     if q:
         like = f"%{q}%"
-        query = query.filter(
-            or_(
-                Employee.em_id.ilike(like),
-                Employee.id_card.ilike(like),
-                Employee.first_name_th.ilike(like),
-                Employee.last_name_th.ilike(like),
-                Employee.first_name_en.ilike(like),
-                Employee.last_name_en.ilike(like),
-                Employee.position.ilike(like),
-                Employee.department.ilike(like),
-                Employee.status.ilike(like),
-            )
-        )
+        query = query.filter(or_(
+            Employee.em_id.ilike(like),
+            Employee.id_card.ilike(like),
+            Employee.first_name_th.ilike(like),
+            Employee.last_name_th.ilike(like),
+            Employee.first_name_en.ilike(like),
+            Employee.last_name_en.ilike(like),
+            Employee.position.ilike(like),
+            Employee.section.ilike(like),
+            Employee.department.ilike(like),
+        ))
 
     employees = query.order_by(nullslast(Employee.no.asc()), Employee.em_id.asc()).all()
 
@@ -664,8 +666,11 @@ def employees_list():
         "employees.html",
         employees=employees,
         q=q,
-        status=status,   # ✅ เพิ่มบรรทัดนี้
-        total=len(employees),
+        status=status,                 # ✅ ส่งไป template
+        total=len(employees),          # ✅ จำนวนตาม filter ปัจจุบัน
+        total_all=total_all,           # ✅ จำนวนทั้งหมด
+        total_active=total_active,     # ✅ จำนวน Active ทั้งหมด
+        total_resign=total_resign,     # ✅ จำนวน Resign ทั้งหมด
     )
     
 @app.route("/employees/new", methods=["GET", "POST"])
