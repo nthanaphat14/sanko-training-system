@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="page-head">
+  <div>
+    <h1>Training Courses</h1>
+    <div class="muted">ทะเบียนหลักสูตร (OJT / INH / EXT)</div>
+  </div>
+
+  <div class="actions">
+    {% if current_user and current_user.role == "admin" %}
+      <a class="btn primary" href="{{ url_for('course_new') }}">+ New Course</a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <form method="get" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+    <select name="type" class="input" style="width:160px;">
+      <option value="All" {% if ctype=='All' %}selected{% endif %}>All</option>
+      <option value="OJT" {% if ctype=='OJT' %}selected{% endif %}>OJT</option>
+      <option value="INH" {% if ctype=='INH' %}selected{% endif %}>INHOUSE</option>
+      <option value="EXT" {% if ctype=='EXT' %}selected{% endif %}>EXTERNAL</option>
+    </select>
+
+    <input class="input" name="q" value="{{ q or '' }}" placeholder="ค้นหา: code / name / vendor / owner" style="flex:1; min-width:260px;">
+    <button class="btn" type="submit">ค้นหา</button>
+    <a class="btn ghost" href="{{ url_for('courses_list') }}">ล้าง</a>
+  </form>
+</div>
+
+<div class="card">
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Course Code</th>
+          <th>Course Name</th>
+          <th>Status</th>
+          <th>Vendor</th>
+          <th>Owner</th>
+          <th class="nowrap">Total Cost</th>
+          <th class="nowrap">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in rows %}
+        <tr>
+          <td class="nowrap"><b>{{ c.course_type }}</b></td>
+          <td class="nowrap">{{ c.course_code }}</td>
+          <td>{{ c.course_name }}</td>
+          <td class="nowrap">{{ c.status or "" }}</td>
+          <td>{{ c.vendor or "" }}</td>
+          <td>{{ c.owner or "" }}</td>
+          <td class="nowrap">{{ "{:,.2f}".format(c.total_amount()) }}</td>
+          <td class="nowrap">
+            {% if current_user and current_user.role == "admin" %}
+              <a class="btn sm" href="{{ url_for('course_edit', course_id=c.id) }}">แก้ไข</a>
+            {% else %}
+              <a class="btn sm" href="{{ url_for('course_edit', course_id=c.id) }}">ดู</a>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+        {% if rows|length == 0 %}
+          <tr><td colspan="8" class="muted center" style="padding:16px;">ยังไม่มีหลักสูตร</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
