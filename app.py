@@ -35,7 +35,9 @@ from openpyxl import Workbook
 from sqlalchemy.sql import nullslast
 from sqlalchemy.sql import func
 from math import ceil
-
+from openpyxl import Workbook
+from openpyxl.utils import get_column_letter
+from math import ceil
 # -------------------------------------------------
 # App Config
 # -------------------------------------------------
@@ -1954,6 +1956,98 @@ def report_training_print():
         per_page=per_page,
         total_pages=total_pages,
         print_date=datetime.utcnow(),
+    )
+
+@app.get("/reports/training/export")
+@login_required
+def report_training_export():
+    emp_id = (request.args.get("emp_id") or "").strip()
+    if not emp_id:
+        flash("กรุณาระบุ Emp ID", "error")
+        return redirect(url_for("report_training"))
+
+    # normalize ให้ match เหมือนที่คุณแก้ใน report_training
+    emp_id_norm = emp_id.strip().upper()
+
+    rows = TrainingRecord.query.filter(
+        func.upper(func.trim(TrainingRecord.emp_id)) == emp_id_norm
+    ).order_by(
+        nullslast(TrainingRecord.start_date.asc()),
+        TrainingRecord.id.asc()
+    ).all()
+
+    if not rows:
+        flash("ไม่พบ Training Record สำหรับ Emp ID นี้", "error")
+        return redirect(url_for("report_training", q=emp_id))
+
+    # employee (มี/ไม่มีได้)
+    emp = Employee.query.filter(func.upper(func.trim(Employee.em_id)) == emp_id_norm).first()
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Training Report"
+
+    # ===== Header บนสุด =====
+    ws["A1"] = "Training Report"
+    ws["A2"] = f"Emp ID: {emp_id_norm}"
+    if emp:
+        ws["A3"] = f"Name-TH: {emp.th_full()}"
+        ws["A4"] = f"Section: {emp.section or '-'}   Position: {emp.position or '-'}"
+        if getattr(emp, "department", None):
+            ws["A5"] = f"Department: {emp.department}"
+    ws["A6"] = " "
+
+    # ===== Table header =====
+    headers = [
+        "#", "Year", "Month",
+        "Course Code", "Course Name", "Type",
+        "Start Date", "End Date", "Hours",
+        "Eval Method", "Result", "Score",
+        "Evaluator", "Expire Date", "Remark"
+    ]
+    start_row = 7
+    ws.append([])  # ให้ row 7 อยู่
+    for col_idx, h in enumerate(headers, start=1):
+        ws.cell(row=start_row, column=col_idx, value=h)
+
+    # ===== Table rows =====
+    r = start_row + 1
+    for i, t in enumerate(rows, start=1):
+        ws.cell(r, 1, i)
+        ws.cell(r, 2, t.year)
+        ws.cell(r, 3, t.month)
+        ws.cell(r, 4, t.course_code)
+        ws.cell(r, 5, t.course_name)
+        ws.cell(r, 6, t.course_type)
+        ws.cell(r, 7, t.start_date.isoformat() if t.start_date else "")
+        ws.cell(r, 8, t.end_date.isoformat() if t.end_date else "")
+        ws.cell(r, 9, t.hours)
+        ws.cell(r, 10, t.evaluate_method)
+        ws.cell(r, 11, t.result)
+        ws.cell(r, 12, t.score)
+        ws.cell(r, 13, t.evaluator)
+        ws.cell(r, 14, t.expire_date.isoformat() if t.expire_date else "")
+        ws.cell(r, 15, t.remark)
+        r += 1
+
+    # ===== Auto width แบบง่าย =====
+    for col in range(1, 16):
+        ws.column_dimensions[get_column_letter(col)].width = 18
+    ws.column_dimensions["A"].width = 6
+    ws.column_dimensions["E"].width = 40
+    ws.column_dimensions["O"].width = 30
+
+    # ===== ส่งไฟล์ =====
+    bio = BytesIO()
+    wb.save(bio)
+    bio.seek(0)
+
+    filename = f"TrainingReport_{emp_id_norm}.xlsx"
+    return send_file(
+        bio,
+        as_attachment=True,
+        download_name=filename,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
     
 # -------------------------------------------------
