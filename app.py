@@ -277,7 +277,8 @@ class TrainingCourse(db.Model):
     owner = db.Column(db.String(120), nullable=True)          # ผู้รับผิดชอบ
     vendor = db.Column(db.String(200), nullable=True)         # วิทยากร/บริษัท
     location = db.Column(db.String(200), nullable=True)       # สถานที่ (in/out)
-
+    training_date = db.Column(db.Date, nullable=True)
+    
     # ใช้ช่วยในการ report ภายหลัง
     course_year = db.Column(db.Integer, nullable=True, index=True)
     course_month = db.Column(db.Integer, nullable=True, index=True)  # 1-12
