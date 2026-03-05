@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="page-head">
+  <div>
+    <h1>{% if mode=='new' %}New Course{% else %}Edit Course{% endif %}</h1>
+    {% if course %}
+      <div class="muted">Code: <b>{{ course.course_code }}</b> • Type: <b>{{ course.course_type }}</b></div>
+    {% endif %}
+  </div>
+
+  <div class="actions">
+    <a class="btn ghost" href="{{ url_for('courses_list') }}">กลับ</a>
+  </div>
+</div>
+
+<div class="card">
+  <form method="post" style="display:grid; grid-template-columns:repeat(2,1fr); gap:12px;">
+    {% if mode=='new' %}
+      <div class="field">
+        <label>Type</label>
+        <select class="input" name="course_type" required>
+          <option value="">-- เลือก --</option>
+          <option value="OJT">OJT</option>
+          <option value="INH">INHOUSE</option>
+          <option value="EXT">EXTERNAL</option>
+        </select>
+      </div>
+    {% else %}
+      <div class="field">
+        <label>Type</label>
+        <input class="input" value="{{ course.course_type }}" disabled>
+      </div>
+    {% endif %}
+
+    <div class="field">
+      <label>Status</label>
+      <select class="input" name="status">
+        {% set st = course.status if course else 'Draft' %}
+        <option value="Draft" {% if st=='Draft' %}selected{% endif %}>Draft</option>
+        <option value="Planned" {% if st=='Planned' %}selected{% endif %}>Planned</option>
+        <option value="Done" {% if st=='Done' %}selected{% endif %}>Done</option>
+        <option value="Cancelled" {% if st=='Cancelled' %}selected{% endif %}>Cancelled</option>
+      </select>
+    </div>
+
+    <div class="field" style="grid-column:1/-1;">
+      <label>Course Name</label>
+      <input class="input" name="course_name" value="{{ course.course_name if course else '' }}" required>
+    </div>
+
+    <div class="field">
+      <label>Owner</label>
+      <input class="input" name="owner" value="{{ course.owner if course else '' }}">
+    </div>
+
+    <div class="field">
+      <label>Vendor / Trainer</label>
+      <input class="input" name="vendor" value="{{ course.vendor if course else '' }}">
+    </div>
+
+    <div class="field" style="grid-column:1/-1;">
+      <label>Location</label>
+      <input class="input" name="location" value="{{ course.location if course else '' }}">
+    </div>
+
+    <div class="field" style="grid-column:1/-1;">
+      <label>Description</label>
+      <input class="input" name="description" value="{{ course.description if course else '' }}">
+    </div>
+
+    <div style="grid-column:1/-1; display:flex; gap:10px; justify-content:flex-end;">
+      <button class="btn primary" type="submit">Save</button>
+    </div>
+  </form>
+</div>
+
+{% if mode=='edit' and course %}
+  <!-- Upload files -->
+  <div class="card">
+    <div style="font-weight:900; margin-bottom:10px;">แนบไฟล์หลักสูตร / ใบเสนอราคา / ใบแจ้งหนี้ / ใบเสร็จ</div>
+
+    <form method="post" action="{{ url_for('course_file_add', course_id=course.id) }}" enctype="multipart/form-data"
+          style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+      <select name="file_type" class="input" style="width:220px;">
+        <option value="">(เลือกประเภทเอกสาร)</option>
+        <option value="syllabus">รายละเอียดหลักสูตร</option>
+        <option value="quotation">ใบเสนอราคา</option>
+        <option value="invoice">ใบแจ้งหนี้</option>
+        <option value="receipt">ใบเสร็จ</option>
+        <option value="other">อื่นๆ</option>
+      </select>
+
+      <input class="input" name="note" placeholder="หมายเหตุ" style="width:260px;">
+      <input type="file" name="file" accept=".pdf,.png,.jpg,.jpeg,.xlsx" required>
+      <button class="btn" type="submit">Upload</button>
+    </form>
+
+    <div class="sep" style="margin:12px 0;"></div>
+
+    <div class="muted" style="margin-bottom:8px;">ไฟล์ทั้งหมด: {{ course.files|length }}</div>
+    <div class="table-wrap">
+      <table class="table" style="min-width:800px;">
+        <thead>
+          <tr>
+            <th>Type</th>
+            <th>File</th>
+            <th>Note</th>
+            <th>Uploaded</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for f in course.files %}
+          <tr>
+            <td class="nowrap">{{ f.file_type or "" }}</td>
+            <td>
+              <a class="btn sm" target="_blank"
+                 href="{{ url_for('static', filename='uploads/courses/' ~ f.stored_name) }}">
+                View
+              </a>
+              <span class="muted" style="margin-left:8px;">{{ f.original_name or f.stored_name }}</span>
+            </td>
+            <td>{{ f.note or "" }}</td>
+            <td class="nowrap">{{ f.uploaded_at }}</td>
+          </tr>
+          {% endfor %}
+          {% if course.files|length == 0 %}
+            <tr><td colspan="4" class="muted center" style="padding:14px;">ยังไม่มีไฟล์</td></tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Cost items -->
+  <div class="card">
+    <div style="font-weight:900; margin-bottom:10px;">ค่าใช้จ่าย</div>
+
+    <form method="post" action="{{ url_for('course_cost_add', course_id=course.id) }}"
+          style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+      <select name="cost_type" class="input" style="width:220px;">
+        <option value="ค่าอบรม">ค่าอบรม</option>
+        <option value="ค่าเดินทาง">ค่าเดินทาง</option>
+        <option value="ค่าที่พัก">ค่าที่พัก</option>
+        <option value="ค่าอาหาร">ค่าอาหาร</option>
+        <option value="ค่าเอกสาร">ค่าเอกสาร</option>
+        <option value="อื่นๆ">อื่นๆ</option>
+      </select>
+
+      <input class="input" name="amount_before_vat" placeholder="ก่อน VAT" style="width:160px;">
+      <input class="input" name="vat_rate" placeholder="VAT %" value="7" style="width:100px;">
+      <input class="input" name="remark" placeholder="หมายเหตุ" style="width:260px;">
+      <button class="btn" type="submit">+ Add</button>
+    </form>
+
+    <div class="sep" style="margin:12px 0;"></div>
+
+    <div class="muted" style="margin-bottom:8px;">
+      รวมก่อน VAT: <b>{{ "{:,.2f}".format(course.total_before_vat()) }}</b> •
+      VAT: <b>{{ "{:,.2f}".format(course.total_vat()) }}</b> •
+      รวมทั้งสิ้น: <b>{{ "{:,.2f}".format(course.total_amount()) }}</b>
+    </div>
+
+    <div class="table-wrap">
+      <table class="table" style="min-width:900px;">
+        <thead>
+          <tr>
+            <th>Type</th>
+            <th class="nowrap">Before VAT</th>
+            <th class="nowrap">VAT%</th>
+            <th class="nowrap">VAT</th>
+            <th class="nowrap">Total</th>
+            <th>Remark</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for x in course.cost_items %}
+          <tr>
+            <td>{{ x.cost_type }}</td>
+            <td class="nowrap">{{ "{:,.2f}".format(x.amount_before_vat or 0) }}</td>
+            <td class="nowrap">{{ x.vat_rate or 0 }}</td>
+            <td class="nowrap">{{ "{:,.2f}".format(x.amount_vat or 0) }}</td>
+            <td class="nowrap"><b>{{ "{:,.2f}".format(x.amount_total or 0) }}</b></td>
+            <td>{{ x.remark or "" }}</td>
+          </tr>
+          {% endfor %}
+          {% if course.cost_items|length == 0 %}
+            <tr><td colspan="6" class="muted center" style="padding:14px;">ยังไม่มีค่าใช้จ่าย</td></tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endif %}
+
+{% endblock %}
