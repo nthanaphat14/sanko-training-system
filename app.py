@@ -34,6 +34,7 @@ from datetime import datetime
 from openpyxl import Workbook
 from sqlalchemy.sql import nullslast
 from sqlalchemy.sql import func
+from math import ceil
 
 # -------------------------------------------------
 # App Config
@@ -1888,21 +1889,17 @@ def report_training():
 @app.get("/reports/training/print")
 @login_required
 def report_training_print():
-    emp_id = (request.args.get("emp_id") or "").strip().upper()
+    emp_id = (request.args.get("emp_id") or "").strip()
     if not emp_id:
         flash("กรุณาระบุ Emp ID", "error")
         return redirect(url_for("report_training"))
 
-    # employee อาจมีหรือไม่มีก็ได้ (แก้ให้หาแบบ case-insensitive)
-    emp = Employee.query.filter(func.upper(func.trim(Employee.em_id)) == emp_id).first()
+    # employee อาจมีหรือไม่มีก็ได้
+    emp = Employee.query.filter_by(em_id=emp_id).first()
 
     # fallback: ถ้าไม่มี employee ให้ใช้ข้อมูลจาก training_records
     if not emp:
-        tr = (TrainingRecord.query
-              .filter(func.upper(func.trim(TrainingRecord.emp_id)) == emp_id)
-              .order_by(TrainingRecord.id.desc())
-              .first())
-
+        tr = TrainingRecord.query.filter_by(emp_id=emp_id).order_by(TrainingRecord.id.desc()).first()
         if not tr:
             flash("ไม่พบข้อมูล Training Record ของพนักงานนี้", "error")
             return redirect(url_for("report_training", q=emp_id))
@@ -1922,22 +1919,30 @@ def report_training_print():
             def en_full(self): return ""
 
         emp = TempEmp(
-            (tr.emp_id or "").strip(),
+            tr.emp_id,
             f"{tr.prefix or ''}{tr.first_name or ''} {tr.last_name or ''}".strip(),
             tr.section,
             tr.position,
         )
 
-    # ✅ ดึง rows แบบ trim+upper (นี่คือจุดที่ทำให้จาก 6 -> 18)
-    rows = (TrainingRecord.query
-            .filter(func.upper(func.trim(TrainingRecord.emp_id)) == emp_id)
-            .order_by(nullslast(TrainingRecord.start_date.asc()), TrainingRecord.id.asc())
-            .all())
+    # ดึงข้อมูล training ทั้งหมด
+    rows = TrainingRecord.query.filter(TrainingRecord.emp_id == emp_id).order_by(
+        nullslast(TrainingRecord.start_date.asc()),
+        TrainingRecord.id.asc()
+    ).all()
+
+    # ✅ แบ่งหน้า: 10 รายการ/หน้า
+    per_page = 10
+    total_pages = max(1, ceil(len(rows) / per_page))
+    pages = [rows[i:i+per_page] for i in range(0, len(rows), per_page)]
 
     return render_template(
         "report_training_print.html",
         emp=emp,
-        rows=rows,
+        rows=rows,              # เผื่อใช้
+        pages=pages,            # ✅ สำคัญ
+        per_page=per_page,      # ✅ สำคัญ
+        total_pages=total_pages,# ✅ สำคัญ
         print_date=datetime.utcnow(),
     )
     
