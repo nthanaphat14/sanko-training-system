@@ -2242,6 +2242,11 @@ def course_edit(course_id):
         c.vendor = (request.form.get("vendor") or "").strip() or None
         c.location = (request.form.get("location") or "").strip() or None
         c.status = (request.form.get("status") or "Draft").strip() or "Draft"
+
+        training_date = request.form.get("training_date")
+        if training_date:
+            c.training_date = datetime.strptime(training_date,"%Y-%m-%d").date()
+        
         db.session.commit()
         flash("บันทึกข้อมูลหลักสูตรแล้ว", "success")
         return redirect(url_for("course_edit", course_id=course_id))
@@ -2323,7 +2328,54 @@ def course_file_add(course_id):
     flash("แนบไฟล์แล้ว", "success")
     return redirect(url_for("course_edit", course_id=course_id))
     
+@app.post("/courses/file/<int:file_id>/delete")
+@role_required("admin")
+def course_file_delete(file_id):
 
+    f = db.session.get(CourseFile,file_id)
+
+    if not f:
+        flash("ไม่พบไฟล์","error")
+        return redirect(url_for("courses_list"))
+
+    course_id = f.course_id
+
+    try:
+        path = os.path.join(UPLOAD_COURSE_DIR,f.stored_name)
+
+        if os.path.exists(path):
+            os.remove(path)
+
+    except:
+        pass
+
+    db.session.delete(f)
+    db.session.commit()
+
+    flash("ลบไฟล์แล้ว","success")
+
+    return redirect(url_for("course_edit",course_id=course_id))
+
+@app.post("/courses/cost/<int:cost_id>/delete")
+@role_required("admin")
+def course_cost_delete(cost_id):
+
+    item = db.session.get(CourseCostItem,cost_id)
+
+    if not item:
+        flash("ไม่พบรายการ","error")
+        return redirect(url_for("courses_list"))
+
+    course_id = item.course_id
+
+    db.session.delete(item)
+    db.session.commit()
+
+    flash("ลบค่าใช้จ่ายแล้ว","success")
+
+    return redirect(url_for("course_edit",course_id=course_id))
+
+    
 # -------------------------------------------------
 # Run (Local Only)
 # -------------------------------------------------
