@@ -113,6 +113,7 @@
             <th>File</th>
             <th>Note</th>
             <th>Uploaded</th>
+            <th class="nowrap">Action</th>
           </tr>
         </thead>
         <tbody>
@@ -128,10 +129,18 @@
             </td>
             <td>{{ f.note or "" }}</td>
             <td class="nowrap">{{ f.uploaded_at }}</td>
+            <td class="nowrap">
+              <form method="post"
+                    action="{{ url_for('course_file_delete', file_id=f.id) }}"
+                    style="display:inline;"
+                    onsubmit="return confirm('ลบไฟล์นี้ใช่หรือไม่?');">
+                <button class="btn sm danger" type="submit">Delete</button>
+              </form>
+            </td>
           </tr>
           {% endfor %}
           {% if course.files|length == 0 %}
-            <tr><td colspan="4" class="muted center" style="padding:14px;">ยังไม่มีไฟล์</td></tr>
+            <tr><td colspan="5" class="muted center" style="padding:14px;">ยังไม่มีไฟล์</td></tr>
           {% endif %}
         </tbody>
       </table>
