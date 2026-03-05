@@ -38,11 +38,54 @@ from math import ceil
 from openpyxl import Workbook
 from openpyxl.utils import get_column_letter
 from math import ceil
+from datetime import datetime, date
+from sqlalchemy import func
+from werkzeug.utils import secure_filename
+import os
+
 # -------------------------------------------------
 # App Config
 # -------------------------------------------------
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "super-secret-key")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+UPLOAD_COURSE_DIR = os.path.join(BASE_DIR, "static", "uploads", "courses")
+os.makedirs(UPLOAD_COURSE_DIR, exist_ok=True)
+
+ALLOWED_EXT = {"pdf", "png", "jpg", "jpeg", "xlsx"}
+
+def allowed_file(filename: str) -> bool:
+    if not filename or "." not in filename:
+        return False
+    ext = filename.rsplit(".", 1)[1].lower()
+    return ext in ALLOWED_EXT
+
+def gen_course_code(course_type: str, dt: datetime | None = None) -> str:
+    """
+    รูปแบบ: INH-YYYYMM-0001 (running แยกตาม type และรีเซ็ตทุกเดือน)
+    """
+    dt = dt or datetime.utcnow()
+    yyyymm = f"{dt.year}{dt.month:02d}"
+    prefix = (course_type or "").strip().upper()
+
+    # ดึงเลข running ล่าสุดของเดือนนี้+ประเภทนี้
+    like = f"{prefix}-{yyyymm}-%"
+    last_code = db.session.query(func.max(TrainingCourse.course_code)).filter(
+        TrainingCourse.course_code.ilike(like)
+    ).scalar()
+
+    if last_code:
+        # last_code เช่น INH-202603-0012
+        try:
+            last_run = int(last_code.split("-")[-1])
+        except Exception:
+            last_run = 0
+    else:
+        last_run = 0
+
+    new_run = last_run + 1
+    return f"{prefix}-{yyyymm}-{new_run:04d}"
+
 
 # DATABASE
 db_url = (os.environ.get("DATABASE_URL") or "").strip()
@@ -217,6 +260,77 @@ class ImportItem(db.Model):
     end_date = db.Column(db.Date, nullable=True)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+class TrainingCourse(db.Model):
+    __tablename__ = "training_courses"
+    id = db.Column(db.Integer, primary_key=True)
+
+    # OJT / INH / EXT
+    course_type = db.Column(db.String(20), nullable=False, index=True)
+
+    # รหัสหลักสูตร เช่น INH-202603-0001
+    course_code = db.Column(db.String(30), nullable=False, unique=True, index=True)
+
+    course_name = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+
+    owner = db.Column(db.String(120), nullable=True)          # ผู้รับผิดชอบ
+    vendor = db.Column(db.String(200), nullable=True)         # วิทยากร/บริษัท
+    location = db.Column(db.String(200), nullable=True)       # สถานที่ (in/out)
+
+    # ใช้ช่วยในการ report ภายหลัง
+    course_year = db.Column(db.Integer, nullable=True, index=True)
+    course_month = db.Column(db.Integer, nullable=True, index=True)  # 1-12
+
+    status = db.Column(db.String(30), default="Draft")        # Draft/Planned/Done/Cancelled
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def total_before_vat(self):
+        return float(sum([c.amount_before_vat or 0 for c in self.cost_items]))
+
+    def total_vat(self):
+        return float(sum([c.amount_vat or 0 for c in self.cost_items]))
+
+    def total_amount(self):
+        return float(sum([c.amount_total or 0 for c in self.cost_items]))
+
+
+class CourseFile(db.Model):
+    __tablename__ = "course_files"
+    id = db.Column(db.Integer, primary_key=True)
+    course_id = db.Column(db.Integer, db.ForeignKey("training_courses.id"), nullable=False, index=True)
+
+    file_type = db.Column(db.String(50), nullable=True)   # syllabus/quotation/invoice/receipt/อื่นๆ
+    original_name = db.Column(db.String(255), nullable=True)
+    stored_name = db.Column(db.String(255), nullable=False)  # ชื่อที่เซฟใน server
+    note = db.Column(db.String(255), nullable=True)
+
+    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    course = db.relationship("TrainingCourse", backref=db.backref("files", lazy=True))
+
+
+class CourseCostItem(db.Model):
+    __tablename__ = "course_cost_items"
+    id = db.Column(db.Integer, primary_key=True)
+    course_id = db.Column(db.Integer, db.ForeignKey("training_courses.id"), nullable=False, index=True)
+
+    cost_type = db.Column(db.String(80), nullable=False)  # ค่าอบรม/เดินทาง/ที่พัก/อาหาร/อื่นๆ
+    amount_before_vat = db.Column(db.Float, nullable=True)
+    vat_rate = db.Column(db.Float, default=7.0)          # %
+    amount_vat = db.Column(db.Float, nullable=True)
+    amount_total = db.Column(db.Float, nullable=True)
+    remark = db.Column(db.String(255), nullable=True)
+
+    attach_file_id = db.Column(db.Integer, db.ForeignKey("course_files.id"), nullable=True)
+    attach_file = db.relationship("CourseFile", foreign_keys=[attach_file_id])
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    course = db.relationship("TrainingCourse", backref=db.backref("cost_items", lazy=True))
+
 
 # -------------------------------------------------
 # Helper Functions
@@ -2049,7 +2163,166 @@ def report_training_export():
         download_name=filename,
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     )
+
+@app.get("/courses")
+@login_required
+def courses_list():
+    q = (request.args.get("q") or "").strip()
+    ctype = (request.args.get("type") or "All").strip()
+
+    query = TrainingCourse.query
+
+    if ctype in ["OJT", "INH", "EXT"]:
+        query = query.filter(TrainingCourse.course_type == ctype)
+
+    if q:
+        like = f"%{q}%"
+        query = query.filter(or_(
+            TrainingCourse.course_code.ilike(like),
+            TrainingCourse.course_name.ilike(like),
+            TrainingCourse.vendor.ilike(like),
+            TrainingCourse.owner.ilike(like),
+        ))
+
+    rows = query.order_by(TrainingCourse.created_at.desc()).all()
+    return render_template("courses_list.html", rows=rows, q=q, ctype=ctype)
+
+@app.route("/courses/new", methods=["GET", "POST"])
+@role_required("admin")
+def course_new():
+    if request.method == "GET":
+        return render_template("course_form.html", mode="new", course=None)
+
+    course_type = (request.form.get("course_type") or "").strip().upper()
+    course_name = (request.form.get("course_name") or "").strip()
+
+    if course_type not in ["OJT", "INH", "EXT"]:
+        flash("กรุณาเลือกประเภท OJT / INH / EXT", "error")
+        return redirect(url_for("course_new"))
+
+    if not course_name:
+        flash("กรุณากรอกชื่อหลักสูตร", "error")
+        return redirect(url_for("course_new"))
+
+    now = datetime.utcnow()
+    code = gen_course_code(course_type, now)
+
+    c = TrainingCourse(
+        course_type=course_type,
+        course_code=code,
+        course_name=course_name,
+        description=(request.form.get("description") or "").strip() or None,
+        owner=(request.form.get("owner") or "").strip() or None,
+        vendor=(request.form.get("vendor") or "").strip() or None,
+        location=(request.form.get("location") or "").strip() or None,
+        course_year=now.year,
+        course_month=now.month,
+        status=(request.form.get("status") or "Draft").strip() or "Draft",
+    )
+
+    db.session.add(c)
+    db.session.commit()
+
+    flash(f"สร้างหลักสูตรสำเร็จ: {code}", "success")
+    return redirect(url_for("course_edit", course_id=c.id))
+
+@app.route("/courses/<int:course_id>/edit", methods=["GET", "POST"])
+@role_required("admin")
+def course_edit(course_id):
+    c = db.session.get(TrainingCourse, course_id)
+    if not c:
+        flash("ไม่พบหลักสูตร", "error")
+        return redirect(url_for("courses_list"))
+
+    if request.method == "POST":
+        c.course_name = (request.form.get("course_name") or "").strip()
+        c.description = (request.form.get("description") or "").strip() or None
+        c.owner = (request.form.get("owner") or "").strip() or None
+        c.vendor = (request.form.get("vendor") or "").strip() or None
+        c.location = (request.form.get("location") or "").strip() or None
+        c.status = (request.form.get("status") or "Draft").strip() or "Draft"
+        db.session.commit()
+        flash("บันทึกข้อมูลหลักสูตรแล้ว", "success")
+        return redirect(url_for("course_edit", course_id=course_id))
+
+    return render_template("course_form.html", mode="edit", course=c)
+
+@app.post("/courses/<int:course_id>/cost/add")
+@role_required("admin")
+def course_cost_add(course_id):
+    c = db.session.get(TrainingCourse, course_id)
+    if not c:
+        flash("ไม่พบหลักสูตร", "error")
+        return redirect(url_for("courses_list"))
+
+    cost_type = (request.form.get("cost_type") or "").strip()
+    before = request.form.get("amount_before_vat") or ""
+    vat_rate = request.form.get("vat_rate") or "7"
+
+    try:
+        before_f = float(before) if before != "" else 0.0
+        vat_rate_f = float(vat_rate) if vat_rate != "" else 7.0
+    except Exception:
+        flash("จำนวนเงินไม่ถูกต้อง", "error")
+        return redirect(url_for("course_edit", course_id=course_id))
+
+    vat_amt = round(before_f * (vat_rate_f / 100.0), 2)
+    total_amt = round(before_f + vat_amt, 2)
+
+    item = CourseCostItem(
+        course_id=course_id,
+        cost_type=cost_type or "อื่นๆ",
+        amount_before_vat=before_f,
+        vat_rate=vat_rate_f,
+        amount_vat=vat_amt,
+        amount_total=total_amt,
+        remark=(request.form.get("remark") or "").strip() or None
+    )
+
+    db.session.add(item)
+    db.session.commit()
+    flash("เพิ่มค่าใช้จ่ายแล้ว", "success")
+    return redirect(url_for("course_edit", course_id=course_id))
     
+@app.post("/courses/<int:course_id>/file/add")
+@role_required("admin")
+def course_file_add(course_id):
+    c = db.session.get(TrainingCourse, course_id)
+    if not c:
+        flash("ไม่พบหลักสูตร", "error")
+        return redirect(url_for("courses_list"))
+
+    f = request.files.get("file")
+    if not f or not f.filename:
+        flash("กรุณาเลือกไฟล์", "error")
+        return redirect(url_for("course_edit", course_id=course_id))
+
+    if not allowed_file(f.filename):
+        flash("อนุญาตเฉพาะ pdf/png/jpg/jpeg/xlsx", "error")
+        return redirect(url_for("course_edit", course_id=course_id))
+
+    original = f.filename
+    safe = secure_filename(original)
+    stamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+    stored = f"{c.course_code}_{stamp}_{safe}"
+
+    save_path = os.path.join(UPLOAD_COURSE_DIR, stored)
+    f.save(save_path)
+
+    cf = CourseFile(
+        course_id=course_id,
+        file_type=(request.form.get("file_type") or "").strip() or None,
+        original_name=original,
+        stored_name=stored,
+        note=(request.form.get("note") or "").strip() or None,
+    )
+    db.session.add(cf)
+    db.session.commit()
+
+    flash("แนบไฟล์แล้ว", "success")
+    return redirect(url_for("course_edit", course_id=course_id))
+    
+
 # -------------------------------------------------
 # Run (Local Only)
 # -------------------------------------------------
