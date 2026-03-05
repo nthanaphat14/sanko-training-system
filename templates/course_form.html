@@ -64,6 +64,12 @@
       <input class="input" name="location" value="{{ course.location if course else '' }}">
     </div>
 
+    <div class="field">
+      <label>Training Date</label>
+      <input class="input" type="date" name="training_date"
+      value="{{ course.training_date if course else '' }}">
+    </div>
+    
     <div class="field" style="grid-column:1/-1;">
       <label>Description</label>
       <input class="input" name="description" value="{{ course.description if course else '' }}">
