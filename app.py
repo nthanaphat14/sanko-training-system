@@ -344,6 +344,40 @@ def get_current_user():
         return None
     return db.session.get(User, uid)
 
+def audit(action, detail=""):
+    """
+    บันทึกการใช้งานลง audit_logs
+    action: ชื่อเหตุการณ์ เช่น LOGIN_SUCCESS, EMPLOYEE_ADD
+    detail: รายละเอียดเพิ่มเติม
+    """
+    try:
+        # ดึง email จาก session ก่อน
+        user_email = session.get("user_email")
+
+        # ถ้าไม่มีใน session ให้ลองดึงจาก user ปัจจุบัน
+        if not user_email:
+            u = get_current_user()
+            if u:
+                user_email = u.email
+
+        # IP address
+        ip = request.headers.get("X-Forwarded-For", request.remote_addr)
+        if ip and "," in ip:
+            ip = ip.split(",")[0].strip()
+
+        log = AuditLog(
+            user_email=user_email,
+            action=action,
+            detail=detail,
+            ip=ip,
+        )
+        db.session.add(log)
+        db.session.commit()
+
+    except Exception as e:
+        # กันระบบหลักพังเพราะ log
+        db.session.rollback()
+        print("AUDIT LOG ERROR:", e)
 
 def build_training_query(args):
     q = (args.get("q") or "").strip()
@@ -738,6 +772,8 @@ def login_post():
 
     session.clear()
     session["uid"] = u.id
+    session["user_email"] = u.email
+    session["user_role"] = u.role
     session.permanent = True
 
     audit("LOGIN_SUCCESS", f"email={email}")
@@ -997,6 +1033,7 @@ def employee_new():
         emp = Employee(em_id=em_id, first_name_th=first_name_th)
         db.session.add(emp)
         db.session.commit()
+        audit("EMPLOYEE_ADD", f"em_id={emp.em_id}")
 
         flash("เพิ่มพนักงานเรียบร้อย", "success")
         return redirect(url_for("employees_list"))
@@ -1034,6 +1071,8 @@ def employee_edit(em_id):
 
         except (IntegrityError, DataError) as e:
             db.session.rollback()
+            audit("EMPLOYEE_EDIT", f"em_id={emp.em_id}")
+            
             flash("บันทึกไม่สำเร็จ: ข้อมูลไม่ถูกต้องหรือซ้ำในระบบ", "error")
         except Exception as e:
             db.session.rollback()
@@ -1045,6 +1084,9 @@ def employee_delete(em_id):
     emp = Employee.query.filter_by(em_id=em_id).first_or_404()
     db.session.delete(emp)
     db.session.commit()
+    em_id = emp.em_id
+    audit("EMPLOYEE_EDIT", f"em_id={emp.em_id}")
+    
     flash("ลบข้อมูลเรียบร้อย", "success")
     return redirect(url_for("employees_list"))
 
@@ -1500,6 +1542,7 @@ def trainings_import():
 
     except Exception as e:
         db.session.rollback()
+    
         flash(f"Import ไม่สำเร็จ: {e}", "error")
         return redirect(url_for("trainings_import"))
 
@@ -1533,6 +1576,31 @@ def import_batch_detail(batch_id):
         duplicated=duplicated,
         skipped=skipped,
     )                    
+
+@app.get("/admin/audit-logs")
+def admin_audit_logs():
+    u = get_current_user()
+    if not u or u.role != "admin":
+        abort(403)
+
+    q = (request.args.get("q") or "").strip()
+
+    query = AuditLog.query
+
+    if q:
+        like = f"%{q}%"
+        query = query.filter(
+            or_(
+                AuditLog.user_email.ilike(like),
+                AuditLog.action.ilike(like),
+                AuditLog.detail.ilike(like),
+                AuditLog.ip.ilike(like),
+            )
+        )
+
+    rows = query.order_by(AuditLog.created_at.desc(), AuditLog.id.desc()).limit(500).all()
+
+    return render_template("admin_audit_logs.html", rows=rows, q=q)
 
 @app.get("/employees/export")
 @login_required
@@ -2297,6 +2365,7 @@ def course_new():
 
     db.session.add(c)
     db.session.commit()
+    audit("COURSE_ADD", f"course_code={c.course_code}")
 
     flash(f"สร้างหลักสูตรสำเร็จ: {code}", "success")
     return redirect(url_for("course_edit", course_id=c.id))
@@ -2322,6 +2391,7 @@ def course_edit(course_id):
             c.training_date = datetime.strptime(training_date,"%Y-%m-%d").date()
         
         db.session.commit()
+        audit("COURSE_EDIT", f"course_code={c.course_code}")
         flash("บันทึกข้อมูลหลักสูตรแล้ว", "success")
         return redirect(url_for("course_edit", course_id=course_id))
 
@@ -2361,6 +2431,8 @@ def course_cost_add(course_id):
 
     db.session.add(item)
     db.session.commit()
+    audit("COURSE_EDIT", f"course_code={c.course_code}")
+    
     flash("เพิ่มค่าใช้จ่ายแล้ว", "success")
     return redirect(url_for("course_edit", course_id=course_id))
     
@@ -2398,6 +2470,7 @@ def course_file_add(course_id):
     )
     db.session.add(cf)
     db.session.commit()
+    audit("COURSE_FILE_ADD", f"course_code={c.course.course_code}, file={cf.original_name}")
 
     flash("แนบไฟล์แล้ว", "success")
     return redirect(url_for("course_edit", course_id=course_id))
@@ -2425,7 +2498,8 @@ def course_file_delete(file_id):
 
     db.session.delete(f)
     db.session.commit()
-
+    audit("COURSE_FILE_DELETE", f"file_id={file_id}, course_id={course_id}")
+    
     flash("ลบไฟล์แล้ว","success")
 
     return redirect(url_for("course_edit",course_id=course_id))
@@ -2444,6 +2518,7 @@ def course_cost_delete(cost_id):
 
     db.session.delete(item)
     db.session.commit()
+    audit("COURSE_COST_DELETE", f"cost_id={cost_id}, course_id={course_id}")
 
     flash("ลบค่าใช้จ่ายแล้ว","success")
 
