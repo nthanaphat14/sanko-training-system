@@ -44,6 +44,8 @@ from werkzeug.utils import secure_filename
 import os
 from flask import abort, request
 from flask_login import current_user
+from flask_login import LoginManager, current_user, login_user, logout_user, login_required
+from flask_login import UserMixin
 
 # -------------------------------------------------
 # App Config
@@ -51,6 +53,14 @@ from flask_login import current_user
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "super-secret-key")
 ALLOWED_ADMIN_EMAIL = "hr02@sankothai.net"
+ogin_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = "login"
+login_manager.login_message = "กรุณาเข้าสู่ระบบก่อน"
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
 
 @app.before_request
 def block_non_owner():
@@ -58,23 +68,34 @@ def block_non_owner():
         "login",
         "logout",
         "static",
+        "robots",
+        "favicon",
     }
 
-    # อนุญาต route public ที่จำเป็น
+    # กันกรณี endpoint เป็น None
+    if request.endpoint is None:
+        return
+
     if request.endpoint in public_endpoints:
         return
 
-    # ถ้ายังไม่ login ปล่อยให้ route เดิมจัดการ redirect เอง
-    if not current_user or not current_user.is_authenticated:
+    # ถ้ายังไม่ login ให้ route อื่นจัดการเอง
+    try:
+        if not current_user.is_authenticated:
+            return
+    except Exception:
         return
 
     user_email = getattr(current_user, "email", None)
-
     if not user_email:
         abort(403)
 
     if user_email.strip().lower() != ALLOWED_ADMIN_EMAIL.lower():
         abort(403)
+
+@app.route("/favicon.ico")
+def favicon():
+    return "", 204
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_COURSE_DIR = os.path.join(BASE_DIR, "static", "uploads", "courses")
@@ -137,6 +158,12 @@ db = SQLAlchemy(app)
 # -------------------------------------------------
 # Model
 # -------------------------------------------------
+class User(UserMixin, db.Model):
+    __tablename__ = "users"
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(255), unique=True, nullable=False)
+    password_hash = db.Column(db.String(255), nullable=False)
+
 class User(db.Model):
     __tablename__ = "users"
     id = db.Column(db.Integer, primary_key=True)
