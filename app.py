@@ -42,12 +42,40 @@ from datetime import datetime, date
 from sqlalchemy import func
 from werkzeug.utils import secure_filename
 import os
+from flask import abort, request
+from flask_login import current_user
 
 # -------------------------------------------------
 # App Config
 # -------------------------------------------------
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "super-secret-key")
+ALLOWED_ADMIN_EMAIL = "hr02@sankothai.net"
+
+@app.before_request
+def block_non_owner():
+    public_endpoints = {
+        "login",
+        "logout",
+        "static",
+    }
+
+    # อนุญาต route public ที่จำเป็น
+    if request.endpoint in public_endpoints:
+        return
+
+    # ถ้ายังไม่ login ปล่อยให้ route เดิมจัดการ redirect เอง
+    if not current_user or not current_user.is_authenticated:
+        return
+
+    user_email = getattr(current_user, "email", None)
+
+    if not user_email:
+        abort(403)
+
+    if user_email.strip().lower() != ALLOWED_ADMIN_EMAIL.lower():
+        abort(403)
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_COURSE_DIR = os.path.join(BASE_DIR, "static", "uploads", "courses")
 os.makedirs(UPLOAD_COURSE_DIR, exist_ok=True)
