@@ -2,82 +2,119 @@
 {% block content %}
 
 <div class="page-head">
-  <h1>{{ event.event_code }}</h1>
+  <div>
+    <h1>{{ event.event_code }}</h1>
+    <div class="muted">{{ event.title }}</div>
+  </div>
+
+  <div>
+    <a class="btn ghost" href="{{ url_for('events_list') }}">Back</a>
+  </div>
 </div>
 
 <div class="card">
+  <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:12px;">
+    <div>
+      <div class="muted">Course</div>
+      <div><b>{{ event.course.course_code }}</b> • {{ event.course.course_name }}</div>
+    </div>
 
-<h3>Event Info</h3>
+    <div>
+      <div class="muted">Type</div>
+      <div>{{ event.event_type }}</div>
+    </div>
 
-<p><b>Course</b> : {{ event.course.course_name }}</p>
+    <div>
+      <div class="muted">Date</div>
+      <div>
+        {{ event.start_date }}
+        {% if event.end_date %} - {{ event.end_date }}{% endif %}
+      </div>
+    </div>
 
-<p><b>Date</b> : {{ event.start_date }}</p>
+    <div>
+      <div class="muted">Status</div>
+      <div>{{ event.status }}</div>
+    </div>
 
-<p><b>Location</b> : {{ event.location }}</p>
+    <div>
+      <div class="muted">Location</div>
+      <div>{{ event.location or "-" }}</div>
+    </div>
 
+    <div>
+      <div class="muted">Trainer</div>
+      <div>{{ event.trainer or "-" }}</div>
+    </div>
+  </div>
 </div>
 
 <div class="card">
+  <h3 style="margin-top:0;">Add Participant</h3>
 
-<h3>Cost</h3>
-
-<table class="table">
-
-<thead>
-<tr>
-<th>Type</th>
-<th>Before VAT</th>
-<th>VAT</th>
-<th>Total</th>
-</tr>
-</thead>
-
-<tbody>
-
-{% for x in event.cost_items %}
-
-<tr>
-
-<td>{{ x.cost_type }}</td>
-
-<td>{{ "{:,.2f}".format(x.amount_before_vat) }}</td>
-
-<td>{{ "{:,.2f}".format(x.amount_vat) }}</td>
-
-<td><b>{{ "{:,.2f}".format(x.amount_total) }}</b></td>
-
-</tr>
-
-{% endfor %}
-
-</tbody>
-
-</table>
-
+  <form method="post" action="{{ url_for('event_participant_add', event_id=event.id) }}"
+        style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+    <input class="input" name="emp_id" placeholder="กรอก Emp ID" style="width:220px;" required>
+    <button class="btn primary" type="submit">+ Add Participant</button>
+  </form>
 </div>
 
 <div class="card">
+  <h3 style="margin-top:0;">Participants</h3>
 
-<h3>Add Cost</h3>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Emp ID</th>
+          <th>Name</th>
+          <th>Section</th>
+          <th>Position</th>
+          <th class="nowrap">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for x in participants %}
+        <tr>
+          <td class="nowrap">{{ x.row.emp_id }}</td>
 
-<form method="post" action="{{ url_for('event_cost_add', event_id=event.id) }}">
+          <td>
+            {% if x.emp %}
+              {{ x.emp.th_full() }}
+            {% else %}
+              <span class="muted">ไม่พบข้อมูลพนักงาน</span>
+            {% endif %}
+          </td>
 
-<div class="grid-3">
+          <td>
+            {% if x.emp %}{{ x.emp.section or "" }}{% endif %}
+          </td>
 
-<input class="input" name="cost_type" placeholder="Cost Type">
+          <td>
+            {% if x.emp %}{{ x.emp.position or "" }}{% endif %}
+          </td>
 
-<input class="input" name="amount_before_vat" placeholder="Amount">
+          <td class="nowrap">
+            <form method="post"
+                  action="{{ url_for('event_participant_delete', participant_id=x.row.id) }}"
+                  style="display:inline;"
+                  onsubmit="return confirm('ลบผู้เข้าอบรมคนนี้ออกจาก Event?');">
+              <button class="btn sm danger" type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
 
-<input class="input" name="vat_rate" value="7">
-
-</div>
-
-<button class="btn" type="submit">
-Add Cost
-</button>
-
-</form>
-
+        {% if participants|length == 0 %}
+        <tr>
+          <td colspan="5" class="muted center" style="padding:14px;">
+            ยังไม่มีผู้เข้าอบรม
+          </td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
 </div>
 
 {% endblock %}
