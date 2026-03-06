@@ -35,17 +35,31 @@
           {{ email }} ({{ role }})
         </span>
 
-        <a class="btn ghost" href="{{ url_for('change_password') }}">
-          Change Password
-        </a>
+        <div class="dropdown">
 
-        {% if role == "admin" %}
-          <a class="btn ghost" href="{{ url_for('admin_users') }}">
-            Admin Users
-          </a>
-          <a class="btn ghost" href="{{ url_for('admin_audit_logs') }}">
-            Audit Logs
-          </a>
+          <button class="btn ghost dropdown-btn">
+            Settings
+          </button>
+
+          <div class="dropdown-menu">
+
+            <a href="{{ url_for('change_password') }}">
+              Change Password
+            </a>
+
+            {% if role == "admin" %}
+            <a href="{{ url_for('admin_users') }}">
+              Admin Users
+            </a>
+            {% endif %}
+
+            <a href="{{ url_for('audit_logs') }}">
+              Audit Logs
+            </a>
+
+          </div>
+
+        </div>
         {% endif %}
 
         <a class="btn danger" href="{{ url_for('logout') }}">
