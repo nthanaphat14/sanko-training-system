@@ -9,6 +9,8 @@
 <body>
 
   {% set is_login_page = request.endpoint in ['login', 'login_post'] %}
+  {% set role = session.get("user_role") %}
+  {% set email = session.get("user_email") %}
 
   {% if not is_login_page %}
   <div class="topbar">
@@ -23,12 +25,7 @@
       <a class="btn" href="{{ url_for('dashboard') }}">Dashboard</a>
       <a class="btn" href="{{ url_for('report_training') }}">Report</a>
       <a class="btn ghost" href="{{ url_for('courses_list') }}">Training Course</a>
-      <a class="btn ghost" href="{{ url_for('events_list') }}">
-      Training Events
-      </a>
-
-      {% set role = session.get("user_role") %}
-      {% set email = session.get("user_email") %}
+      <a class="btn ghost" href="{{ url_for('events_list') }}">Training Events</a>
 
       {% if email %}
         <span class="muted" style="margin-left:15px;">
@@ -36,31 +33,19 @@
         </span>
 
         <div class="dropdown">
-
-          <button class="btn ghost dropdown-btn">
+          <button class="btn ghost dropdown-btn" type="button">
             Settings
           </button>
 
           <div class="dropdown-menu">
-
-            <a href="{{ url_for('change_password') }}">
-              Change Password
-            </a>
+            <a href="{{ url_for('change_password') }}">Change Password</a>
 
             {% if role == "admin" %}
-            <a href="{{ url_for('admin_users') }}">
-              Admin Users
-            </a>
+              <a href="{{ url_for('admin_users') }}">Admin Users</a>
+              <a href="{{ url_for('admin_audit_logs') }}">Audit Logs</a>
             {% endif %}
-
-            <a href="{{ url_for('audit_logs') }}">
-              Audit Logs
-            </a>
-
           </div>
-
         </div>
-        {% endif %}
 
         <a class="btn danger" href="{{ url_for('logout') }}">
           Logout
