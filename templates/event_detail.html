@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="page-head">
+  <h1>{{ event.event_code }}</h1>
+</div>
+
+<div class="card">
+
+<h3>Event Info</h3>
+
+<p><b>Course</b> : {{ event.course.course_name }}</p>
+
+<p><b>Date</b> : {{ event.start_date }}</p>
+
+<p><b>Location</b> : {{ event.location }}</p>
+
+</div>
+
+<div class="card">
+
+<h3>Cost</h3>
+
+<table class="table">
+
+<thead>
+<tr>
+<th>Type</th>
+<th>Before VAT</th>
+<th>VAT</th>
+<th>Total</th>
+</tr>
+</thead>
+
+<tbody>
+
+{% for x in event.cost_items %}
+
+<tr>
+
+<td>{{ x.cost_type }}</td>
+
+<td>{{ "{:,.2f}".format(x.amount_before_vat) }}</td>
+
+<td>{{ "{:,.2f}".format(x.amount_vat) }}</td>
+
+<td><b>{{ "{:,.2f}".format(x.amount_total) }}</b></td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+</div>
+
+<div class="card">
+
+<h3>Add Cost</h3>
+
+<form method="post" action="{{ url_for('event_cost_add', event_id=event.id) }}">
+
+<div class="grid-3">
+
+<input class="input" name="cost_type" placeholder="Cost Type">
+
+<input class="input" name="amount_before_vat" placeholder="Amount">
+
+<input class="input" name="vat_rate" value="7">
+
+</div>
+
+<button class="btn" type="submit">
+Add Cost
+</button>
+
+</form>
+
+</div>
+
+{% endblock %}
