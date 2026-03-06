@@ -1533,7 +1533,8 @@ def trainings_import():
         batch.skipped = skipped
 
         db.session.commit()
-
+        audit("TRAINING_IMPORT", f"file={filename}, added={added}, updated={updated}, skipped={skipped}")
+        
         flash(
             f"Import สำเร็จ: เพิ่ม {added} | อัปเดต {updated} | ซ้ำ {duplicated} | ข้าม {skipped}",
             "success"
