@@ -336,23 +336,34 @@ class TrainingEvent(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
 
-    event_code = db.Column(db.String(40), unique=True, index=True)
-
     course_id = db.Column(
         db.Integer,
         db.ForeignKey("training_courses.id"),
-        nullable=False
+        nullable=False,
+        index=True
     )
 
-    start_date = db.Column(db.Date)
-    end_date = db.Column(db.Date)
+    event_type = db.Column(db.String(20), nullable=False, index=True)
+    event_code = db.Column(db.String(30), nullable=False, unique=True, index=True)
 
-    location = db.Column(db.String(200))
-    trainer = db.Column(db.String(200))
+    title = db.Column(db.String(255), nullable=False)
+    location = db.Column(db.String(255), nullable=True)
+
+    start_date = db.Column(db.Date, nullable=False)
+    end_date = db.Column(db.Date, nullable=True)
+
+    trainer = db.Column(db.String(255), nullable=True)
+
+    description = db.Column(db.Text, nullable=True)
+    status = db.Column(db.String(30), nullable=False, default="PLANNED")
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    course = db.relationship("TrainingCourse")
+    course = db.relationship(
+        "TrainingCourse",
+        backref=db.backref("events", lazy=True)
+    )
 
 # -------------------------------------------------
 # Helper Functions
