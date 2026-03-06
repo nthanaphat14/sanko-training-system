@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="page-head">
+  <div>
+    <h1>New Training Event</h1>
+    <div class="muted">สร้างรอบอบรมใหม่</div>
+  </div>
+</div>
+
+<div class="card">
+  <form method="post" style="display:grid; grid-template-columns:repeat(2,1fr); gap:12px;">
+
+    <div class="field" style="grid-column:1/-1;">
+      <label>Course</label>
+      <select class="input" name="course_id" required>
+        <option value="">-- เลือกหลักสูตร --</option>
+        {% for c in courses %}
+          <option value="{{ c.id }}">
+            {{ c.course_code }} • {{ c.course_name }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Event Type</label>
+      <select class="input" name="event_type" required>
+        <option value="">-- เลือกประเภท --</option>
+        <option value="OJT">OJT</option>
+        <option value="INH">INHOUSE</option>
+        <option value="EXT">EXTERNAL</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>Title</label>
+      <input class="input" name="title" placeholder="ถ้าไม่กรอก จะใช้ชื่อหลักสูตร">
+    </div>
+
+    <div class="field">
+      <label>Start Date</label>
+      <input class="input" type="date" name="start_date" required>
+    </div>
+
+    <div class="field">
+      <label>End Date</label>
+      <input class="input" type="date" name="end_date">
+    </div>
+
+    <div class="field">
+      <label>Location</label>
+      <input class="input" name="location">
+    </div>
+
+    <div class="field">
+      <label>Trainer</label>
+      <input class="input" name="trainer">
+    </div>
+
+    <div style="grid-column:1/-1; display:flex; gap:10px;">
+      <button class="btn primary" type="submit">Save Event</button>
+      <a class="btn ghost" href="{{ url_for('events_list') }}">Cancel</a>
+    </div>
+
+  </form>
+</div>
+
+{% endblock %}
