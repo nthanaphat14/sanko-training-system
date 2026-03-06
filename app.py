@@ -2735,6 +2735,81 @@ def events_new():
     flash("สร้าง Training Event สำเร็จ", "success")
 
     return redirect(url_for("events_list"))
+
+@app.get("/events/<int:event_id>")
+def event_detail(event_id):
+    event = TrainingEvent.query.get_or_404(event_id)
+
+    # ดึง participants แล้วไปหา Employee จริง
+    participant_rows = TrainingEventParticipant.query.filter_by(
+        event_id=event.id
+    ).order_by(TrainingEventParticipant.id.asc()).all()
+
+    participants = []
+    for p in participant_rows:
+        emp = Employee.query.filter_by(em_id=p.emp_id).first()
+        participants.append({
+            "row": p,
+            "emp": emp
+        })
+
+    return render_template(
+        "event_detail.html",
+        event=event,
+        participants=participants
+    )
+
+@app.post("/events/<int:event_id>/participants/add")
+def event_participant_add(event_id):
+    event = TrainingEvent.query.get_or_404(event_id)
+
+    emp_id = (request.form.get("emp_id") or "").strip()
+
+    if not emp_id:
+        flash("กรุณาระบุ Emp ID", "error")
+        return redirect(url_for("event_detail", event_id=event.id))
+
+    emp = Employee.query.filter_by(em_id=emp_id).first()
+    if not emp:
+        flash("ไม่พบ Emp ID นี้ในระบบพนักงาน", "error")
+        return redirect(url_for("event_detail", event_id=event.id))
+
+    exists = TrainingEventParticipant.query.filter_by(
+        event_id=event.id,
+        emp_id=emp_id
+    ).first()
+
+    if exists:
+        flash("พนักงานคนนี้อยู่ใน Event แล้ว", "error")
+        return redirect(url_for("event_detail", event_id=event.id))
+
+    row = TrainingEventParticipant(
+        event_id=event.id,
+        emp_id=emp_id
+    )
+
+    db.session.add(row)
+    db.session.commit()
+
+    audit("EVENT_PARTICIPANT_ADD", f"event_code={event.event_code}, emp_id={emp_id}")
+    flash("เพิ่มผู้เข้าอบรมสำเร็จ", "success")
+
+    return redirect(url_for("event_detail", event_id=event.id))
+
+@app.post("/events/participants/<int:participant_id>/delete")
+def event_participant_delete(participant_id):
+    row = TrainingEventParticipant.query.get_or_404(participant_id)
+
+    event_id = row.event_id
+    emp_id = row.emp_id
+
+    db.session.delete(row)
+    db.session.commit()
+
+    audit("EVENT_PARTICIPANT_DELETE", f"event_id={event_id}, emp_id={emp_id}")
+    flash("ลบผู้เข้าอบรมออกจาก Event แล้ว", "success")
+
+    return redirect(url_for("event_detail", event_id=event_id))
     
 # -------------------------------------------------
 # Run (Local Only)
