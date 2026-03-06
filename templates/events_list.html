@@ -2,54 +2,60 @@
 {% block content %}
 
 <div class="page-head">
-  <h1>Training Events</h1>
+  <div>
+    <h1>Training Events</h1>
+  </div>
+
+  <div>
+    <a class="btn primary" href="{{ url_for('events_new') }}">
+      + New Event
+    </a>
+  </div>
 </div>
 
 <div class="card">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Event Code</th>
+        <th>Course</th>
+        <th>Date</th>
+        <th>Location</th>
+      </tr>
+    </thead>
 
-<table class="table">
+    <tbody>
+      {% for e in rows %}
+      <tr>
+        <td>
+          <a href="{{ url_for('event_detail', event_id=e.id) }}">
+            {{ e.event_code }}
+          </a>
+        </td>
 
-<thead>
-<tr>
-<th>Event Code</th>
-<th>Course</th>
-<th>Date</th>
-<th>Location</th>
-</tr>
-</thead>
+        <td>
+          {{ e.course.course_name }}
+        </td>
 
-<tbody>
+        <td>
+          {{ e.start_date }}
+        </td>
 
-{% for e in rows %}
+        <td>
+          {{ e.location or "" }}
+        </td>
+      </tr>
+      {% endfor %}
 
-<tr>
-
-<td>
-<a href="{{ url_for('event_detail', event_id=e.id) }}">
-{{ e.event_code }}
-</a>
-</td>
-
-<td>
-{{ e.course.course_name }}
-</td>
-
-<td>
-{{ e.start_date }}
-</td>
-
-<td>
-{{ e.location }}
-</td>
-
-</tr>
-
-{% endfor %}
-
-</tbody>
-
-</table>
-
+      {% if rows|length == 0 %}
+      <tr>
+        <td colspan="4" class="muted center" style="padding:14px;">
+          ยังไม่มี Training Event
+        </td>
+      </tr>
+      {% endif %}
+    </tbody>
+  </table>
 </div>
 
 {% endblock %}
