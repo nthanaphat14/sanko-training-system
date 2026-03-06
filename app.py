@@ -302,6 +302,34 @@ class CourseCostItem(db.Model):
 
     course = db.relationship("TrainingCourse", backref=db.backref("cost_items", lazy=True))
 
+class EventCostItem(db.Model):
+    __tablename__ = "event_cost_items"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    event_id = db.Column(
+        db.Integer,
+        db.ForeignKey("training_events.id"),
+        nullable=False,
+        index=True
+    )
+
+    cost_type = db.Column(db.String(80), nullable=False)
+
+    amount_before_vat = db.Column(db.Float)
+    vat_rate = db.Column(db.Float, default=7)
+
+    amount_vat = db.Column(db.Float)
+    amount_total = db.Column(db.Float)
+
+    remark = db.Column(db.String(255))
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    event = db.relationship(
+        "TrainingEvent",
+        backref=db.backref("cost_items", lazy=True)
+    )
 
 # -------------------------------------------------
 # Helper Functions
