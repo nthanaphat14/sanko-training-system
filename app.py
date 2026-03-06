@@ -688,6 +688,7 @@ def safe_date(v):
 # -------------------------------------------------
 # Routes
 # -------------------------------------------------
+
 @app.get("/login")
 def login():
     u = get_current_user()
@@ -702,40 +703,48 @@ def login_post():
     password = request.form.get("password") or ""
 
     u = User.query.filter_by(email=email).first()
+
     if not u or not u.is_active:
         audit("LOGIN_FAIL", f"email={email}")
         flash("User หรือ Password ไม่ถูกต้อง", "error")
         return redirect(url_for("login"))
 
+    # ถ้าโดน lock
     if u.locked_until and u.locked_until > datetime.utcnow():
         audit("LOGIN_LOCKED", f"email={email}")
-        flash("บัญชีถูกล็อกชั่วคราว (ลองใหม่อีกครั้งภายหลัง)", "error")
+        flash("บัญชีถูกล็อกชั่วคราว", "error")
         return redirect(url_for("login"))
 
+    # password ไม่ถูก
     if not check_password_hash(u.password_hash, password):
         u.failed_attempts = (u.failed_attempts or 0) + 1
+
         if u.failed_attempts >= 8:
             u.locked_until = datetime.utcnow() + timedelta(minutes=10)
             u.failed_attempts = 0
+
         db.session.commit()
 
         audit("LOGIN_FAIL", f"email={email}")
         flash("User หรือ Password ไม่ถูกต้อง", "error")
         return redirect(url_for("login"))
 
-    # success
+    # LOGIN SUCCESS
     u.failed_attempts = 0
     u.locked_until = None
     u.last_login_at = datetime.utcnow()
+
     db.session.commit()
 
     session.clear()
-    session["uid"] = u.id          # ✅ สำคัญ: ใช้ key ให้ตรงกับ get_current_user()
+    session["uid"] = u.id
     session.permanent = True
 
     audit("LOGIN_SUCCESS", f"email={email}")
+
     flash("เข้าสู่ระบบสำเร็จ", "success")
     return redirect(url_for("employees_list"))
+
 
 @app.get("/logout")
 def logout():
@@ -743,10 +752,18 @@ def logout():
     session.clear()
     return redirect(url_for("login"))
 
+
+# -------------------------------------------------
+# Change Password
+# -------------------------------------------------
+
 @app.route("/change-password", methods=["GET", "POST"])
-@login_required
 def change_password():
     u = get_current_user()
+
+    if not u:
+        return redirect(url_for("login"))
+
     if request.method == "GET":
         return render_template("change_password.html", user=u)
 
@@ -767,23 +784,37 @@ def change_password():
         return redirect(url_for("change_password"))
 
     u.password_hash = generate_password_hash(new_pw)
+
     db.session.commit()
+
     audit("CHANGE_PASSWORD", f"user={u.email}")
+
     flash("เปลี่ยนรหัสผ่านสำเร็จ", "success")
     return redirect(url_for("employees_list"))
 
 
-# ---------- Admin: ดูรายชื่อ user + reset ----------
+# -------------------------------------------------
+# Admin Users
+# -------------------------------------------------
+
 @app.get("/admin/users")
-@role_required("admin")
 def admin_users():
+    u = get_current_user()
+
+    if not u or u.role != "admin":
+        abort(403)
+
     users = User.query.order_by(User.email.asc()).all()
     return render_template("admin_users.html", users=users)
 
 
 @app.post("/admin/users/<int:user_id>/reset-password")
-@role_required("admin")
 def admin_reset_password(user_id):
+
+    u = get_current_user()
+    if not u or u.role != "admin":
+        abort(403)
+
     target = User.query.get_or_404(user_id)
     new_pw = request.form.get("new_password") or ""
 
@@ -792,26 +823,43 @@ def admin_reset_password(user_id):
         return redirect(url_for("admin_users"))
 
     target.password_hash = generate_password_hash(new_pw)
+
     db.session.commit()
-    audit("RESET_PASSWORD", f"admin={session.get('user_email')} reset={target.email}")
+
+    audit("RESET_PASSWORD", f"admin={u.email} reset={target.email}")
+
     flash(f"รีเซ็ตรหัสผ่านให้ {target.email} สำเร็จ", "success")
+
     return redirect(url_for("admin_users"))
+
+
+# -------------------------------------------------
+# Require login globally
+# -------------------------------------------------
 
 @app.before_request
 def require_login_globally():
-    open_paths = set(["/login", "/healthz"])
-    if request.path.startswith("/static/"):
-        return None
-    if request.path in open_paths:
-        return None
 
-    # ปล่อยให้ POST /login ผ่าน
+    open_paths = {"/login", "/healthz"}
+
+    if request.path.startswith("/static/"):
+        return
+
+    if request.path in open_paths:
+        return
+
     if request.path == "/login" and request.method == "POST":
-        return None
+        return
 
     u = get_current_user()
+
     if not u or not u.is_active:
         return redirect(url_for("login"))
+
+
+# -------------------------------------------------
+# Root
+# -------------------------------------------------
 
 @app.get("/")
 def root():
