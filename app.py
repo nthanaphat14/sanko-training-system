@@ -331,6 +331,29 @@ class EventCostItem(db.Model):
         backref=db.backref("cost_items", lazy=True)
     )
 
+class TrainingEvent(db.Model):
+    __tablename__ = "training_events"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    event_code = db.Column(db.String(40), unique=True, index=True)
+
+    course_id = db.Column(
+        db.Integer,
+        db.ForeignKey("training_courses.id"),
+        nullable=False
+    )
+
+    start_date = db.Column(db.Date)
+    end_date = db.Column(db.Date)
+
+    location = db.Column(db.String(200))
+    trainer = db.Column(db.String(200))
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    course = db.relationship("TrainingCourse")
+
 # -------------------------------------------------
 # Helper Functions
 # -------------------------------------------------
