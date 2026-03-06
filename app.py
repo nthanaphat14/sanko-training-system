@@ -58,83 +58,11 @@ login_manager.init_app(app)
 login_manager.login_view = "login"
 login_manager.login_message = "กรุณาเข้าสู่ระบบก่อน"
 
-@login_manager.user_loader
-def load_user(user_id):
-    return User.query.get(int(user_id))
-
-@app.before_request
-def block_non_owner():
-    public_endpoints = {
-        "login",
-        "logout",
-        "static",
-        "robots",
-        "favicon",
-    }
-
-    # กันกรณี endpoint เป็น None
-    if request.endpoint is None:
-        return
-
-    if request.endpoint in public_endpoints:
-        return
-
-    # ถ้ายังไม่ login ให้ route อื่นจัดการเอง
-    try:
-        if not current_user.is_authenticated:
-            return
-    except Exception:
-        return
-
-    user_email = getattr(current_user, "email", None)
-    if not user_email:
-        abort(403)
-
-    if user_email.strip().lower() != ALLOWED_ADMIN_EMAIL.lower():
-        abort(403)
-
-@app.route("/favicon.ico")
-def favicon():
-    return "", 204
-
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_COURSE_DIR = os.path.join(BASE_DIR, "static", "uploads", "courses")
 os.makedirs(UPLOAD_COURSE_DIR, exist_ok=True)
 
 ALLOWED_EXT = {"pdf", "png", "jpg", "jpeg", "xlsx"}
-
-def allowed_file(filename: str) -> bool:
-    if not filename or "." not in filename:
-        return False
-    ext = filename.rsplit(".", 1)[1].lower()
-    return ext in ALLOWED_EXT
-
-def gen_course_code(course_type: str, dt: datetime | None = None) -> str:
-    """
-    รูปแบบ: INH-YYYYMM-0001 (running แยกตาม type และรีเซ็ตทุกเดือน)
-    """
-    dt = dt or datetime.utcnow()
-    yyyymm = f"{dt.year}{dt.month:02d}"
-    prefix = (course_type or "").strip().upper()
-
-    # ดึงเลข running ล่าสุดของเดือนนี้+ประเภทนี้
-    like = f"{prefix}-{yyyymm}-%"
-    last_code = db.session.query(func.max(TrainingCourse.course_code)).filter(
-        TrainingCourse.course_code.ilike(like)
-    ).scalar()
-
-    if last_code:
-        # last_code เช่น INH-202603-0012
-        try:
-            last_run = int(last_code.split("-")[-1])
-        except Exception:
-            last_run = 0
-    else:
-        last_run = 0
-
-    new_run = last_run + 1
-    return f"{prefix}-{yyyymm}-{new_run:04d}"
-
 
 # DATABASE
 db_url = (os.environ.get("DATABASE_URL") or "").strip()
@@ -391,6 +319,38 @@ class CourseCostItem(db.Model):
 # -------------------------------------------------
 # Helper Functions
 # -------------------------------------------------
+def allowed_file(filename: str) -> bool:
+    if not filename or "." not in filename:
+        return False
+    ext = filename.rsplit(".", 1)[1].lower()
+    return ext in ALLOWED_EXT
+
+def gen_course_code(course_type: str, dt: datetime | None = None) -> str:
+    """
+    รูปแบบ: INH-YYYYMM-0001 (running แยกตาม type และรีเซ็ตทุกเดือน)
+    """
+    dt = dt or datetime.utcnow()
+    yyyymm = f"{dt.year}{dt.month:02d}"
+    prefix = (course_type or "").strip().upper()
+
+    # ดึงเลข running ล่าสุดของเดือนนี้+ประเภทนี้
+    like = f"{prefix}-{yyyymm}-%"
+    last_code = db.session.query(func.max(TrainingCourse.course_code)).filter(
+        TrainingCourse.course_code.ilike(like)
+    ).scalar()
+
+    if last_code:
+        # last_code เช่น INH-202603-0012
+        try:
+            last_run = int(last_code.split("-")[-1])
+        except Exception:
+            last_run = 0
+    else:
+        last_run = 0
+
+    new_run = last_run + 1
+    return f"{prefix}-{yyyymm}-{new_run:04d}"
+    
 def get_current_user():
     uid = session.get("uid")
     if not uid:
@@ -452,6 +412,45 @@ def build_training_query(args):
 
     return query, q, year, month
 
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
+@app.before_request
+def block_non_owner():
+    public_endpoints = {
+        "login",
+        "logout",
+        "static",
+        "robots",
+        "favicon",
+    }
+
+    # กันกรณี endpoint เป็น None
+    if request.endpoint is None:
+        return
+
+    if request.endpoint in public_endpoints:
+        return
+
+    # ถ้ายังไม่ login ให้ route อื่นจัดการเอง
+    try:
+        if not current_user.is_authenticated:
+            return
+    except Exception:
+        return
+
+    user_email = getattr(current_user, "email", None)
+    if not user_email:
+        abort(403)
+
+    if user_email.strip().lower() != ALLOWED_ADMIN_EMAIL.lower():
+        abort(403)
+
+@app.route("/favicon.ico")
+def favicon():
+    return "", 204
+    
 @app.context_processor
 def inject_helpers():
     return {
