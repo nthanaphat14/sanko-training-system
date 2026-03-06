@@ -2553,7 +2553,50 @@ def course_cost_delete(cost_id):
 
     return redirect(url_for("course_edit",course_id=course_id))
 
-    
+@app.get("/events/<int:event_id>")
+def event_detail(event_id):
+
+    event = TrainingEvent.query.get_or_404(event_id)
+
+    return render_template(
+        "event_detail.html",
+        event=event
+    )
+
+@app.post("/events/<int:event_id>/cost/add")
+def event_cost_add(event_id):
+
+    event = TrainingEvent.query.get_or_404(event_id)
+
+    cost_type = request.form.get("cost_type")
+
+    before_vat = float(request.form.get("amount_before_vat") or 0)
+
+    vat_rate = float(request.form.get("vat_rate") or 7)
+
+    vat = before_vat * vat_rate / 100
+
+    total = before_vat + vat
+
+    item = EventCostItem(
+        event_id=event.id,
+        cost_type=cost_type,
+        amount_before_vat=before_vat,
+        vat_rate=vat_rate,
+        amount_vat=vat,
+        amount_total=total
+    )
+
+    db.session.add(item)
+    db.session.commit()
+
+    audit(
+        "EVENT_COST_ADD",
+        f"event={event.event_code}, cost={cost_type}, total={total}"
+    )
+
+    return redirect(url_for("event_detail", event_id=event.id))
+
 # -------------------------------------------------
 # Run (Local Only)
 # -------------------------------------------------
