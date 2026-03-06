@@ -769,6 +769,28 @@ def safe_date(v):
         except:
             pass
     return None
+
+def gen_event_code(event_type: str, dt: date | None = None):
+    dt = dt or datetime.utcnow().date()
+    yyyymm = f"{dt.year}{dt.month:02d}"
+    prefix = (event_type or "").strip().upper()
+
+    like = f"{prefix}-{yyyymm}-%"
+
+    last_code = db.session.query(func.max(TrainingEvent.event_code)).filter(
+        TrainingEvent.event_code.ilike(like)
+    ).scalar()
+
+    if last_code:
+        try:
+            last_run = int(last_code.split("-")[-1])
+        except Exception:
+            last_run = 0
+    else:
+        last_run = 0
+
+    new_run = last_run + 1
+    return f"{prefix}-{yyyymm}-{new_run:04d}"
     
 # -------------------------------------------------
 # Routes
@@ -2631,6 +2653,55 @@ def events_list():
         "events_list.html",
         rows=rows
     )
+
+@app.route("/events/new", methods=["GET", "POST"])
+def events_new():
+    courses = TrainingCourse.query.order_by(TrainingCourse.course_name.asc()).all()
+
+    if request.method == "GET":
+        return render_template("events_new.html", courses=courses)
+
+    course_id = request.form.get("course_id")
+    event_type = (request.form.get("event_type") or "").strip().upper()
+    title = (request.form.get("title") or "").strip()
+    location = (request.form.get("location") or "").strip()
+    trainer = (request.form.get("trainer") or "").strip()
+    start_date_raw = (request.form.get("start_date") or "").strip()
+    end_date_raw = (request.form.get("end_date") or "").strip()
+
+    if not course_id or not event_type or not start_date_raw:
+        flash("กรุณากรอกข้อมูลให้ครบ", "error")
+        return redirect(url_for("events_new"))
+
+    start_date = datetime.strptime(start_date_raw, "%Y-%m-%d").date()
+    end_date = datetime.strptime(end_date_raw, "%Y-%m-%d").date() if end_date_raw else None
+
+    code = gen_event_code(event_type, start_date)
+
+    course = TrainingCourse.query.get_or_404(int(course_id))
+
+    if not title:
+        title = course.course_name
+
+    e = TrainingEvent(
+        course_id=course.id,
+        event_type=event_type,
+        event_code=code,
+        title=title,
+        location=location or None,
+        trainer=trainer or None,
+        start_date=start_date,
+        end_date=end_date,
+        status="PLANNED",
+    )
+
+    db.session.add(e)
+    db.session.commit()
+
+    audit("EVENT_CREATE", f"event_code={e.event_code}")
+    flash("สร้าง Training Event สำเร็จ", "success")
+    return redirect(url_for("events_list"))
+
     
 # -------------------------------------------------
 # Run (Local Only)
