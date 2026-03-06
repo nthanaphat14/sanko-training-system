@@ -2631,16 +2631,6 @@ def course_cost_delete(cost_id):
 
     return redirect(url_for("course_edit",course_id=course_id))
 
-@app.get("/events/<int:event_id>")
-def event_detail(event_id):
-
-    event = TrainingEvent.query.get_or_404(event_id)
-
-    return render_template(
-        "event_detail.html",
-        event=event
-    )
-
 @app.post("/events/<int:event_id>/cost/add")
 def event_cost_add(event_id):
 
