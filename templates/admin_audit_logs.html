@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="page-head">
+  <div>
+    <h1>Audit Logs</h1>
+    <div class="muted">ประวัติการใช้งานระบบ</div>
+  </div>
+</div>
+
+<div class="card">
+  <form method="get" style="display:flex; gap:10px; flex-wrap:wrap;">
+    <input class="input" name="q" value="{{ q or '' }}" placeholder="ค้นหา email / action / detail / ip" style="flex:1; min-width:260px;">
+    <button class="btn" type="submit">ค้นหา</button>
+    <a class="btn ghost" href="{{ url_for('admin_audit_logs') }}">ล้าง</a>
+  </form>
+</div>
+
+<div class="card">
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>DateTime</th>
+          <th>User</th>
+          <th>Action</th>
+          <th>Detail</th>
+          <th>IP</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for x in rows %}
+        <tr>
+          <td class="nowrap">{{ x.created_at }}</td>
+          <td class="nowrap">{{ x.user_email or "-" }}</td>
+          <td class="nowrap"><b>{{ x.action }}</b></td>
+          <td>{{ x.detail or "" }}</td>
+          <td class="nowrap">{{ x.ip or "" }}</td>
+        </tr>
+        {% endfor %}
+        {% if rows|length == 0 %}
+          <tr><td colspan="5" class="muted center" style="padding:14px;">ยังไม่มี Audit Log</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
