@@ -2620,6 +2620,18 @@ def event_cost_add(event_id):
 
     return redirect(url_for("event_detail", event_id=event.id))
 
+@app.get("/events")
+def events_list():
+
+    rows = TrainingEvent.query.order_by(
+        TrainingEvent.created_at.desc()
+    ).all()
+
+    return render_template(
+        "events_list.html",
+        rows=rows
+    )
+    
 # -------------------------------------------------
 # Run (Local Only)
 # -------------------------------------------------
