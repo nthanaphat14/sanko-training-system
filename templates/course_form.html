@@ -186,21 +186,36 @@
             <th class="nowrap">VAT</th>
             <th class="nowrap">Total</th>
             <th>Remark</th>
+            <th>Action</th>
           </tr>
         </thead>
         <tbody>
           {% for x in course.cost_items %}
-          <tr>
-            <td>{{ x.cost_type }}</td>
-            <td class="nowrap">{{ "{:,.2f}".format(x.amount_before_vat or 0) }}</td>
-            <td class="nowrap">{{ x.vat_rate or 0 }}</td>
-            <td class="nowrap">{{ "{:,.2f}".format(x.amount_vat or 0) }}</td>
-            <td class="nowrap"><b>{{ "{:,.2f}".format(x.amount_total or 0) }}</b></td>
-            <td>{{ x.remark or "" }}</td>
-          </tr>
+            <tr>
+                <td>{{ x.cost_type }}</td>
+                <td class="nowrap">{{ "{:,.2f}".format(x.amount_before_vat or 0) }}</td>
+                <td class="nowrap">{{ x.vat_rate or 0 }}</td>
+                <td class="nowrap">{{ "{:,.2f}".format(x.amount_vat or 0) }}</td>
+                <td class="nowrap">
+                <b>{{ "{:,.2f}".format(x.amount_total or 0) }}</b>
+                </td>
+                <td>{{ x.remark or "" }}</td>
+                <td>
+
+                    <form method="post"
+                          action="{{ url_for('course_cost_delete', cost_id=x.id) }}"
+                          style="display:inline;">
+
+                        <button class="btn sm danger"
+                                  onclick="return confirm('ลบค่าใช้จ่าย?')">
+                              Delete
+                        </button>
+                    </form>
+                </td>
+            </tr>
           {% endfor %}
           {% if course.cost_items|length == 0 %}
-            <tr><td colspan="6" class="muted center" style="padding:14px;">ยังไม่มีค่าใช้จ่าย</td></tr>
+            <tr><td colspan="7" class="muted center" style="padding:14px;">ยังไม่มีค่าใช้จ่าย</td></tr>
           {% endif %}
         </tbody>
       </table>
