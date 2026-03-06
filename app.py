@@ -365,6 +365,28 @@ class TrainingEvent(db.Model):
         backref=db.backref("events", lazy=True)
     )
 
+class TrainingEventParticipant(db.Model):
+    __tablename__ = "training_event_participants"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    event_id = db.Column(
+        db.Integer,
+        db.ForeignKey("training_events.id"),
+        nullable=False,
+        index=True
+    )
+
+    emp_id = db.Column(db.String(40), nullable=False, index=True)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    event = db.relationship(
+        "TrainingEvent",
+        backref=db.backref("participants", lazy=True, cascade="all, delete-orphan")
+    )
+
+
 # -------------------------------------------------
 # Helper Functions
 # -------------------------------------------------
