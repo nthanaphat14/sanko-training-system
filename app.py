@@ -2700,8 +2700,8 @@ def events_new():
 
     audit("EVENT_CREATE", f"event_code={e.event_code}")
     flash("สร้าง Training Event สำเร็จ", "success")
-    return redirect(url_for("events_list"))
 
+    return redirect(url_for("events_list"))
     
 # -------------------------------------------------
 # Run (Local Only)
