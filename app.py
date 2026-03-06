@@ -1,5 +1,9 @@
 import os
-from datetime import datetime
+from io import BytesIO
+from math import ceil
+from datetime import datetime, date, timedelta
+from functools import wraps
+
 from flask import (
     Flask,
     render_template,
@@ -9,64 +13,51 @@ from flask import (
     flash,
     session,
     g,
+    abort,
+    send_file,
 )
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import or_, nullslast
-from sqlalchemy.exc import IntegrityError, DataError
-from io import BytesIO
-from flask import send_file
-from openpyxl import load_workbook
-from openpyxl import Workbook
-from sqlalchemy import func  
-from datetime import date
-from functools import wraps
-from flask import session, abort
-from flask import session, g
-from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import timedelta
-from flask import redirect, url_for, abort, flash
-from flask import request
-from werkzeug.security import check_password_hash
+from flask_login import (
+    LoginManager,
+    UserMixin,
+    current_user,
+    login_user,
+    logout_user,
+    login_required,
+)
 from sqlalchemy import or_, func
-from sqlalchemy import or_
-from math import ceil
-from datetime import datetime
-from openpyxl import Workbook
 from sqlalchemy.sql import nullslast
-from sqlalchemy.sql import func
-from math import ceil
-from openpyxl import Workbook
-from openpyxl.utils import get_column_letter
-from math import ceil
-from datetime import datetime, date
-from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError, DataError
+from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
-import os
-from flask import abort, request
-from flask_login import current_user
-from flask_login import LoginManager, current_user, login_user, logout_user, login_required
-from flask_login import UserMixin
+
+from openpyxl import Workbook, load_workbook
+from openpyxl.utils import get_column_letter
+
 
 # -------------------------------------------------
 # App Config
 # -------------------------------------------------
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "super-secret-key")
+
 ALLOWED_ADMIN_EMAIL = "hr02@sankothai.net"
-ogin_manager = LoginManager()
+
+# Flask-Login
+login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login"
 login_manager.login_message = "กรุณาเข้าสู่ระบบก่อน"
 
+# Upload
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_COURSE_DIR = os.path.join(BASE_DIR, "static", "uploads", "courses")
 os.makedirs(UPLOAD_COURSE_DIR, exist_ok=True)
 
 ALLOWED_EXT = {"pdf", "png", "jpg", "jpeg", "xlsx"}
 
-# DATABASE
+# Database
 db_url = (os.environ.get("DATABASE_URL") or "").strip()
-
 if db_url.startswith("postgres://"):
     db_url = db_url.replace("postgres://", "postgresql://", 1)
 
@@ -74,26 +65,20 @@ app.config["SQLALCHEMY_DATABASE_URI"] = db_url or "sqlite:///employee.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
-# ถ้ารันบน HTTPS (Render) ให้เปิด True ได้เลย
 app.config["SESSION_COOKIE_SECURE"] = True
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(minutes=30)
 
-print("DATABASE =", app.config["SQLALCHEMY_DATABASE_URI"])  # 👈 ใส่ตรงนี้
+print("DATABASE =", app.config["SQLALCHEMY_DATABASE_URI"])
 
 db = SQLAlchemy(app)
 
 
 # -------------------------------------------------
-# Model
+# Models
 # -------------------------------------------------
 class User(UserMixin, db.Model):
     __tablename__ = "users"
-    id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(255), unique=True, nullable=False)
-    password_hash = db.Column(db.String(255), nullable=False)
 
-class User(db.Model):
-    __tablename__ = "users"
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(180), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
@@ -107,8 +92,15 @@ class User(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
+
 class AuditLog(db.Model):
     __tablename__ = "audit_logs"
+
     id = db.Column(db.Integer, primary_key=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
 
@@ -117,23 +109,10 @@ class AuditLog(db.Model):
     detail = db.Column(db.Text, nullable=True)
     ip = db.Column(db.String(64), nullable=True)
 
+
 class Employee(db.Model):
     __tablename__ = "employees"
 
-    def th_full(self):
-        """คืนชื่อ-สกุลภาษาไทยแบบรวม"""
-        first = (self.first_name_th or "").strip()
-        last = (self.last_name_th or "").strip()
-        full = f"{first} {last}".strip()
-        return full
-
-    def en_full(self):   # ← ต้องเยื้อง 4 ช่อง
-        """คืนชื่อ-สกุลภาษาอังกฤษแบบรวม"""
-        first = (self.first_name_en or "").strip()
-        last = (self.last_name_en or "").strip()
-        full = f"{first} {last}".strip()
-        return full
-    
     id = db.Column(db.Integer, primary_key=True)
     no = db.Column(db.Integer, nullable=True)
     em_id = db.Column(db.String(40), unique=True, nullable=False)
@@ -159,74 +138,82 @@ class Employee(db.Model):
     major = db.Column(db.String(150), nullable=True)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(
-        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
-    )
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-from datetime import datetime, date
+    def th_full(self):
+        first = (self.first_name_th or "").strip()
+        last = (self.last_name_th or "").strip()
+        return f"{first} {last}".strip()
+
+    def en_full(self):
+        first = (self.first_name_en or "").strip()
+        last = (self.last_name_en or "").strip()
+        return f"{first} {last}".strip()
+
 
 class TrainingRecord(db.Model):
     __tablename__ = "training_records"
     __table_args__ = (
         db.UniqueConstraint("emp_id", "start_date", name="uq_training_emp_start"),
     )
+
     id = db.Column(db.Integer, primary_key=True)
 
-    seq = db.Column(db.Integer, nullable=True)               # ลำดับ
-    year = db.Column(db.Integer, nullable=True)              # Year.
-    month = db.Column(db.Integer, nullable=True)             # Month
+    seq = db.Column(db.Integer, nullable=True)
+    year = db.Column(db.Integer, nullable=True)
+    month = db.Column(db.Integer, nullable=True)
 
-    emp_id = db.Column(db.String(50), nullable=False, index=True)  # Emp ID
+    emp_id = db.Column(db.String(50), nullable=False, index=True)
 
     prefix = db.Column(db.String(50), nullable=True)
     first_name = db.Column(db.String(200), nullable=True)
     last_name = db.Column(db.String(200), nullable=True)
-    
-    section = db.Column(db.String(150), nullable=True)    # แผนก
-    position = db.Column(db.String(150), nullable=True)      # ตำแหน่ง
 
-    course_code = db.Column(db.String(100), nullable=True)   # รหัสหลักสูตร
-    course_name = db.Column(db.String(255), nullable=True)   # ชื่อหลักสูตร
-    course_type = db.Column(db.String(100), nullable=True)   # ประเภท
+    section = db.Column(db.String(150), nullable=True)
+    position = db.Column(db.String(150), nullable=True)
 
-    start_date = db.Column(db.Date, nullable=True)           # StartDate
-    end_date = db.Column(db.Date, nullable=True)             # EndDate
-    hours = db.Column(db.Float, nullable=True)               # ชั่วโมง
+    course_code = db.Column(db.String(100), nullable=True)
+    course_name = db.Column(db.String(255), nullable=True)
+    course_type = db.Column(db.String(100), nullable=True)
 
-    evaluate_method = db.Column(db.String(150), nullable=True)  # วิธีประเมิน
-    result = db.Column(db.String(50), nullable=True)            # ผล
-    score = db.Column(db.Float, nullable=True)                  # คะแนน
-    evaluator = db.Column(db.String(150), nullable=True)        # ผู้ประเมิน
+    start_date = db.Column(db.Date, nullable=True)
+    end_date = db.Column(db.Date, nullable=True)
+    hours = db.Column(db.Float, nullable=True)
 
-    expire_date = db.Column(db.Date, nullable=True)          # วันหมดอายุ
-    remark = db.Column(db.Text, nullable=True)               # หมายเหตุ
+    evaluate_method = db.Column(db.String(150), nullable=True)
+    result = db.Column(db.String(50), nullable=True)
+    score = db.Column(db.Float, nullable=True)
+    evaluator = db.Column(db.String(150), nullable=True)
+
+    expire_date = db.Column(db.Date, nullable=True)
+    remark = db.Column(db.Text, nullable=True)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
 
 class ImportBatch(db.Model):
     __tablename__ = "import_batches"
+
     id = db.Column(db.Integer, primary_key=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # สรุปผลรอบนี้
     added = db.Column(db.Integer, default=0)
     updated = db.Column(db.Integer, default=0)
     duplicated = db.Column(db.Integer, default=0)
     skipped = db.Column(db.Integer, default=0)
 
-    # ไว้ให้ดูไฟล์อะไร import (optional)
     filename = db.Column(db.String(255), nullable=True)
+
 
 class ImportItem(db.Model):
     __tablename__ = "import_items"
+
     id = db.Column(db.Integer, primary_key=True)
     batch_id = db.Column(db.Integer, db.ForeignKey("import_batches.id"), nullable=False, index=True)
 
-    # Added / Updated / Duplicate / Skipped
     status = db.Column(db.String(20), nullable=False)
     reason = db.Column(db.String(255), nullable=True)
 
-    # เก็บ snapshot สำหรับ “ดูว่าใคร”
     row_no = db.Column(db.Integer, nullable=True)
     emp_id = db.Column(db.String(50), nullable=True)
     prefix = db.Column(db.String(50), nullable=True)
@@ -244,51 +231,50 @@ class ImportItem(db.Model):
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+
 class TrainingCourse(db.Model):
     __tablename__ = "training_courses"
+
     id = db.Column(db.Integer, primary_key=True)
 
-    # OJT / INH / EXT
-    course_type = db.Column(db.String(20), nullable=False, index=True)
-
-    # รหัสหลักสูตร เช่น INH-202603-0001
+    course_type = db.Column(db.String(20), nullable=False, index=True)  # OJT / INH / EXT
     course_code = db.Column(db.String(30), nullable=False, unique=True, index=True)
 
     course_name = db.Column(db.String(255), nullable=False)
     description = db.Column(db.Text, nullable=True)
 
-    owner = db.Column(db.String(120), nullable=True)          # ผู้รับผิดชอบ
-    vendor = db.Column(db.String(200), nullable=True)         # วิทยากร/บริษัท
-    location = db.Column(db.String(200), nullable=True)       # สถานที่ (in/out)
+    owner = db.Column(db.String(120), nullable=True)
+    vendor = db.Column(db.String(200), nullable=True)
+    location = db.Column(db.String(200), nullable=True)
     training_date = db.Column(db.Date, nullable=True)
-    
-    # ใช้ช่วยในการ report ภายหลัง
-    course_year = db.Column(db.Integer, nullable=True, index=True)
-    course_month = db.Column(db.Integer, nullable=True, index=True)  # 1-12
 
-    status = db.Column(db.String(30), default="Draft")        # Draft/Planned/Done/Cancelled
+    course_year = db.Column(db.Integer, nullable=True, index=True)
+    course_month = db.Column(db.Integer, nullable=True, index=True)
+
+    status = db.Column(db.String(30), default="Draft")
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     def total_before_vat(self):
-        return float(sum([c.amount_before_vat or 0 for c in self.cost_items]))
+        return float(sum(c.amount_before_vat or 0 for c in self.cost_items))
 
     def total_vat(self):
-        return float(sum([c.amount_vat or 0 for c in self.cost_items]))
+        return float(sum(c.amount_vat or 0 for c in self.cost_items))
 
     def total_amount(self):
-        return float(sum([c.amount_total or 0 for c in self.cost_items]))
+        return float(sum(c.amount_total or 0 for c in self.cost_items))
 
 
 class CourseFile(db.Model):
     __tablename__ = "course_files"
+
     id = db.Column(db.Integer, primary_key=True)
     course_id = db.Column(db.Integer, db.ForeignKey("training_courses.id"), nullable=False, index=True)
 
-    file_type = db.Column(db.String(50), nullable=True)   # syllabus/quotation/invoice/receipt/อื่นๆ
+    file_type = db.Column(db.String(50), nullable=True)
     original_name = db.Column(db.String(255), nullable=True)
-    stored_name = db.Column(db.String(255), nullable=False)  # ชื่อที่เซฟใน server
+    stored_name = db.Column(db.String(255), nullable=False)
     note = db.Column(db.String(255), nullable=True)
 
     uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -298,12 +284,13 @@ class CourseFile(db.Model):
 
 class CourseCostItem(db.Model):
     __tablename__ = "course_cost_items"
+
     id = db.Column(db.Integer, primary_key=True)
     course_id = db.Column(db.Integer, db.ForeignKey("training_courses.id"), nullable=False, index=True)
 
-    cost_type = db.Column(db.String(80), nullable=False)  # ค่าอบรม/เดินทาง/ที่พัก/อาหาร/อื่นๆ
+    cost_type = db.Column(db.String(80), nullable=False)
     amount_before_vat = db.Column(db.Float, nullable=True)
-    vat_rate = db.Column(db.Float, default=7.0)          # %
+    vat_rate = db.Column(db.Float, default=7.0)
     amount_vat = db.Column(db.Float, nullable=True)
     amount_total = db.Column(db.Float, nullable=True)
     remark = db.Column(db.String(255), nullable=True)
@@ -325,6 +312,7 @@ def allowed_file(filename: str) -> bool:
     ext = filename.rsplit(".", 1)[1].lower()
     return ext in ALLOWED_EXT
 
+
 def gen_course_code(course_type: str, dt: datetime | None = None) -> str:
     """
     รูปแบบ: INH-YYYYMM-0001 (running แยกตาม type และรีเซ็ตทุกเดือน)
@@ -333,14 +321,12 @@ def gen_course_code(course_type: str, dt: datetime | None = None) -> str:
     yyyymm = f"{dt.year}{dt.month:02d}"
     prefix = (course_type or "").strip().upper()
 
-    # ดึงเลข running ล่าสุดของเดือนนี้+ประเภทนี้
     like = f"{prefix}-{yyyymm}-%"
     last_code = db.session.query(func.max(TrainingCourse.course_code)).filter(
         TrainingCourse.course_code.ilike(like)
     ).scalar()
 
     if last_code:
-        # last_code เช่น INH-202603-0012
         try:
             last_run = int(last_code.split("-")[-1])
         except Exception:
@@ -350,18 +336,16 @@ def gen_course_code(course_type: str, dt: datetime | None = None) -> str:
 
     new_run = last_run + 1
     return f"{prefix}-{yyyymm}-{new_run:04d}"
-    
+
+
 def get_current_user():
     uid = session.get("uid")
     if not uid:
         return None
-    return db.session.get(User, uid)  # SQLAlchemy 2.x
+    return db.session.get(User, uid)
+
 
 def build_training_query(args):
-    """
-    ใช้ args = request.args (หรือ dict ที่มี key เหมือนกัน)
-    ทำให้ /trainings และ /trainings/export ใช้ filter ชุดเดียวกัน 100%
-    """
     q = (args.get("q") or "").strip()
     year = (args.get("year") or "").strip()
     month = (args.get("month") or "").strip()
@@ -370,9 +354,8 @@ def build_training_query(args):
 
     if q:
         like = f"%{q}%"
-
-        # เลือก field ชื่อแบบยืดหยุ่น (กัน model ไม่ตรง)
         name_field = None
+
         for cand in ["full_name", "employee_name", "name", "emp_name", "first_name", "last_name"]:
             if hasattr(TrainingRecord, cand):
                 name_field = getattr(TrainingRecord, cand)
@@ -380,23 +363,16 @@ def build_training_query(args):
 
         conds = []
 
-        # ✅ สำคัญ: ใช้ชื่อ field ให้ตรงกับ model ของคุณ
-        # จาก template คุณใช้ t.emp_id / t.course_code / t.course_name
         if hasattr(TrainingRecord, "emp_id"):
             conds.append(TrainingRecord.emp_id.ilike(like))
         if hasattr(TrainingRecord, "employee_code"):
             conds.append(TrainingRecord.employee_code.ilike(like))
-
-        # ค้นหาชื่อ/นามสกุล ถ้ามี
         if hasattr(TrainingRecord, "first_name"):
             conds.append(TrainingRecord.first_name.ilike(like))
         if hasattr(TrainingRecord, "last_name"):
             conds.append(TrainingRecord.last_name.ilike(like))
-
-        # หรือชื่อรวม (ถ้ามี)
         if name_field is not None:
             conds.append(name_field.ilike(like))
-
         if hasattr(TrainingRecord, "course_code"):
             conds.append(TrainingRecord.course_code.ilike(like))
         if hasattr(TrainingRecord, "course_name"):
@@ -412,9 +388,6 @@ def build_training_query(args):
 
     return query, q, year, month
 
-@login_manager.user_loader
-def load_user(user_id):
-    return User.query.get(int(user_id))
 
 @app.before_request
 def block_non_owner():
@@ -426,14 +399,12 @@ def block_non_owner():
         "favicon",
     }
 
-    # กันกรณี endpoint เป็น None
     if request.endpoint is None:
         return
 
     if request.endpoint in public_endpoints:
         return
 
-    # ถ้ายังไม่ login ให้ route อื่นจัดการเอง
     try:
         if not current_user.is_authenticated:
             return
@@ -446,6 +417,7 @@ def block_non_owner():
 
     if user_email.strip().lower() != ALLOWED_ADMIN_EMAIL.lower():
         abort(403)
+
 
 @app.route("/favicon.ico")
 def favicon():
