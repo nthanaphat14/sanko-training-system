@@ -197,3 +197,34 @@ color:white;
   color: #fca5a5;
   border-color: rgba(239,68,68,.35);
 }
+
+.dropdown {
+  position: relative;
+}
+
+.dropdown-menu {
+  display: none;
+  position: absolute;
+  background: #0b1220;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  top: 38px;
+  right: 0;
+  min-width: 180px;
+  padding: 6px 0;
+}
+
+.dropdown-menu a {
+  display: block;
+  padding: 8px 12px;
+  color: #fff;
+  text-decoration: none;
+}
+
+.dropdown-menu a:hover {
+  background: rgba(255,255,255,0.08);
+}
+
+.dropdown:hover .dropdown-menu {
+  display: block;
+}
