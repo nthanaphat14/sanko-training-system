@@ -216,4 +216,116 @@
   </div>
 </div>
 
+<div class="card">
+  <h3 style="margin-top:0;">Add Cost</h3>
+
+  <form method="post"
+        action="{{ url_for('event_cost_add', event_id=event.id) }}"
+        style="display:grid; grid-template-columns:repeat(4,1fr); gap:10px;">
+
+    <input class="input" name="cost_type" placeholder="ประเภทค่าใช้จ่าย เช่น Trainer Fee" required>
+    <input class="input" name="amount_before_vat" placeholder="ก่อน VAT">
+    <input class="input" name="vat_rate" value="7" placeholder="VAT %">
+    <input class="input" name="remark" placeholder="หมายเหตุ">
+
+    <div style="grid-column:1/-1;">
+      <button class="btn primary" type="submit">+ Add Cost</button>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;">Cost Items</h3>
+
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Before VAT</th>
+          <th>VAT %</th>
+          <th>VAT</th>
+          <th>Total</th>
+          <th>Remark</th>
+          <th class="nowrap">Action</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for x in event.cost_items %}
+        <tr>
+          <td>
+            <form method="post"
+                  action="{{ url_for('event_cost_edit', cost_id=x.id) }}"
+                  style="display:grid; grid-template-columns:repeat(6,1fr) auto auto; gap:8px; align-items:center;">
+              <input class="input" name="cost_type" value="{{ x.cost_type or '' }}">
+          </td>
+
+          <td>
+              <input class="input" name="amount_before_vat" value="{{ x.amount_before_vat or 0 }}">
+          </td>
+
+          <td>
+              <input class="input" name="vat_rate" value="{{ x.vat_rate or 7 }}">
+          </td>
+
+          <td class="nowrap">
+              {{ "{:,.2f}".format(x.amount_vat or 0) }}
+          </td>
+
+          <td class="nowrap">
+              <b>{{ "{:,.2f}".format(x.amount_total or 0) }}</b>
+          </td>
+
+          <td>
+              <input class="input" name="remark" value="{{ x.remark or '' }}">
+          </td>
+
+          <td class="nowrap">
+              <button class="btn sm" type="submit">Save</button>
+            </form>
+
+            <form method="post"
+                  action="{{ url_for('event_cost_delete', cost_id=x.id) }}"
+                  style="display:inline;"
+                  onsubmit="return confirm('ลบค่าใช้จ่ายนี้ใช่หรือไม่?');">
+              <button class="btn sm danger" type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+
+        {% if event.cost_items|length == 0 %}
+        <tr>
+          <td colspan="7" class="muted center" style="padding:14px;">
+            ยังไม่มีค่าใช้จ่าย
+          </td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;">Cost Summary</h3>
+
+  <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px;">
+    <div>
+      <div class="muted">Before VAT</div>
+      <div><b>{{ "{:,.2f}".format(total_before_vat or 0) }}</b></div>
+    </div>
+
+    <div>
+      <div class="muted">VAT</div>
+      <div><b>{{ "{:,.2f}".format(total_vat or 0) }}</b></div>
+    </div>
+
+    <div>
+      <div class="muted">Total</div>
+      <div><b>{{ "{:,.2f}".format(total_amount or 0) }}</b></div>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
