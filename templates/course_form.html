@@ -35,8 +35,8 @@
 
     <div class="field">
       <label>Status</label>
+      {% set st = course.status if course else 'Draft' %}
       <select class="input" name="status">
-        {% set st = course.status if course else 'Draft' %}
         <option value="Draft" {% if st=='Draft' %}selected{% endif %}>Draft</option>
         <option value="Planned" {% if st=='Planned' %}selected{% endif %}>Planned</option>
         <option value="Done" {% if st=='Done' %}selected{% endif %}>Done</option>
@@ -64,12 +64,6 @@
       <input class="input" name="location" value="{{ course.location if course else '' }}">
     </div>
 
-    <div class="field">
-      <label>Training Date</label>
-      <input class="input" type="date" name="training_date"
-      value="{{ course.training_date if course else '' }}">
-    </div>
-    
     <div class="field" style="grid-column:1/-1;">
       <label>Description</label>
       <input class="input" name="description" value="{{ course.description if course else '' }}">
@@ -77,6 +71,7 @@
 
     <div style="grid-column:1/-1; display:flex; gap:10px; justify-content:flex-end;">
       <button class="btn primary" type="submit">Save</button>
+      <a class="btn ghost" href="{{ url_for('courses_list') }}">Cancel</a>
     </div>
   </form>
 </div>
@@ -192,26 +187,20 @@
         <tbody>
           {% for x in course.cost_items %}
             <tr>
-                <td>{{ x.cost_type }}</td>
-                <td class="nowrap">{{ "{:,.2f}".format(x.amount_before_vat or 0) }}</td>
-                <td class="nowrap">{{ x.vat_rate or 0 }}</td>
-                <td class="nowrap">{{ "{:,.2f}".format(x.amount_vat or 0) }}</td>
-                <td class="nowrap">
-                <b>{{ "{:,.2f}".format(x.amount_total or 0) }}</b>
-                </td>
-                <td>{{ x.remark or "" }}</td>
-                <td>
-
-                    <form method="post"
-                          action="{{ url_for('course_cost_delete', cost_id=x.id) }}"
-                          style="display:inline;">
-
-                        <button class="btn sm danger"
-                                  onclick="return confirm('ลบค่าใช้จ่าย?')">
-                              Delete
-                        </button>
-                    </form>
-                </td>
+              <td>{{ x.cost_type }}</td>
+              <td class="nowrap">{{ "{:,.2f}".format(x.amount_before_vat or 0) }}</td>
+              <td class="nowrap">{{ x.vat_rate or 0 }}</td>
+              <td class="nowrap">{{ "{:,.2f}".format(x.amount_vat or 0) }}</td>
+              <td class="nowrap"><b>{{ "{:,.2f}".format(x.amount_total or 0) }}</b></td>
+              <td>{{ x.remark or "" }}</td>
+              <td>
+                <form method="post"
+                      action="{{ url_for('course_cost_delete', cost_id=x.id) }}"
+                      style="display:inline;"
+                      onsubmit="return confirm('ลบค่าใช้จ่าย?')">
+                  <button class="btn sm danger" type="submit">Delete</button>
+                </form>
+              </td>
             </tr>
           {% endfor %}
           {% if course.cost_items|length == 0 %}
@@ -220,6 +209,17 @@
         </tbody>
       </table>
     </div>
+  </div>
+
+  <!-- Delete course -->
+  <div class="card">
+    <div style="font-weight:900; margin-bottom:10px; color:#b91c1c;">Danger Zone</div>
+
+    <form method="post"
+          action="{{ url_for('course_delete', course_id=course.id) }}"
+          onsubmit="return confirm('ลบหลักสูตรนี้ใช่หรือไม่?');">
+      <button class="btn danger" type="submit">Delete Course</button>
+    </form>
   </div>
 {% endif %}
 
