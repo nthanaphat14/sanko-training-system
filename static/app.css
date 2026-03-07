@@ -274,3 +274,20 @@ color:white;
 .dropdown:hover .dropdown-menu{
   display: block;
 }
+
+.top-actions{
+  display:grid;
+  grid-template-columns: repeat(3, 220px);
+  gap:14px;
+  justify-content:center;
+  margin-top:20px;
+}
+
+.top-actions .btn{
+  width:100%;
+  height:60px;
+  font-size:18px;
+  border-radius:16px;
+}
+
+
