@@ -3195,6 +3195,40 @@ def event_delete(event_id):
 
     return redirect(url_for("events_list"))
 
+@app.get("/events/calendar")
+@login_required
+def events_calendar():
+    return render_template("events_calendar.html")
+    
+@app.get("/api/events/calendar")
+@login_required
+def events_calendar_api():
+    rows = TrainingEvent.query.order_by(TrainingEvent.start_date.asc()).all()
+
+    data = []
+
+    for e in rows:
+        if e.event_type == "OJT":
+            color = "#f59e0b"
+        elif e.event_type == "INH":
+            color = "#2563eb"
+        elif e.event_type == "EXT":
+            color = "#16a34a"
+        else:
+            color = "#6b7280"
+
+        data.append({
+            "id": e.id,
+            "title": f"{e.event_code} • {e.title}",
+            "start": e.start_date.isoformat() if e.start_date else None,
+            "end": e.end_date.isoformat() if e.end_date else None,
+            "url": url_for("event_detail", event_id=e.id),
+            "backgroundColor": color,
+            "borderColor": color,
+        })
+
+    return data
+    
 # -------------------------------------------------
 # Run (Local Only)
 # -------------------------------------------------
