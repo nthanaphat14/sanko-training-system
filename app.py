@@ -10,7 +10,7 @@ from flask import (
     request,
     redirect,
     url_for,
-    flash,t
+    flash,
     session,
     g,
     abort,
