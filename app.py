@@ -194,6 +194,18 @@ class TrainingRecord(db.Model):
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+    event_id = db.Column(
+        db.Integer,
+        db.ForeignKey("training_events.id"),
+        nullable=True,
+        index=True
+    )
+
+    event = db.relationship(
+        "TrainingEvent",
+        backref=db.backref("records", lazy=True)
+    )
+
 
 class ImportBatch(db.Model):
     __tablename__ = "import_batches"
