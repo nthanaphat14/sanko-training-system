@@ -2478,7 +2478,9 @@ def courses_list():
     rows = query.order_by(TrainingCourse.created_at.desc()).all()
     return render_template("courses_list.html", rows=rows, q=q, ctype=ctype)
 
+
 @app.route("/courses/new", methods=["GET", "POST"])
+@login_required
 @role_required("admin")
 def course_new():
     if request.method == "GET":
@@ -2513,12 +2515,15 @@ def course_new():
 
     db.session.add(c)
     db.session.commit()
-    audit("COURSE_ADD", f"course_code={c.course_code}")
 
+    audit("COURSE_ADD", f"course_code={c.course_code}")
     flash(f"สร้างหลักสูตรสำเร็จ: {code}", "success")
+
     return redirect(url_for("course_edit", course_id=c.id))
 
+
 @app.route("/courses/<int:course_id>/edit", methods=["GET", "POST"])
+@login_required
 @role_required("admin")
 def course_edit(course_id):
     c = db.session.get(TrainingCourse, course_id)
@@ -2534,18 +2539,17 @@ def course_edit(course_id):
         c.location = (request.form.get("location") or "").strip() or None
         c.status = (request.form.get("status") or "Draft").strip() or "Draft"
 
-        training_date = request.form.get("training_date")
-        if training_date:
-            c.training_date = datetime.strptime(training_date,"%Y-%m-%d").date()
-        
         db.session.commit()
+
         audit("COURSE_EDIT", f"course_code={c.course_code}")
         flash("บันทึกข้อมูลหลักสูตรแล้ว", "success")
         return redirect(url_for("course_edit", course_id=course_id))
 
     return render_template("course_form.html", mode="edit", course=c)
 
+
 @app.post("/courses/<int:course_id>/cost/add")
+@login_required
 @role_required("admin")
 def course_cost_add(course_id):
     c = db.session.get(TrainingCourse, course_id)
@@ -2574,17 +2578,20 @@ def course_cost_add(course_id):
         vat_rate=vat_rate_f,
         amount_vat=vat_amt,
         amount_total=total_amt,
-        remark=(request.form.get("remark") or "").strip() or None
+        remark=(request.form.get("remark") or "").strip() or None,
     )
 
     db.session.add(item)
     db.session.commit()
-    audit("COURSE_EDIT", f"course_code={c.course_code}")
-    
+
+    audit("COURSE_COST_ADD", f"course_code={c.course_code}, cost_type={item.cost_type}, total={item.amount_total}")
     flash("เพิ่มค่าใช้จ่ายแล้ว", "success")
+
     return redirect(url_for("course_edit", course_id=course_id))
-    
+
+
 @app.post("/courses/<int:course_id>/file/add")
+@login_required
 @role_required("admin")
 def course_file_add(course_id):
     c = db.session.get(TrainingCourse, course_id)
@@ -2616,63 +2623,341 @@ def course_file_add(course_id):
         stored_name=stored,
         note=(request.form.get("note") or "").strip() or None,
     )
+
     db.session.add(cf)
     db.session.commit()
-    audit("COURSE_FILE_ADD", f"course_code={c.course.course_code}, file={cf.original_name}")
 
+    audit("COURSE_FILE_ADD", f"course_code={c.course_code}, file={cf.original_name}")
     flash("แนบไฟล์แล้ว", "success")
+
     return redirect(url_for("course_edit", course_id=course_id))
-    
+
+
 @app.post("/courses/file/<int:file_id>/delete")
+@login_required
 @role_required("admin")
 def course_file_delete(file_id):
-
-    f = db.session.get(CourseFile,file_id)
+    f = db.session.get(CourseFile, file_id)
 
     if not f:
-        flash("ไม่พบไฟล์","error")
+        flash("ไม่พบไฟล์", "error")
         return redirect(url_for("courses_list"))
 
     course_id = f.course_id
 
     try:
-        path = os.path.join(UPLOAD_COURSE_DIR,f.stored_name)
-
+        path = os.path.join(UPLOAD_COURSE_DIR, f.stored_name)
         if os.path.exists(path):
             os.remove(path)
-
-    except:
+    except Exception:
         pass
 
     db.session.delete(f)
     db.session.commit()
-    audit("COURSE_FILE_DELETE", f"file_id={file_id}, course_id={course_id}")
-    
-    flash("ลบไฟล์แล้ว","success")
 
-    return redirect(url_for("course_edit",course_id=course_id))
+    audit("COURSE_FILE_DELETE", f"file_id={file_id}, course_id={course_id}")
+    flash("ลบไฟล์แล้ว", "success")
+
+    return redirect(url_for("course_edit", course_id=course_id))
+
 
 @app.post("/courses/cost/<int:cost_id>/delete")
+@login_required
 @role_required("admin")
 def course_cost_delete(cost_id):
-
-    item = db.session.get(CourseCostItem,cost_id)
+    item = db.session.get(CourseCostItem, cost_id)
 
     if not item:
-        flash("ไม่พบรายการ","error")
+        flash("ไม่พบรายการ", "error")
         return redirect(url_for("courses_list"))
 
     course_id = item.course_id
 
     db.session.delete(item)
     db.session.commit()
+
     audit("COURSE_COST_DELETE", f"cost_id={cost_id}, course_id={course_id}")
+    flash("ลบค่าใช้จ่ายแล้ว", "success")
 
-    flash("ลบค่าใช้จ่ายแล้ว","success")
+    return redirect(url_for("course_edit", course_id=course_id))
 
-    return redirect(url_for("course_edit",course_id=course_id))
+
+@app.get("/events")
+@login_required
+def events_list():
+    rows = TrainingEvent.query.order_by(TrainingEvent.created_at.desc()).all()
+    return render_template("events_list.html", rows=rows)
+
+
+@app.route("/events/new", methods=["GET", "POST"])
+@login_required
+@role_required("admin")
+def events_new():
+    courses = TrainingCourse.query.order_by(TrainingCourse.course_name.asc()).all()
+
+    if request.method == "GET":
+        return render_template("events_new.html", courses=courses)
+
+    course_id = request.form.get("course_id")
+    title = (request.form.get("title") or "").strip()
+    location = (request.form.get("location") or "").strip()
+    trainer = (request.form.get("trainer") or "").strip()
+    start_date_raw = (request.form.get("start_date") or "").strip()
+    end_date_raw = (request.form.get("end_date") or "").strip()
+
+    if not course_id or not start_date_raw:
+        flash("กรุณากรอกข้อมูลให้ครบ", "error")
+        return redirect(url_for("events_new"))
+
+    course = TrainingCourse.query.get_or_404(int(course_id))
+
+    # ✅ ดึงประเภท Event จาก Course โดยตรง
+    event_type = (course.course_type or "").strip().upper()
+
+    if event_type not in ["OJT", "INH", "EXT"]:
+        flash("ประเภทหลักสูตรของ Course ไม่ถูกต้อง", "error")
+        return redirect(url_for("events_new"))
+
+    start_date = datetime.strptime(start_date_raw, "%Y-%m-%d").date()
+    end_date = datetime.strptime(end_date_raw, "%Y-%m-%d").date() if end_date_raw else None
+
+    code = gen_event_code(event_type, start_date)
+
+    if not title:
+        title = course.course_name
+
+    e = TrainingEvent(
+        course_id=course.id,
+        event_type=event_type,
+        event_code=code,
+        title=title,
+        location=location or None,
+        trainer=trainer or None,
+        start_date=start_date,
+        end_date=end_date,
+        status="PLANNED",
+        description=course.description,
+    )
+
+    db.session.add(e)
+    db.session.commit()
+
+    audit("EVENT_CREATE", f"event_code={e.event_code}, course_code={course.course_code}")
+    flash("สร้าง Training Event สำเร็จ", "success")
+
+    return redirect(url_for("event_detail", event_id=e.id))
+
+
+@app.get("/events/<int:event_id>")
+@login_required
+def event_detail(event_id):
+    event = TrainingEvent.query.get_or_404(event_id)
+
+    participant_rows = TrainingEventParticipant.query.filter_by(
+        event_id=event.id
+    ).order_by(TrainingEventParticipant.id.asc()).all()
+
+    participants = []
+    for p in participant_rows:
+        emp = Employee.query.filter_by(em_id=p.emp_id).first()
+        participants.append({
+            "row": p,
+            "emp": emp
+        })
+
+    total_before_vat = sum((x.amount_before_vat or 0) for x in event.cost_items)
+    total_vat = sum((x.amount_vat or 0) for x in event.cost_items)
+    total_amount = sum((x.amount_total or 0) for x in event.cost_items)
+
+    return render_template(
+        "event_detail.html",
+        event=event,
+        participants=participants,
+        total_before_vat=total_before_vat,
+        total_vat=total_vat,
+        total_amount=total_amount,
+    )
+
+
+@app.post("/events/participant/<int:participant_id>/update")
+@login_required
+@role_required("admin")
+def event_participant_update(participant_id):
+    p = TrainingEventParticipant.query.get_or_404(participant_id)
+
+    result = (request.form.get("result") or "").strip().upper()
+    score_raw = (request.form.get("score") or "").strip()
+    hours_raw = (request.form.get("training_hours") or "").strip()
+    remark = (request.form.get("remark") or "").strip()
+
+    p.result = result or None
+
+    try:
+        p.score = float(score_raw) if score_raw else None
+    except Exception:
+        p.score = None
+
+    try:
+        p.training_hours = float(hours_raw) if hours_raw else None
+    except Exception:
+        p.training_hours = None
+
+    p.remark = remark or None
+
+    db.session.commit()
+
+    audit("EVENT_PARTICIPANT_UPDATE", f"event_id={p.event_id}, emp_id={p.emp_id}, result={p.result}")
+    flash("บันทึกผลอบรมแล้ว", "success")
+
+    return redirect(url_for("event_detail", event_id=p.event_id))
+
+
+@app.post("/events/<int:event_id>/participants/add")
+@login_required
+@role_required("admin")
+def event_participant_add(event_id):
+    event = TrainingEvent.query.get_or_404(event_id)
+
+    emp_id = (request.form.get("emp_id") or "").strip()
+
+    if not emp_id:
+        flash("กรุณาระบุ Emp ID", "error")
+        return redirect(url_for("event_detail", event_id=event.id))
+
+    emp = Employee.query.filter_by(em_id=emp_id).first()
+    if not emp:
+        flash("ไม่พบ Emp ID นี้ในระบบพนักงาน", "error")
+        return redirect(url_for("event_detail", event_id=event.id))
+
+    exists = TrainingEventParticipant.query.filter_by(
+        event_id=event.id,
+        emp_id=emp_id
+    ).first()
+
+    if exists:
+        flash("พนักงานคนนี้อยู่ใน Event แล้ว", "error")
+        return redirect(url_for("event_detail", event_id=event.id))
+
+    row = TrainingEventParticipant(
+        event_id=event.id,
+        emp_id=emp_id
+    )
+
+    db.session.add(row)
+    db.session.commit()
+
+    audit("EVENT_PARTICIPANT_ADD", f"event_code={event.event_code}, emp_id={emp_id}")
+    flash("เพิ่มผู้เข้าอบรมสำเร็จ", "success")
+
+    return redirect(url_for("event_detail", event_id=event.id))
+
+
+@app.post("/events/participants/<int:participant_id>/delete")
+@login_required
+@role_required("admin")
+def event_participant_delete(participant_id):
+    row = TrainingEventParticipant.query.get_or_404(participant_id)
+
+    event_id = row.event_id
+    emp_id = row.emp_id
+
+    db.session.delete(row)
+    db.session.commit()
+
+    audit("EVENT_PARTICIPANT_DELETE", f"event_id={event_id}, emp_id={emp_id}")
+    flash("ลบผู้เข้าอบรมออกจาก Event แล้ว", "success")
+
+    return redirect(url_for("event_detail", event_id=event_id))
+
+
+@app.post("/events/<int:event_id>/files/add")
+@login_required
+@role_required("admin")
+def event_file_add(event_id):
+    event = TrainingEvent.query.get_or_404(event_id)
+
+    f = request.files.get("file")
+    file_type = (request.form.get("file_type") or "").strip()
+    note = (request.form.get("note") or "").strip()
+
+    if not f or not f.filename:
+        flash("กรุณาเลือกไฟล์", "error")
+        return redirect(url_for("event_detail", event_id=event.id))
+
+    if not allowed_file(f.filename):
+        flash("อนุญาตเฉพาะไฟล์ pdf / png / jpg / jpeg / xlsx", "error")
+        return redirect(url_for("event_detail", event_id=event.id))
+
+    original = f.filename
+    safe = secure_filename(original)
+    stamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+    stored = f"{event.event_code}_{stamp}_{safe}"
+
+    save_path = os.path.join(UPLOAD_EVENT_DIR, stored)
+    f.save(save_path)
+
+    row = EventFile(
+        event_id=event.id,
+        file_type=file_type or "other",
+        original_name=original,
+        stored_name=stored,
+        note=note or None,
+    )
+
+    db.session.add(row)
+    db.session.commit()
+
+    audit("EVENT_FILE_ADD", f"event_code={event.event_code}, file={original}")
+    flash("อัปโหลดไฟล์สำเร็จ", "success")
+
+    return redirect(url_for("event_detail", event_id=event.id))
+
+
+@app.post("/events/files/<int:file_id>/edit")
+@login_required
+@role_required("admin")
+def event_file_edit(file_id):
+    row = EventFile.query.get_or_404(file_id)
+
+    row.file_type = (request.form.get("file_type") or "").strip() or "other"
+    row.note = (request.form.get("note") or "").strip() or None
+
+    db.session.commit()
+
+    audit("EVENT_FILE_EDIT", f"file_id={row.id}, event_id={row.event_id}")
+    flash("อัปเดตข้อมูลไฟล์แล้ว", "success")
+
+    return redirect(url_for("event_detail", event_id=row.event_id))
+
+
+@app.post("/events/files/<int:file_id>/delete")
+@login_required
+@role_required("admin")
+def event_file_delete(file_id):
+    row = EventFile.query.get_or_404(file_id)
+
+    event_id = row.event_id
+    original_name = row.original_name
+    file_path = os.path.join(UPLOAD_EVENT_DIR, row.stored_name)
+
+    try:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+    except Exception:
+        pass
+
+    db.session.delete(row)
+    db.session.commit()
+
+    audit("EVENT_FILE_DELETE", f"event_id={event_id}, file={original_name}")
+    flash("ลบไฟล์แล้ว", "success")
+
+    return redirect(url_for("event_detail", event_id=event_id))
+
 
 @app.post("/events/<int:event_id>/cost/add")
+@login_required
+@role_required("admin")
 def event_cost_add(event_id):
     event = TrainingEvent.query.get_or_404(event_id)
 
@@ -2714,7 +2999,10 @@ def event_cost_add(event_id):
 
     return redirect(url_for("event_detail", event_id=event.id))
 
+
 @app.post("/events/cost/<int:cost_id>/edit")
+@login_required
+@role_required("admin")
 def event_cost_edit(cost_id):
     row = EventCostItem.query.get_or_404(cost_id)
 
@@ -2752,7 +3040,10 @@ def event_cost_edit(cost_id):
 
     return redirect(url_for("event_detail", event_id=row.event_id))
 
+
 @app.post("/events/cost/<int:cost_id>/delete")
+@login_required
+@role_required("admin")
 def event_cost_delete(cost_id):
     row = EventCostItem.query.get_or_404(cost_id)
 
@@ -2769,259 +3060,9 @@ def event_cost_delete(cost_id):
     return redirect(url_for("event_detail", event_id=event_id))
 
 
-@app.get("/events")
-def events_list():
-
-    rows = TrainingEvent.query.order_by(
-        TrainingEvent.created_at.desc()
-    ).all()
-
-    return render_template(
-        "events_list.html",
-        rows=rows
-    )
-
-@app.route("/events/new", methods=["GET", "POST"])
-def events_new():
-    courses = TrainingCourse.query.order_by(TrainingCourse.course_name.asc()).all()
-
-    if request.method == "GET":
-        return render_template("events_new.html", courses=courses)
-
-    course_id = request.form.get("course_id")
-    event_type = (request.form.get("event_type") or "").strip().upper()
-    title = (request.form.get("title") or "").strip()
-    location = (request.form.get("location") or "").strip()
-    trainer = (request.form.get("trainer") or "").strip()
-    start_date_raw = (request.form.get("start_date") or "").strip()
-    end_date_raw = (request.form.get("end_date") or "").strip()
-
-    if not course_id or not event_type or not start_date_raw:
-        flash("กรุณากรอกข้อมูลให้ครบ", "error")
-        return redirect(url_for("events_new"))
-
-    start_date = datetime.strptime(start_date_raw, "%Y-%m-%d").date()
-    end_date = datetime.strptime(end_date_raw, "%Y-%m-%d").date() if end_date_raw else None
-
-    code = gen_event_code(event_type, start_date)
-
-    course = TrainingCourse.query.get_or_404(int(course_id))
-
-    if not title:
-        title = course.course_name
-
-    e = TrainingEvent(
-        course_id=course.id,
-        event_type=event_type,
-        event_code=code,
-        title=title,
-        location=location or None,
-        trainer=trainer or None,
-        start_date=start_date,
-        end_date=end_date,
-        status="PLANNED",
-    )
-
-    db.session.add(e)
-    db.session.commit()
-
-    audit("EVENT_CREATE", f"event_code={e.event_code}")
-    flash("สร้าง Training Event สำเร็จ", "success")
-
-    return redirect(url_for("events_list"))
-
-@app.get("/events/<int:event_id>")
-def event_detail(event_id):
-
-    event = TrainingEvent.query.get_or_404(event_id)
-
-    participant_rows = TrainingEventParticipant.query.filter_by(
-        event_id=event.id
-    ).order_by(TrainingEventParticipant.id.asc()).all()
-
-    participants = []
-
-    for p in participant_rows:
-        emp = Employee.query.filter_by(em_id=p.emp_id).first()
-
-        participants.append({
-            "row": p,
-            "emp": emp
-        })
-
-    # ---------- COST SUMMARY ----------
-    total_before_vat = sum((x.amount_before_vat or 0) for x in event.cost_items)
-    total_vat = sum((x.amount_vat or 0) for x in event.cost_items)
-    total_amount = sum((x.amount_total or 0) for x in event.cost_items)
-
-    return render_template(
-        "event_detail.html",
-        event=event,
-        participants=participants,
-        total_before_vat=total_before_vat,
-        total_vat=total_vat,
-        total_amount=total_amount,
-    )
-
-@app.post("/events/participant/<int:participant_id>/update")
-def event_participant_update(participant_id):
-    p = TrainingEventParticipant.query.get_or_404(participant_id)
-
-    result = (request.form.get("result") or "").strip().upper()
-    score_raw = (request.form.get("score") or "").strip()
-    hours_raw = (request.form.get("training_hours") or "").strip()
-    remark = (request.form.get("remark") or "").strip()
-
-    p.result = result or None
-
-    try:
-        p.score = float(score_raw) if score_raw else None
-    except Exception:
-        p.score = None
-
-    try:
-        p.training_hours = float(hours_raw) if hours_raw else None
-    except Exception:
-        p.training_hours = None
-
-    p.remark = remark or None
-
-    db.session.commit()
-
-    audit("EVENT_PARTICIPANT_UPDATE", f"event_id={p.event_id}, emp_id={p.emp_id}, result={p.result}")
-    flash("บันทึกผลอบรมแล้ว", "success")
-
-    return redirect(url_for("event_detail", event_id=p.event_id))
-
-@app.post("/events/<int:event_id>/participants/add")
-def event_participant_add(event_id):
-    event = TrainingEvent.query.get_or_404(event_id)
-
-    emp_id = (request.form.get("emp_id") or "").strip()
-
-    if not emp_id:
-        flash("กรุณาระบุ Emp ID", "error")
-        return redirect(url_for("event_detail", event_id=event.id))
-
-    emp = Employee.query.filter_by(em_id=emp_id).first()
-    if not emp:
-        flash("ไม่พบ Emp ID นี้ในระบบพนักงาน", "error")
-        return redirect(url_for("event_detail", event_id=event.id))
-
-    exists = TrainingEventParticipant.query.filter_by(
-        event_id=event.id,
-        emp_id=emp_id
-    ).first()
-
-    if exists:
-        flash("พนักงานคนนี้อยู่ใน Event แล้ว", "error")
-        return redirect(url_for("event_detail", event_id=event.id))
-
-    row = TrainingEventParticipant(
-        event_id=event.id,
-        emp_id=emp_id
-    )
-
-    db.session.add(row)
-    db.session.commit()
-
-    audit("EVENT_PARTICIPANT_ADD", f"event_code={event.event_code}, emp_id={emp_id}")
-    flash("เพิ่มผู้เข้าอบรมสำเร็จ", "success")
-
-    return redirect(url_for("event_detail", event_id=event.id))
-
-@app.post("/events/participants/<int:participant_id>/delete")
-def event_participant_delete(participant_id):
-    row = TrainingEventParticipant.query.get_or_404(participant_id)
-
-    event_id = row.event_id
-    emp_id = row.emp_id
-
-    db.session.delete(row)
-    db.session.commit()
-
-    audit("EVENT_PARTICIPANT_DELETE", f"event_id={event_id}, emp_id={emp_id}")
-    flash("ลบผู้เข้าอบรมออกจาก Event แล้ว", "success")
-
-    return redirect(url_for("event_detail", event_id=event_id))
-
-@app.post("/events/<int:event_id>/files/add")
-def event_file_add(event_id):
-    event = TrainingEvent.query.get_or_404(event_id)
-
-    f = request.files.get("file")
-    file_type = (request.form.get("file_type") or "").strip()
-    note = (request.form.get("note") or "").strip()
-
-    if not f or not f.filename:
-        flash("กรุณาเลือกไฟล์", "error")
-        return redirect(url_for("event_detail", event_id=event.id))
-
-    if not allowed_file(f.filename):
-        flash("อนุญาตเฉพาะไฟล์ pdf / png / jpg / jpeg / xlsx", "error")
-        return redirect(url_for("event_detail", event_id=event.id))
-
-    original = f.filename
-    safe = secure_filename(original)
-    stamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
-    stored = f"{event.event_code}_{stamp}_{safe}"
-
-    save_path = os.path.join(UPLOAD_EVENT_DIR, stored)
-    f.save(save_path)
-
-    row = EventFile(
-        event_id=event.id,
-        file_type=file_type or "other",
-        original_name=original,
-        stored_name=stored,
-        note=note or None,
-    )
-
-    db.session.add(row)
-    db.session.commit()
-
-    audit("EVENT_FILE_ADD", f"event_code={event.event_code}, file={original}")
-    flash("อัปโหลดไฟล์สำเร็จ", "success")
-
-    return redirect(url_for("event_detail", event_id=event.id))
-
-@app.post("/events/files/<int:file_id>/edit")
-def event_file_edit(file_id):
-    row = EventFile.query.get_or_404(file_id)
-
-    row.file_type = (request.form.get("file_type") or "").strip() or "other"
-    row.note = (request.form.get("note") or "").strip() or None
-
-    db.session.commit()
-
-    audit("EVENT_FILE_EDIT", f"file_id={row.id}, event_id={row.event_id}")
-    flash("อัปเดตข้อมูลไฟล์แล้ว", "success")
-
-    return redirect(url_for("event_detail", event_id=row.event_id))
-
-@app.post("/events/files/<int:file_id>/delete")
-def event_file_delete(file_id):
-    row = EventFile.query.get_or_404(file_id)
-
-    event_id = row.event_id
-    original_name = row.original_name
-    file_path = os.path.join(UPLOAD_EVENT_DIR, row.stored_name)
-
-    try:
-        if os.path.exists(file_path):
-            os.remove(file_path)
-    except Exception:
-        pass
-
-    db.session.delete(row)
-    db.session.commit()
-
-    audit("EVENT_FILE_DELETE", f"event_id={event_id}, file={original_name}")
-    flash("ลบไฟล์แล้ว", "success")
-
-    return redirect(url_for("event_detail", event_id=event_id))
-
 @app.post("/events/<int:event_id>/generate-records")
+@login_required
+@role_required("admin")
 def event_generate_training_records(event_id):
     event = TrainingEvent.query.get_or_404(event_id)
 
@@ -3088,12 +3129,9 @@ def event_generate_training_records(event_id):
 
     db.session.commit()
 
-    audit(
-        "GENERATE_TRAINING_RECORDS",
-        f"event_code={event.event_code}, added={added}, skipped={skipped}"
-    )
-
+    audit("GENERATE_TRAINING_RECORDS", f"event_code={event.event_code}, added={added}, skipped={skipped}")
     flash(f"สร้าง TrainingRecord สำเร็จ {added} รายการ / ข้าม {skipped} รายการ", "success")
+
     return redirect(url_for("event_detail", event_id=event.id))
     
 # -------------------------------------------------
