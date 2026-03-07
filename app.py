@@ -43,6 +43,9 @@ app.secret_key = os.environ.get("SECRET_KEY", "super-secret-key")
 
 ALLOWED_ADMIN_EMAIL = "hr02@sankothai.net"
 
+UPLOAD_EVENT_DIR = os.path.join(BASE_DIR, "static", "uploads", "events")
+os.makedirs(UPLOAD_EVENT_DIR, exist_ok=True)
+
 # Flask-Login
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -386,7 +389,29 @@ class TrainingEventParticipant(db.Model):
         backref=db.backref("participants", lazy=True, cascade="all, delete-orphan")
     )
 
+class EventFile(db.Model):
+    __tablename__ = "event_files"
 
+    id = db.Column(db.Integer, primary_key=True)
+
+    event_id = db.Column(
+        db.Integer,
+        db.ForeignKey("training_events.id"),
+        nullable=False,
+        index=True
+    )
+
+    file_type = db.Column(db.String(50), nullable=True)   # quotation / invoice / receipt / certificate / attendance / other
+    original_name = db.Column(db.String(255), nullable=True)
+    stored_name = db.Column(db.String(255), nullable=False)
+    note = db.Column(db.String(255), nullable=True)
+
+    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    event = db.relationship(
+        "TrainingEvent",
+        backref=db.backref("files", lazy=True, cascade="all, delete-orphan")
+    )
 # -------------------------------------------------
 # Helper Functions
 # -------------------------------------------------
@@ -2798,6 +2823,82 @@ def event_participant_delete(participant_id):
 
     audit("EVENT_PARTICIPANT_DELETE", f"event_id={event_id}, emp_id={emp_id}")
     flash("ลบผู้เข้าอบรมออกจาก Event แล้ว", "success")
+
+    return redirect(url_for("event_detail", event_id=event_id))
+
+@app.post("/events/<int:event_id>/files/add")
+def event_file_add(event_id):
+    event = TrainingEvent.query.get_or_404(event_id)
+
+    f = request.files.get("file")
+    file_type = (request.form.get("file_type") or "").strip()
+    note = (request.form.get("note") or "").strip()
+
+    if not f or not f.filename:
+        flash("กรุณาเลือกไฟล์", "error")
+        return redirect(url_for("event_detail", event_id=event.id))
+
+    if not allowed_file(f.filename):
+        flash("อนุญาตเฉพาะไฟล์ pdf / png / jpg / jpeg / xlsx", "error")
+        return redirect(url_for("event_detail", event_id=event.id))
+
+    original = f.filename
+    safe = secure_filename(original)
+    stamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+    stored = f"{event.event_code}_{stamp}_{safe}"
+
+    save_path = os.path.join(UPLOAD_EVENT_DIR, stored)
+    f.save(save_path)
+
+    row = EventFile(
+        event_id=event.id,
+        file_type=file_type or "other",
+        original_name=original,
+        stored_name=stored,
+        note=note or None,
+    )
+
+    db.session.add(row)
+    db.session.commit()
+
+    audit("EVENT_FILE_ADD", f"event_code={event.event_code}, file={original}")
+    flash("อัปโหลดไฟล์สำเร็จ", "success")
+
+    return redirect(url_for("event_detail", event_id=event.id))
+
+@app.post("/events/files/<int:file_id>/edit")
+def event_file_edit(file_id):
+    row = EventFile.query.get_or_404(file_id)
+
+    row.file_type = (request.form.get("file_type") or "").strip() or "other"
+    row.note = (request.form.get("note") or "").strip() or None
+
+    db.session.commit()
+
+    audit("EVENT_FILE_EDIT", f"file_id={row.id}, event_id={row.event_id}")
+    flash("อัปเดตข้อมูลไฟล์แล้ว", "success")
+
+    return redirect(url_for("event_detail", event_id=row.event_id))
+
+@app.post("/events/files/<int:file_id>/delete")
+def event_file_delete(file_id):
+    row = EventFile.query.get_or_404(file_id)
+
+    event_id = row.event_id
+    original_name = row.original_name
+    file_path = os.path.join(UPLOAD_EVENT_DIR, row.stored_name)
+
+    try:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+    except Exception:
+        pass
+
+    db.session.delete(row)
+    db.session.commit()
+
+    audit("EVENT_FILE_DELETE", f"event_id={event_id}, file={original_name}")
+    flash("ลบไฟล์แล้ว", "success")
 
     return redirect(url_for("event_detail", event_id=event_id))
     
