@@ -3020,6 +3020,81 @@ def event_file_delete(file_id):
     flash("ลบไฟล์แล้ว", "success")
 
     return redirect(url_for("event_detail", event_id=event_id))
+
+@app.post("/events/<int:event_id>/generate-records")
+def event_generate_training_records(event_id):
+    event = TrainingEvent.query.get_or_404(event_id)
+
+    participants = TrainingEventParticipant.query.filter_by(
+        event_id=event.id
+    ).order_by(TrainingEventParticipant.id.asc()).all()
+
+    if not participants:
+        flash("ยังไม่มีผู้เข้าอบรมใน Event นี้", "error")
+        return redirect(url_for("event_detail", event_id=event.id))
+
+    added = 0
+    skipped = 0
+
+    for p in participants:
+        emp = Employee.query.filter_by(em_id=p.emp_id).first()
+
+        if not emp:
+            skipped += 1
+            continue
+
+        exists = TrainingRecord.query.filter_by(
+            emp_id=p.emp_id,
+            event_id=event.id
+        ).first()
+
+        if exists:
+            skipped += 1
+            continue
+
+        rec = TrainingRecord(
+            year=event.start_date.year if event.start_date else None,
+            month=event.start_date.month if event.start_date else None,
+
+            emp_id=p.emp_id,
+
+            prefix=emp.title_th,
+            first_name=emp.first_name_th,
+            last_name=emp.last_name_th,
+
+            section=emp.section,
+            position=emp.position,
+
+            course_code=event.course.course_code,
+            course_name=event.course.course_name,
+            course_type=event.course.course_type,
+
+            start_date=event.start_date,
+            end_date=event.end_date,
+
+            hours=p.training_hours,
+
+            evaluate_method="Event Result",
+            result=p.result,
+            score=p.score,
+            evaluator=event.trainer,
+
+            remark=p.remark,
+            event_id=event.id
+        )
+
+        db.session.add(rec)
+        added += 1
+
+    db.session.commit()
+
+    audit(
+        "GENERATE_TRAINING_RECORDS",
+        f"event_code={event.event_code}, added={added}, skipped={skipped}"
+    )
+
+    flash(f"สร้าง TrainingRecord สำเร็จ {added} รายการ / ข้าม {skipped} รายการ", "success")
+    return redirect(url_for("event_detail", event_id=event.id))
     
 # -------------------------------------------------
 # Run (Local Only)
