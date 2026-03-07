@@ -66,33 +66,66 @@
     <table class="table">
       <thead>
         <tr>
-          <th>Emp ID</th>
-          <th>Name</th>
-          <th>Section</th>
-          <th>Position</th>
-          <th class="nowrap">Action</th>
+            <th>Emp ID</th>
+            <th>Name</th>
+            <th>Section</th>
+            <th>Position</th>
+            <th>Result</th>
+            <th>Score</th>
+            <th>Hours</th>
+            <th>Remark</th>
+            <th class="nowrap">Save</th>
+            <th class="nowrap">Delete</th>
         </tr>
       </thead>
       <tbody>
         {% for x in participants %}
         <tr>
-          <td class="nowrap">{{ x.row.emp_id }}</td>
+          <form method="post"
+                action="{{ url_for('event_participant_update', participant_id=x.row.id) }}">
 
-          <td>
-            {% if x.emp %}
-              {{ x.emp.th_full() }}
-            {% else %}
-              <span class="muted">ไม่พบข้อมูลพนักงาน</span>
-            {% endif %}
-          </td>
+            <td class="nowrap">{{ x.row.emp_id }}</td>
 
-          <td>
-            {% if x.emp %}{{ x.emp.section or "" }}{% endif %}
-          </td>
+            <td>
+              {% if x.emp %}
+                {{ x.emp.th_full() }}
+              {% else %}
+                <span class="muted">ไม่พบข้อมูลพนักงาน</span>
+              {% endif %}
+            </td>
 
-          <td>
-            {% if x.emp %}{{ x.emp.position or "" }}{% endif %}
-          </td>
+            <td>
+              {% if x.emp %}{{ x.emp.section or "" }}{% endif %}
+            </td>
+
+            <td>
+              {% if x.emp %}{{ x.emp.position or "" }}{% endif %}
+            </td>
+
+            <td>
+              <select name="result" class="input" style="width:110px;">
+                <option value="" {% if not x.row.result %}selected{% endif %}>-</option>
+                <option value="PASS" {% if x.row.result=='PASS' %}selected{% endif %}>PASS</option>
+                <option value="FAIL" {% if x.row.result=='FAIL' %}selected{% endif %}>FAIL</option>
+              </select>
+            </td>
+
+            <td>
+              <input class="input" name="score" value="{{ x.row.score or '' }}" style="width:90px;">
+            </td>
+
+            <td>
+              <input class="input" name="training_hours" value="{{ x.row.training_hours or '' }}" style="width:90px;">
+            </td>
+
+            <td>
+              <input class="input" name="remark" value="{{ x.row.remark or '' }}" style="width:180px;">
+            </td>
+
+            <td class="nowrap">
+              <button class="btn sm" type="submit">Save</button>
+            </td>
+          </form>
 
           <td class="nowrap">
             <form method="post"
