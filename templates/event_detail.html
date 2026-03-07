@@ -3,376 +3,224 @@
 
 <div class="page-head">
   <div>
-    <h1>{{ event.event_code }}</h1>
-    <div class="muted">{{ event.title }}</div>
+    <h1>{% if mode=='new' %}New Course{% else %}Edit Course{% endif %}</h1>
+    {% if course %}
+      <div class="muted">Code: <b>{{ course.course_code }}</b> • Type: <b>{{ course.course_type }}</b></div>
+    {% endif %}
   </div>
 
-  <div>
-    <a class="btn ghost" href="{{ url_for('events_list') }}">Back</a>
+  <div class="actions">
+    <a class="btn ghost" href="{{ url_for('courses_list') }}">กลับ</a>
   </div>
 </div>
 
 <div class="card">
-  <div style="display:grid; grid-template-columns:repeat(2,1fr); gap:12px;">
-    <div>
-      <div class="muted">Course</div>
-      <div><b>{{ event.course.course_code }}</b> • {{ event.course.course_name }}</div>
-    </div>
-
-    <div>
-      <div class="muted">Type</div>
-      <div>{{ event.event_type }}</div>
-    </div>
-
-    <div>
-      <div class="muted">Date</div>
-      <div>
-        {{ event.start_date }}
-        {% if event.end_date %} - {{ event.end_date }}{% endif %}
+  <form method="post" style="display:grid; grid-template-columns:repeat(2,1fr); gap:12px;">
+    {% if mode=='new' %}
+      <div class="field">
+        <label>Type</label>
+        <select class="input" name="course_type" required>
+          <option value="">-- เลือก --</option>
+          <option value="OJT">OJT</option>
+          <option value="INH">INHOUSE</option>
+          <option value="EXT">EXTERNAL</option>
+        </select>
       </div>
+    {% else %}
+      <div class="field">
+        <label>Type</label>
+        <input class="input" value="{{ course.course_type }}" disabled>
+      </div>
+    {% endif %}
+
+    <div class="field">
+      <label>Status</label>
+      {% set st = course.status if course else 'Draft' %}
+      <select class="input" name="status">
+        <option value="Draft" {% if st=='Draft' %}selected{% endif %}>Draft</option>
+        <option value="Planned" {% if st=='Planned' %}selected{% endif %}>Planned</option>
+        <option value="Done" {% if st=='Done' %}selected{% endif %}>Done</option>
+        <option value="Cancelled" {% if st=='Cancelled' %}selected{% endif %}>Cancelled</option>
+      </select>
     </div>
 
-    <div>
-      <div class="muted">Status</div>
-      <div>{{ event.status }}</div>
+    <div class="field" style="grid-column:1/-1;">
+      <label>Course Name</label>
+      <input class="input" name="course_name" value="{{ course.course_name if course else '' }}" required>
     </div>
 
-    <div>
-      <div class="muted">Location</div>
-      <div>{{ event.location or "-" }}</div>
+    <div class="field">
+      <label>Owner</label>
+      <input class="input" name="owner" value="{{ course.owner if course else '' }}">
     </div>
 
-    <div>
-      <div class="muted">Trainer</div>
-      <div>{{ event.trainer or "-" }}</div>
+    <div class="field">
+      <label>Vendor / Trainer</label>
+      <input class="input" name="vendor" value="{{ course.vendor if course else '' }}">
     </div>
-  </div>
-</div>
 
-<div class="card">
-  <h3 style="margin-top:0;">Generate Training Records</h3>
+    <div class="field" style="grid-column:1/-1;">
+      <label>Location</label>
+      <input class="input" name="location" value="{{ course.location if course else '' }}">
+    </div>
 
-  <form method="post"
-        action="{{ url_for('event_generate_training_records', event_id=event.id) }}"
-        onsubmit="return confirm('สร้าง TrainingRecord จาก Event นี้ใช่หรือไม่? ระบบจะกันข้อมูลซ้ำให้อัตโนมัติ');">
-    <button class="btn primary" type="submit">
-      Generate Training Records
-    </button>
+    <div class="field" style="grid-column:1/-1;">
+      <label>Description</label>
+      <input class="input" name="description" value="{{ course.description if course else '' }}">
+    </div>
+
+    <div style="grid-column:1/-1; display:flex; gap:10px; justify-content:flex-end;">
+      <button class="btn primary" type="submit">Save</button>
+      <a class="btn ghost" href="{{ url_for('courses_list') }}">Cancel</a>
+    </div>
   </form>
 </div>
 
-<div class="card">
-  <h3 style="margin-top:0;">Add Participant</h3>
+{% if mode=='edit' and course %}
+  <!-- Upload files -->
+  <div class="card">
+    <div style="font-weight:900; margin-bottom:10px;">แนบไฟล์หลักสูตร / ใบเสนอราคา / ใบแจ้งหนี้ / ใบเสร็จ</div>
 
-  <form method="post"
-        action="{{ url_for('event_participant_add', event_id=event.id) }}"
-        style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-    <input class="input" name="emp_id" placeholder="กรอก Emp ID" style="width:220px;" required>
-    <button class="btn primary" type="submit">+ Add Participant</button>
-  </form>
-</div>
+    <form method="post" action="{{ url_for('course_file_add', course_id=course.id) }}" enctype="multipart/form-data"
+          style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+      <select name="file_type" class="input" style="width:220px;">
+        <option value="">(เลือกประเภทเอกสาร)</option>
+        <option value="syllabus">รายละเอียดหลักสูตร</option>
+        <option value="quotation">ใบเสนอราคา</option>
+        <option value="invoice">ใบแจ้งหนี้</option>
+        <option value="receipt">ใบเสร็จ</option>
+        <option value="other">อื่นๆ</option>
+      </select>
 
-<div class="card">
-  <h3 style="margin-top:0;">Participants</h3>
+      <input class="input" name="note" placeholder="หมายเหตุ" style="width:260px;">
+      <input type="file" name="file" accept=".pdf,.png,.jpg,.jpeg,.xlsx" required>
+      <button class="btn" type="submit">Upload</button>
+    </form>
 
-  <div class="table-wrap">
-    <table class="table">
-      <thead>
-        <tr>
-          <th>Emp ID</th>
-          <th>Name</th>
-          <th>Section</th>
-          <th>Position</th>
-          <th>Result</th>
-          <th>Score</th>
-          <th>Hours</th>
-          <th>Remark</th>
-          <th class="nowrap">Save</th>
-          <th class="nowrap">Delete</th>
-        </tr>
-      </thead>
+    <div class="sep" style="margin:12px 0;"></div>
 
-      <tbody>
-        {% for x in participants %}
-        <tr>
-          <form method="post"
-                action="{{ url_for('event_participant_update', participant_id=x.row.id) }}">
-
-            <td class="nowrap">{{ x.row.emp_id }}</td>
-
+    <div class="muted" style="margin-bottom:8px;">ไฟล์ทั้งหมด: {{ course.files|length }}</div>
+    <div class="table-wrap">
+      <table class="table" style="min-width:800px;">
+        <thead>
+          <tr>
+            <th>Type</th>
+            <th>File</th>
+            <th>Note</th>
+            <th>Uploaded</th>
+            <th class="nowrap">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for f in course.files %}
+          <tr>
+            <td class="nowrap">{{ f.file_type or "" }}</td>
             <td>
-              {% if x.emp %}
-                {{ x.emp.th_full() }}
-              {% else %}
-                <span class="muted">ไม่พบข้อมูลพนักงาน</span>
-              {% endif %}
+              <a class="btn sm" target="_blank"
+                 href="{{ url_for('static', filename='uploads/courses/' ~ f.stored_name) }}">
+                View
+              </a>
+              <span class="muted" style="margin-left:8px;">{{ f.original_name or f.stored_name }}</span>
             </td>
-
-            <td>
-              {% if x.emp %}{{ x.emp.section or "" }}{% endif %}
-            </td>
-
-            <td>
-              {% if x.emp %}{{ x.emp.position or "" }}{% endif %}
-            </td>
-
-            <td>
-              <select name="result" class="input" style="width:110px;">
-                <option value="" {% if not x.row.result %}selected{% endif %}>-</option>
-                <option value="PASS" {% if x.row.result=='PASS' %}selected{% endif %}>PASS</option>
-                <option value="FAIL" {% if x.row.result=='FAIL' %}selected{% endif %}>FAIL</option>
-              </select>
-            </td>
-
-            <td>
-              <input class="input" name="score" value="{{ x.row.score or '' }}" style="width:90px;">
-            </td>
-
-            <td>
-              <input class="input" name="training_hours" value="{{ x.row.training_hours or '' }}" style="width:90px;">
-            </td>
-
-            <td>
-              <input class="input" name="remark" value="{{ x.row.remark or '' }}" style="width:180px;">
-            </td>
-
+            <td>{{ f.note or "" }}</td>
+            <td class="nowrap">{{ f.uploaded_at }}</td>
             <td class="nowrap">
-              <button class="btn sm" type="submit">Save</button>
+              <form method="post"
+                    action="{{ url_for('course_file_delete', file_id=f.id) }}"
+                    style="display:inline;"
+                    onsubmit="return confirm('ลบไฟล์นี้ใช่หรือไม่?');">
+                <button class="btn sm danger" type="submit">Delete</button>
+              </form>
             </td>
-          </form>
-
-          <td class="nowrap">
-            <form method="post"
-                  action="{{ url_for('event_participant_delete', participant_id=x.row.id) }}"
-                  style="display:inline;"
-                  onsubmit="return confirm('ลบผู้เข้าอบรมคนนี้ออกจาก Event?');">
-              <button class="btn sm danger" type="submit">Delete</button>
-            </form>
-          </td>
-        </tr>
-        {% endfor %}
-
-        {% if participants|length == 0 %}
-        <tr>
-          <td colspan="10" class="muted center" style="padding:14px;">
-            ยังไม่มีผู้เข้าอบรม
-          </td>
-        </tr>
-        {% endif %}
-      </tbody>
-    </table>
-  </div>
-</div>
-
-<div class="card">
-  <h3 style="margin-top:0;">Upload File</h3>
-
-  <form method="post"
-        action="{{ url_for('event_file_add', event_id=event.id) }}"
-        enctype="multipart/form-data"
-        style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-
-    <select name="file_type" class="input" style="width:220px;">
-      <option value="quotation">ใบเสนอราคา</option>
-      <option value="invoice">ใบแจ้งหนี้</option>
-      <option value="receipt">ใบเสร็จ</option>
-      <option value="certificate">Certificate</option>
-      <option value="attendance">Attendance</option>
-      <option value="other">อื่น ๆ</option>
-    </select>
-
-    <input class="input" name="note" placeholder="หมายเหตุ" style="width:240px;">
-
-    <input type="file" name="file" accept=".pdf,.png,.jpg,.jpeg,.xlsx" required>
-
-    <button class="btn primary" type="submit">Upload</button>
-  </form>
-</div>
-
-<div class="card">
-  <h3 style="margin-top:0;">Files</h3>
-
-  <div class="table-wrap">
-    <table class="table">
-      <thead>
-        <tr>
-          <th>Type</th>
-          <th>File</th>
-          <th>Note</th>
-          <th>Uploaded</th>
-          <th class="nowrap">Action</th>
-        </tr>
-      </thead>
-
-      <tbody>
-        {% for f in event.files %}
-        <tr>
-          <td class="nowrap">{{ f.file_type or "" }}</td>
-
-          <td>
-            <a class="btn sm" target="_blank"
-               href="{{ url_for('static', filename='uploads/events/' ~ f.stored_name) }}">
-              View
-            </a>
-            <span class="muted" style="margin-left:8px;">
-              {{ f.original_name or f.stored_name }}
-            </span>
-          </td>
-
-          <td>
-            <form method="post"
-                  action="{{ url_for('event_file_edit', file_id=f.id) }}"
-                  style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-              <select name="file_type" class="input" style="width:170px;">
-                <option value="quotation" {% if f.file_type=='quotation' %}selected{% endif %}>ใบเสนอราคา</option>
-                <option value="invoice" {% if f.file_type=='invoice' %}selected{% endif %}>ใบแจ้งหนี้</option>
-                <option value="receipt" {% if f.file_type=='receipt' %}selected{% endif %}>ใบเสร็จ</option>
-                <option value="certificate" {% if f.file_type=='certificate' %}selected{% endif %}>Certificate</option>
-                <option value="attendance" {% if f.file_type=='attendance' %}selected{% endif %}>Attendance</option>
-                <option value="other" {% if f.file_type=='other' %}selected{% endif %}>อื่น ๆ</option>
-              </select>
-
-              <input class="input" name="note" value="{{ f.note or '' }}" style="width:220px;">
-
-              <button class="btn sm" type="submit">Save</button>
-            </form>
-          </td>
-
-          <td class="nowrap">{{ f.uploaded_at }}</td>
-
-          <td class="nowrap">
-            <form method="post"
-                  action="{{ url_for('event_file_delete', file_id=f.id) }}"
-                  style="display:inline;"
-                  onsubmit="return confirm('ลบไฟล์นี้ใช่หรือไม่?');">
-              <button class="btn sm danger" type="submit">Delete</button>
-            </form>
-          </td>
-        </tr>
-        {% endfor %}
-
-        {% if event.files|length == 0 %}
-        <tr>
-          <td colspan="5" class="muted center" style="padding:14px;">
-            ยังไม่มีไฟล์แนบ
-          </td>
-        </tr>
-        {% endif %}
-      </tbody>
-    </table>
-  </div>
-</div>
-
-<div class="card">
-  <h3 style="margin-top:0;">Add Cost</h3>
-
-  <form method="post"
-        action="{{ url_for('event_cost_add', event_id=event.id) }}"
-        style="display:grid; grid-template-columns:repeat(4,1fr); gap:10px;">
-
-    <input class="input" name="cost_type" placeholder="ประเภทค่าใช้จ่าย เช่น Trainer Fee" required>
-    <input class="input" name="amount_before_vat" placeholder="ก่อน VAT">
-    <input class="input" name="vat_rate" value="7" placeholder="VAT %">
-    <input class="input" name="remark" placeholder="หมายเหตุ">
-
-    <div style="grid-column:1/-1;">
-      <button class="btn primary" type="submit">+ Add Cost</button>
-    </div>
-  </form>
-</div>
-
-<div class="card">
-  <h3 style="margin-top:0;">Cost Items</h3>
-
-  <div class="table-wrap">
-    <table class="table">
-      <thead>
-        <tr>
-          <th>Type</th>
-          <th>Before VAT</th>
-          <th>VAT %</th>
-          <th>VAT</th>
-          <th>Total</th>
-          <th>Remark</th>
-          <th class="nowrap">Action</th>
-        </tr>
-      </thead>
-
-      <tbody>
-        {% for x in event.cost_items %}
-        <tr>
-          <td>
-            <form method="post"
-                  action="{{ url_for('event_cost_edit', cost_id=x.id) }}"
-                  style="display:grid; grid-template-columns:repeat(6,1fr) auto auto; gap:8px; align-items:center;">
-              <input class="input" name="cost_type" value="{{ x.cost_type or '' }}">
-          </td>
-
-          <td>
-              <input class="input" name="amount_before_vat" value="{{ x.amount_before_vat or 0 }}">
-          </td>
-
-          <td>
-              <input class="input" name="vat_rate" value="{{ x.vat_rate or 7 }}">
-          </td>
-
-          <td class="nowrap">
-              {{ "{:,.2f}".format(x.amount_vat or 0) }}
-          </td>
-
-          <td class="nowrap">
-              <b>{{ "{:,.2f}".format(x.amount_total or 0) }}</b>
-          </td>
-
-          <td>
-              <input class="input" name="remark" value="{{ x.remark or '' }}">
-          </td>
-
-          <td class="nowrap">
-              <button class="btn sm" type="submit">Save</button>
-            </form>
-
-            <form method="post"
-                  action="{{ url_for('event_cost_delete', cost_id=x.id) }}"
-                  style="display:inline;"
-                  onsubmit="return confirm('ลบค่าใช้จ่ายนี้ใช่หรือไม่?');">
-              <button class="btn sm danger" type="submit">Delete</button>
-            </form>
-          </td>
-        </tr>
-        {% endfor %}
-
-        {% if event.cost_items|length == 0 %}
-        <tr>
-          <td colspan="7" class="muted center" style="padding:14px;">
-            ยังไม่มีค่าใช้จ่าย
-          </td>
-        </tr>
-        {% endif %}
-      </tbody>
-    </table>
-  </div>
-</div>
-
-<div class="card">
-  <h3 style="margin-top:0;">Cost Summary</h3>
-
-  <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px;">
-    <div>
-      <div class="muted">Before VAT</div>
-      <div><b>{{ "{:,.2f}".format(total_before_vat or 0) }}</b></div>
-    </div>
-
-    <div>
-      <div class="muted">VAT</div>
-      <div><b>{{ "{:,.2f}".format(total_vat or 0) }}</b></div>
-    </div>
-
-    <div>
-      <div class="muted">Total</div>
-      <div><b>{{ "{:,.2f}".format(total_amount or 0) }}</b></div>
+          </tr>
+          {% endfor %}
+          {% if course.files|length == 0 %}
+            <tr><td colspan="5" class="muted center" style="padding:14px;">ยังไม่มีไฟล์</td></tr>
+          {% endif %}
+        </tbody>
+      </table>
     </div>
   </div>
-</div>
+
+  <!-- Cost items -->
+  <div class="card">
+    <div style="font-weight:900; margin-bottom:10px;">ค่าใช้จ่าย</div>
+
+    <form method="post" action="{{ url_for('course_cost_add', course_id=course.id) }}"
+          style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+      <select name="cost_type" class="input" style="width:220px;">
+        <option value="ค่าอบรม">ค่าอบรม</option>
+        <option value="ค่าเดินทาง">ค่าเดินทาง</option>
+        <option value="ค่าที่พัก">ค่าที่พัก</option>
+        <option value="ค่าอาหาร">ค่าอาหาร</option>
+        <option value="ค่าเอกสาร">ค่าเอกสาร</option>
+        <option value="อื่นๆ">อื่นๆ</option>
+      </select>
+
+      <input class="input" name="amount_before_vat" placeholder="ก่อน VAT" style="width:160px;">
+      <input class="input" name="vat_rate" placeholder="VAT %" value="7" style="width:100px;">
+      <input class="input" name="remark" placeholder="หมายเหตุ" style="width:260px;">
+      <button class="btn" type="submit">+ Add</button>
+    </form>
+
+    <div class="sep" style="margin:12px 0;"></div>
+
+    <div class="muted" style="margin-bottom:8px;">
+      รวมก่อน VAT: <b>{{ "{:,.2f}".format(course.total_before_vat()) }}</b> •
+      VAT: <b>{{ "{:,.2f}".format(course.total_vat()) }}</b> •
+      รวมทั้งสิ้น: <b>{{ "{:,.2f}".format(course.total_amount()) }}</b>
+    </div>
+
+    <div class="table-wrap">
+      <table class="table" style="min-width:900px;">
+        <thead>
+          <tr>
+            <th>Type</th>
+            <th class="nowrap">Before VAT</th>
+            <th class="nowrap">VAT%</th>
+            <th class="nowrap">VAT</th>
+            <th class="nowrap">Total</th>
+            <th>Remark</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for x in course.cost_items %}
+            <tr>
+              <td>{{ x.cost_type }}</td>
+              <td class="nowrap">{{ "{:,.2f}".format(x.amount_before_vat or 0) }}</td>
+              <td class="nowrap">{{ x.vat_rate or 0 }}</td>
+              <td class="nowrap">{{ "{:,.2f}".format(x.amount_vat or 0) }}</td>
+              <td class="nowrap"><b>{{ "{:,.2f}".format(x.amount_total or 0) }}</b></td>
+              <td>{{ x.remark or "" }}</td>
+              <td>
+                <form method="post"
+                      action="{{ url_for('course_cost_delete', cost_id=x.id) }}"
+                      style="display:inline;"
+                      onsubmit="return confirm('ลบค่าใช้จ่าย?')">
+                  <button class="btn sm danger" type="submit">Delete</button>
+                </form>
+              </td>
+            </tr>
+          {% endfor %}
+          {% if course.cost_items|length == 0 %}
+            <tr><td colspan="7" class="muted center" style="padding:14px;">ยังไม่มีค่าใช้จ่าย</td></tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Delete course -->
+  <div class="card">
+    <div style="font-weight:900; margin-bottom:10px; color:#b91c1c;">Danger Zone</div>
+
+    <form method="post"
+          action="{{ url_for('course_delete', course_id=course.id) }}"
+          onsubmit="return confirm('ลบหลักสูตรนี้ใช่หรือไม่?');">
+      <button class="btn danger" type="submit">Delete Course</button>
+    </form>
+  </div>
+{% endif %}
 
 {% endblock %}
