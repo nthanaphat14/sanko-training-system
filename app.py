@@ -2814,25 +2814,35 @@ def events_new():
 
 @app.get("/events/<int:event_id>")
 def event_detail(event_id):
+
     event = TrainingEvent.query.get_or_404(event_id)
 
-    # ดึง participants แล้วไปหา Employee จริง
     participant_rows = TrainingEventParticipant.query.filter_by(
         event_id=event.id
     ).order_by(TrainingEventParticipant.id.asc()).all()
 
     participants = []
+
     for p in participant_rows:
         emp = Employee.query.filter_by(em_id=p.emp_id).first()
+
         participants.append({
             "row": p,
             "emp": emp
         })
 
+    # ---------- COST SUMMARY ----------
+    total_before_vat = sum((x.amount_before_vat or 0) for x in event.cost_items)
+    total_vat = sum((x.amount_vat or 0) for x in event.cost_items)
+    total_amount = sum((x.amount_total or 0) for x in event.cost_items)
+
     return render_template(
         "event_detail.html",
         event=event,
-        participants=participants
+        participants=participants,
+        total_before_vat=total_before_vat,
+        total_vat=total_vat,
+        total_amount=total_amount,
     )
 
 @app.post("/events/<int:event_id>/participants/add")
