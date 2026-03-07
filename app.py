@@ -43,6 +43,7 @@ app.secret_key = os.environ.get("SECRET_KEY", "super-secret-key")
 
 ALLOWED_ADMIN_EMAIL = "hr02@sankothai.net"
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_EVENT_DIR = os.path.join(BASE_DIR, "static", "uploads", "events")
 os.makedirs(UPLOAD_EVENT_DIR, exist_ok=True)
 
