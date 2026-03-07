@@ -10,7 +10,7 @@ from flask import (
     request,
     redirect,
     url_for,
-    flash,
+    flash,t
     session,
     g,
     abort,
@@ -379,6 +379,12 @@ class TrainingEventParticipant(db.Model):
     )
 
     emp_id = db.Column(db.String(40), nullable=False, index=True)
+
+    # ✅ เพิ่ม 4 ช่องนี้
+    result = db.Column(db.String(20), nullable=True)
+    score = db.Column(db.Float, nullable=True)
+    training_hours = db.Column(db.Float, nullable=True)
+    remark = db.Column(db.String(255), nullable=True)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -2844,6 +2850,36 @@ def event_detail(event_id):
         total_vat=total_vat,
         total_amount=total_amount,
     )
+
+@app.post("/events/participant/<int:participant_id>/update")
+def event_participant_update(participant_id):
+    p = TrainingEventParticipant.query.get_or_404(participant_id)
+
+    result = (request.form.get("result") or "").strip().upper()
+    score_raw = (request.form.get("score") or "").strip()
+    hours_raw = (request.form.get("training_hours") or "").strip()
+    remark = (request.form.get("remark") or "").strip()
+
+    p.result = result or None
+
+    try:
+        p.score = float(score_raw) if score_raw else None
+    except Exception:
+        p.score = None
+
+    try:
+        p.training_hours = float(hours_raw) if hours_raw else None
+    except Exception:
+        p.training_hours = None
+
+    p.remark = remark or None
+
+    db.session.commit()
+
+    audit("EVENT_PARTICIPANT_UPDATE", f"event_id={p.event_id}, emp_id={p.emp_id}, result={p.result}")
+    flash("บันทึกผลอบรมแล้ว", "success")
+
+    return redirect(url_for("event_detail", event_id=p.event_id))
 
 @app.post("/events/<int:event_id>/participants/add")
 def event_participant_add(event_id):
