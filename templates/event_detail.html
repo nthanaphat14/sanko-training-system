@@ -5,7 +5,7 @@
   <div>
     <h1>{% if mode=='new' %}New Course{% else %}Edit Course{% endif %}</h1>
     {% if course %}
-      <div class="muted">Code: <b>{{ course.course_code }}</b> • Type: <b>{{ course.course_type }}</b></div>
+      <div class="muted">Code: <b>{{ course.course_code }}</b> • Type: <b>{{ event.course.course_type }}</b></div>
     {% endif %}
   </div>
 
@@ -29,7 +29,7 @@
     {% else %}
       <div class="field">
         <label>Type</label>
-        <input class="input" value="{{ course.course_type }}" disabled>
+        <input class="input" value="{{ event.course.course_type }}" disabled>
       </div>
     {% endif %}
 
