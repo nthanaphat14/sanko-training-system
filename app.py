@@ -3133,7 +3133,68 @@ def event_generate_training_records(event_id):
     flash(f"สร้าง TrainingRecord สำเร็จ {added} รายการ / ข้าม {skipped} รายการ", "success")
 
     return redirect(url_for("event_detail", event_id=event.id))
+
+@app.post("/courses/<int:course_id>/delete")
+@login_required
+@role_required("admin")
+def course_delete(course_id):
+
+    c = db.session.get(TrainingCourse, course_id)
+
+    if not c:
+        flash("ไม่พบหลักสูตร", "error")
+        return redirect(url_for("courses_list"))
+
+    # ป้องกันลบถ้ามี Event อยู่
+    event_count = TrainingEvent.query.filter_by(course_id=c.id).count()
+
+    if event_count > 0:
+        flash("ไม่สามารถลบหลักสูตรได้ เพราะมี Training Event ใช้งานอยู่", "error")
+        return redirect(url_for("course_edit", course_id=c.id))
+
+    db.session.delete(c)
+    db.session.commit()
+
+    audit("COURSE_DELETE", f"course_code={c.course_code}")
+
+    flash("ลบหลักสูตรแล้ว", "success")
+    return redirect(url_for("courses_list"))
     
+@app.post("/events/<int:event_id>/delete")
+@login_required
+@role_required("admin")
+def event_delete(event_id):
+
+    e = TrainingEvent.query.get_or_404(event_id)
+
+    code = e.event_code
+
+    # ลบ participant ก่อน
+    TrainingEventParticipant.query.filter_by(event_id=e.id).delete()
+
+    # ลบ files
+    files = EventFile.query.filter_by(event_id=e.id).all()
+    for f in files:
+        try:
+            path = os.path.join(UPLOAD_EVENT_DIR, f.stored_name)
+            if os.path.exists(path):
+                os.remove(path)
+        except:
+            pass
+        db.session.delete(f)
+
+    # ลบ cost
+    EventCostItem.query.filter_by(event_id=e.id).delete()
+
+    db.session.delete(e)
+    db.session.commit()
+
+    audit("EVENT_DELETE", f"event_code={code}")
+
+    flash("ลบ Training Event แล้ว", "success")
+
+    return redirect(url_for("events_list"))
+
 # -------------------------------------------------
 # Run (Local Only)
 # -------------------------------------------------
