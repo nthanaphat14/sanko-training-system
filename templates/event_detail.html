@@ -50,9 +50,22 @@
 </div>
 
 <div class="card">
+  <h3 style="margin-top:0;">Generate Training Records</h3>
+
+  <form method="post"
+        action="{{ url_for('event_generate_training_records', event_id=event.id) }}"
+        onsubmit="return confirm('สร้าง TrainingRecord จาก Event นี้ใช่หรือไม่? ระบบจะกันข้อมูลซ้ำให้อัตโนมัติ');">
+    <button class="btn primary" type="submit">
+      Generate Training Records
+    </button>
+  </form>
+</div>
+
+<div class="card">
   <h3 style="margin-top:0;">Add Participant</h3>
 
-  <form method="post" action="{{ url_for('event_participant_add', event_id=event.id) }}"
+  <form method="post"
+        action="{{ url_for('event_participant_add', event_id=event.id) }}"
         style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
     <input class="input" name="emp_id" placeholder="กรอก Emp ID" style="width:220px;" required>
     <button class="btn primary" type="submit">+ Add Participant</button>
@@ -66,18 +79,19 @@
     <table class="table">
       <thead>
         <tr>
-            <th>Emp ID</th>
-            <th>Name</th>
-            <th>Section</th>
-            <th>Position</th>
-            <th>Result</th>
-            <th>Score</th>
-            <th>Hours</th>
-            <th>Remark</th>
-            <th class="nowrap">Save</th>
-            <th class="nowrap">Delete</th>
+          <th>Emp ID</th>
+          <th>Name</th>
+          <th>Section</th>
+          <th>Position</th>
+          <th>Result</th>
+          <th>Score</th>
+          <th>Hours</th>
+          <th>Remark</th>
+          <th class="nowrap">Save</th>
+          <th class="nowrap">Delete</th>
         </tr>
       </thead>
+
       <tbody>
         {% for x in participants %}
         <tr>
@@ -140,7 +154,7 @@
 
         {% if participants|length == 0 %}
         <tr>
-          <td colspan="5" class="muted center" style="padding:14px;">
+          <td colspan="10" class="muted center" style="padding:14px;">
             ยังไม่มีผู้เข้าอบรม
           </td>
         </tr>
