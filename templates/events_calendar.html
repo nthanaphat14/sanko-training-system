@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="page-head">
+  <div>
+    <h1>Training Calendar</h1>
+    <div class="muted">ปฏิทินรอบอบรมทั้งหมด</div>
+  </div>
+
+  <div style="display:flex; gap:10px;">
+    <a class="btn ghost" href="{{ url_for('events_list') }}">Event List</a>
+  </div>
+</div>
+
+<div class="card">
+  <div style="display:flex; gap:18px; flex-wrap:wrap; margin-bottom:12px;">
+    <div><span style="display:inline-block; width:12px; height:12px; background:#f59e0b; border-radius:99px; margin-right:6px;"></span> OJT</div>
+    <div><span style="display:inline-block; width:12px; height:12px; background:#2563eb; border-radius:99px; margin-right:6px;"></span> INH</div>
+    <div><span style="display:inline-block; width:12px; height:12px; background:#16a34a; border-radius:99px; margin-right:6px;"></span> EXT</div>
+  </div>
+
+  <div id="calendar"></div>
+</div>
+
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const calendarEl = document.getElementById("calendar");
+
+  const calendar = new FullCalendar.Calendar(calendarEl, {
+    initialView: "dayGridMonth",
+    height: "auto",
+    locale: "th",
+    headerToolbar: {
+      left: "prev,next today",
+      center: "title",
+      right: "dayGridMonth,timeGridWeek,listMonth"
+    },
+    buttonText: {
+      today: "วันนี้",
+      month: "เดือน",
+      week: "สัปดาห์",
+      list: "รายการ"
+    },
+    events: "{{ url_for('events_calendar_api') }}",
+    eventClick: function(info) {
+      if (info.event.url) {
+        info.jsEvent.preventDefault();
+        window.location.href = info.event.url;
+      }
+    }
+  });
+
+  calendar.render();
+});
+</script>
+
+{% endblock %}
