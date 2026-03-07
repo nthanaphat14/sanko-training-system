@@ -117,4 +117,103 @@
   </div>
 </div>
 
+<div class="card">
+  <h3 style="margin-top:0;">Upload File</h3>
+
+  <form method="post"
+        action="{{ url_for('event_file_add', event_id=event.id) }}"
+        enctype="multipart/form-data"
+        style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+
+    <select name="file_type" class="input" style="width:220px;">
+      <option value="quotation">ใบเสนอราคา</option>
+      <option value="invoice">ใบแจ้งหนี้</option>
+      <option value="receipt">ใบเสร็จ</option>
+      <option value="certificate">Certificate</option>
+      <option value="attendance">Attendance</option>
+      <option value="other">อื่น ๆ</option>
+    </select>
+
+    <input class="input" name="note" placeholder="หมายเหตุ" style="width:240px;">
+
+    <input type="file" name="file" accept=".pdf,.png,.jpg,.jpeg,.xlsx" required>
+
+    <button class="btn primary" type="submit">Upload</button>
+  </form>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;">Files</h3>
+
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>File</th>
+          <th>Note</th>
+          <th>Uploaded</th>
+          <th class="nowrap">Action</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for f in event.files %}
+        <tr>
+          <td class="nowrap">{{ f.file_type or "" }}</td>
+
+          <td>
+            <a class="btn sm" target="_blank"
+               href="{{ url_for('static', filename='uploads/events/' ~ f.stored_name) }}">
+              View
+            </a>
+            <span class="muted" style="margin-left:8px;">
+              {{ f.original_name or f.stored_name }}
+            </span>
+          </td>
+
+          <td>
+            <form method="post"
+                  action="{{ url_for('event_file_edit', file_id=f.id) }}"
+                  style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+              <select name="file_type" class="input" style="width:170px;">
+                <option value="quotation" {% if f.file_type=='quotation' %}selected{% endif %}>ใบเสนอราคา</option>
+                <option value="invoice" {% if f.file_type=='invoice' %}selected{% endif %}>ใบแจ้งหนี้</option>
+                <option value="receipt" {% if f.file_type=='receipt' %}selected{% endif %}>ใบเสร็จ</option>
+                <option value="certificate" {% if f.file_type=='certificate' %}selected{% endif %}>Certificate</option>
+                <option value="attendance" {% if f.file_type=='attendance' %}selected{% endif %}>Attendance</option>
+                <option value="other" {% if f.file_type=='other' %}selected{% endif %}>อื่น ๆ</option>
+              </select>
+
+              <input class="input" name="note" value="{{ f.note or '' }}" style="width:220px;">
+
+              <button class="btn sm" type="submit">Save</button>
+            </form>
+          </td>
+
+          <td class="nowrap">{{ f.uploaded_at }}</td>
+
+          <td class="nowrap">
+            <form method="post"
+                  action="{{ url_for('event_file_delete', file_id=f.id) }}"
+                  style="display:inline;"
+                  onsubmit="return confirm('ลบไฟล์นี้ใช่หรือไม่?');">
+              <button class="btn sm danger" type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+
+        {% if event.files|length == 0 %}
+        <tr>
+          <td colspan="5" class="muted center" style="padding:14px;">
+            ยังไม่มีไฟล์แนบ
+          </td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
 {% endblock %}
