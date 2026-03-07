@@ -17,19 +17,9 @@
         <option value="">-- เลือกหลักสูตร --</option>
         {% for c in courses %}
           <option value="{{ c.id }}">
-            {{ c.course_code }} • {{ c.course_name }}
+            {{ c.course_code }} • {{ c.course_name }} • {{ c.course_type }}
           </option>
         {% endfor %}
-      </select>
-    </div>
-
-    <div class="field">
-      <label>Event Type</label>
-      <select class="input" name="event_type" required>
-        <option value="">-- เลือกประเภท --</option>
-        <option value="OJT">OJT</option>
-        <option value="INH">INHOUSE</option>
-        <option value="EXT">EXTERNAL</option>
       </select>
     </div>
 
