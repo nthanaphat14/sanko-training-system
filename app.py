@@ -319,20 +319,17 @@ class EventCostItem(db.Model):
     )
 
     cost_type = db.Column(db.String(80), nullable=False)
-
-    amount_before_vat = db.Column(db.Float)
-    vat_rate = db.Column(db.Float, default=7)
-
-    amount_vat = db.Column(db.Float)
-    amount_total = db.Column(db.Float)
-
-    remark = db.Column(db.String(255))
+    amount_before_vat = db.Column(db.Float, nullable=True)
+    vat_rate = db.Column(db.Float, default=7.0)
+    amount_vat = db.Column(db.Float, nullable=True)
+    amount_total = db.Column(db.Float, nullable=True)
+    remark = db.Column(db.String(255), nullable=True)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     event = db.relationship(
         "TrainingEvent",
-        backref=db.backref("cost_items", lazy=True)
+        backref=db.backref("cost_items", lazy=True, cascade="all, delete-orphan")
     )
 
 class TrainingEvent(db.Model):
@@ -2659,37 +2656,100 @@ def course_cost_delete(cost_id):
 
 @app.post("/events/<int:event_id>/cost/add")
 def event_cost_add(event_id):
-
     event = TrainingEvent.query.get_or_404(event_id)
 
-    cost_type = request.form.get("cost_type")
+    cost_type = (request.form.get("cost_type") or "").strip()
+    remark = (request.form.get("remark") or "").strip()
 
-    before_vat = float(request.form.get("amount_before_vat") or 0)
+    try:
+        amount_before_vat = float(request.form.get("amount_before_vat") or 0)
+    except Exception:
+        amount_before_vat = 0.0
 
-    vat_rate = float(request.form.get("vat_rate") or 7)
+    try:
+        vat_rate = float(request.form.get("vat_rate") or 7)
+    except Exception:
+        vat_rate = 7.0
 
-    vat = before_vat * vat_rate / 100
+    if not cost_type:
+        flash("กรุณาระบุประเภทค่าใช้จ่าย", "error")
+        return redirect(url_for("event_detail", event_id=event.id))
 
-    total = before_vat + vat
+    amount_vat = round(amount_before_vat * vat_rate / 100, 2)
+    amount_total = round(amount_before_vat + amount_vat, 2)
 
-    item = EventCostItem(
+    row = EventCostItem(
         event_id=event.id,
         cost_type=cost_type,
-        amount_before_vat=before_vat,
+        amount_before_vat=amount_before_vat,
         vat_rate=vat_rate,
-        amount_vat=vat,
-        amount_total=total
+        amount_vat=amount_vat,
+        amount_total=amount_total,
+        remark=remark or None,
     )
 
-    db.session.add(item)
+    db.session.add(row)
     db.session.commit()
 
-    audit(
-        "EVENT_COST_ADD",
-        f"event={event.event_code}, cost={cost_type}, total={total}"
-    )
+    audit("EVENT_COST_ADD", f"event_code={event.event_code}, cost_type={cost_type}, total={amount_total}")
+    flash("เพิ่มค่าใช้จ่ายสำเร็จ", "success")
 
     return redirect(url_for("event_detail", event_id=event.id))
+
+@app.post("/events/cost/<int:cost_id>/edit")
+def event_cost_edit(cost_id):
+    row = EventCostItem.query.get_or_404(cost_id)
+
+    cost_type = (request.form.get("cost_type") or "").strip()
+    remark = (request.form.get("remark") or "").strip()
+
+    try:
+        amount_before_vat = float(request.form.get("amount_before_vat") or 0)
+    except Exception:
+        amount_before_vat = 0.0
+
+    try:
+        vat_rate = float(request.form.get("vat_rate") or 7)
+    except Exception:
+        vat_rate = 7.0
+
+    if not cost_type:
+        flash("กรุณาระบุประเภทค่าใช้จ่าย", "error")
+        return redirect(url_for("event_detail", event_id=row.event_id))
+
+    amount_vat = round(amount_before_vat * vat_rate / 100, 2)
+    amount_total = round(amount_before_vat + amount_vat, 2)
+
+    row.cost_type = cost_type
+    row.amount_before_vat = amount_before_vat
+    row.vat_rate = vat_rate
+    row.amount_vat = amount_vat
+    row.amount_total = amount_total
+    row.remark = remark or None
+
+    db.session.commit()
+
+    audit("EVENT_COST_EDIT", f"event_id={row.event_id}, cost_id={row.id}, total={amount_total}")
+    flash("แก้ไขค่าใช้จ่ายแล้ว", "success")
+
+    return redirect(url_for("event_detail", event_id=row.event_id))
+
+@app.post("/events/cost/<int:cost_id>/delete")
+def event_cost_delete(cost_id):
+    row = EventCostItem.query.get_or_404(cost_id)
+
+    event_id = row.event_id
+    total = row.amount_total
+    cost_type = row.cost_type
+
+    db.session.delete(row)
+    db.session.commit()
+
+    audit("EVENT_COST_DELETE", f"event_id={event_id}, cost_type={cost_type}, total={total}")
+    flash("ลบค่าใช้จ่ายแล้ว", "success")
+
+    return redirect(url_for("event_detail", event_id=event_id))
+
 
 @app.get("/events")
 def events_list():
