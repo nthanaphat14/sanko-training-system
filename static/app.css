@@ -284,6 +284,7 @@ h1{
 }
 
 /* dropdown */
+/* dropdown */
 .dropdown{
   position:relative;
 }
@@ -313,20 +314,7 @@ h1{
   right:0;
 }
 
-.dropdown-menu a{
-  display:block;
-  padding:10px 12px;
-  color:#fff;
-  text-decoration:none;
-  border-radius:8px;
-  font-weight:600;
-}
-
-.dropdown-menu a:hover{
-  background: rgba(255,255,255,.08);
-}
-
-.dropdown:open .dropdown-menu{
+.dropdown.open .dropdown-menu{
   display:block;
 }
 
@@ -337,6 +325,10 @@ h1{
   text-decoration:none;
   border-radius:8px;
   font-weight:600;
+}
+
+.dropdown-menu a:hover{
+  background: rgba(255,255,255,.08);
 }
 
 /* top menu buttons */
