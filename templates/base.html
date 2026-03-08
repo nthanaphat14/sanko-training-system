@@ -26,13 +26,18 @@
           Training
         </button>
 
-        <div class="dropdown-menu">
-          <a href="{{ url_for('trainings_list') }}">Records</a>
-          <a href="{{ url_for('courses_list') }}">Courses</a>
-          <a href="{{ url_for('events_list') }}">Events</a>
-          <a href="{{ url_for('events_calendar') }}">Calendar</a>
+        <div class="dropdown js-dropdown">
+          <button class="btn ghost dropdown-btn" type="button">
+            Training
+          </button>
+
+          <div class="dropdown-menu">
+            <a href="{{ url_for('trainings_list') }}">Records</a>
+            <a href="{{ url_for('courses_list') }}">Courses</a>
+            <a href="{{ url_for('events_list') }}">Events</a>
+            <a href="{{ url_for('events_calendar') }}">Calendar</a>
+          </div>
         </div>
-      </div>
 
       <a class="btn" href="{{ url_for('dashboard') }}">Dashboard</a>
       <a class="btn" href="{{ url_for('report_training') }}">Report</a>
@@ -42,7 +47,7 @@
           {{ email }} ({{ role }})
         </span>
 
-        <div class="dropdown">
+        <div class="dropdown js-dropdown">
           <button class="btn ghost dropdown-btn" type="button">
             Settings
           </button>
