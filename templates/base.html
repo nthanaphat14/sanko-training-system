@@ -83,5 +83,31 @@
 
     {% block content %}{% endblock %}
   </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const dropdowns = document.querySelectorAll(".js-dropdown");
+
+  dropdowns.forEach(dropdown => {
+    const btn = dropdown.querySelector(".dropdown-btn");
+
+    btn.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      dropdowns.forEach(d => {
+        if (d !== dropdown) d.classList.remove("open");
+      });
+
+      dropdown.classList.toggle("open");
+    });
+  });
+
+  document.addEventListener("click", function () {
+    dropdowns.forEach(d => d.classList.remove("open"));
+  });
+});
+</script>
+    
 </body>
 </html>
