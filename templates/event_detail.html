@@ -268,12 +268,38 @@
 
   <form method="post"
         action="{{ url_for('event_cost_add', event_id=event.id) }}"
-        style="display:grid; grid-template-columns:repeat(4,1fr); gap:10px;">
+        style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px;">
 
-    <input class="input" name="cost_type" placeholder="ประเภทค่าใช้จ่าย เช่น Trainer Fee" required>
-    <input class="input" name="amount_before_vat" placeholder="ก่อน VAT">
-    <input class="input" name="vat_rate" value="7" placeholder="VAT %">
-    <input class="input" name="remark" placeholder="หมายเหตุ">
+    <div class="field">
+      <label>ประเภทค่าใช้จ่าย</label>
+      <select class="input" name="cost_type" required>
+        <option value="">เลือกประเภทค่าใช้จ่าย</option>
+        <option value="training_fee">ค่าอบรม</option>
+        <option value="trainer_fee">ค่า Trainer</option>
+        <option value="travel">ค่าเดินทาง</option>
+        <option value="hotel">ค่าที่พัก</option>
+        <option value="food">ค่าอาหาร</option>
+        <option value="document">ค่าเอกสาร</option>
+        <option value="certificate">ค่า Certificate</option>
+        <option value="equipment">ค่าอุปกรณ์</option>
+        <option value="other">อื่น ๆ</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>ก่อน VAT</label>
+      <input class="input" name="amount_before_vat" placeholder="เช่น 10000">
+    </div>
+
+    <div class="field">
+      <label>VAT (%)</label>
+      <input class="input" name="vat_rate" value="7" placeholder="7">
+    </div>
+
+    <div class="field">
+      <label>หมายเหตุ</label>
+      <input class="input" name="remark" placeholder="รายละเอียดเพิ่มเติม">
+    </div>
 
     <div style="grid-column:1/-1;">
       <button class="btn primary" type="submit">+ Add Cost</button>
