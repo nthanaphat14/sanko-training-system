@@ -80,11 +80,220 @@
 
   <form method="post"
         action="{{ url_for('event_participant_add', event_id=event.id) }}"
-        style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-    <input class="input" name="emp_id" placeholder="กรอก Emp ID" style="width:220px;" required>
-    <button class="btn primary" type="submit">+ Add Participant</button>
+        id="addParticipantForm"
+        style="display:flex; flex-direction:column; gap:10px; align-items:stretch;">
+
+    <div class="field" style="max-width:560px; position:relative;">
+      <label>ค้นหาพนักงาน</label>
+
+      <input class="input"
+             id="employeeSearch"
+             type="text"
+             placeholder="พิมพ์รหัสพนักงาน / ชื่อ / แผนก"
+             autocomplete="off">
+
+      <input type="hidden" name="emp_id" id="selectedEmpId" required>
+
+      <div id="employeeResults"
+           style="display:none; position:absolute; top:100%; left:0; right:0; background:#0b1220; border:1px solid rgba(255,255,255,.10); border-radius:12px; margin-top:6px; max-height:280px; overflow:auto; z-index:5000; box-shadow:0 10px 30px rgba(0,0,0,.35);">
+      </div>
+    </div>
+
+    <div id="selectedEmployeeBox" class="muted" style="min-height:20px;"></div>
+
+    <div>
+      <button class="btn primary" type="submit">+ Add Participant</button>
+    </div>
   </form>
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const employees = [
+    {% for e in employees %}
+    {
+      emp_id: {{ (e.em_id or "")|tojson }},
+      name: {{ (e.th_full() or "")|tojson }},
+      section: {{ (e.section or "")|tojson }},
+      search_text: {{ (((e.em_id or "") ~ " " ~ (e.th_full() or "") ~ " " ~ (e.section or ""))|lower)|tojson }}
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ];
+
+  const form = document.getElementById("addParticipantForm");
+  const searchInput = document.getElementById("employeeSearch");
+  const hiddenEmpId = document.getElementById("selectedEmpId");
+  const resultsBox = document.getElementById("employeeResults");
+  const selectedBox = document.getElementById("selectedEmployeeBox");
+
+  let currentResults = [];
+  let activeIndex = -1;
+
+  function escapeHtml(text) {
+    return String(text)
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function setSelected(emp) {
+    hiddenEmpId.value = emp.emp_id;
+    searchInput.value = `${emp.emp_id} - ${emp.name}`;
+    selectedBox.innerHTML = `<b>เลือกแล้ว:</b> ${escapeHtml(emp.emp_id)} - ${escapeHtml(emp.name)}${emp.section ? " - " + escapeHtml(emp.section) : ""}`;
+    resultsBox.style.display = "none";
+    activeIndex = -1;
+  }
+
+  function renderResults(items) {
+    currentResults = items;
+    activeIndex = -1;
+
+    if (!items.length) {
+      resultsBox.innerHTML = '<div style="padding:12px; color:#94a3b8;">ไม่พบข้อมูลพนักงาน</div>';
+      resultsBox.style.display = "block";
+      return;
+    }
+
+    resultsBox.innerHTML = items.map((emp, idx) => `
+      <button type="button"
+              class="employee-result-item"
+              data-index="${idx}"
+              style="display:block; width:100%; text-align:left; padding:12px 14px; background:transparent; border:none; border-bottom:1px solid rgba(255,255,255,.06); color:#fff; cursor:pointer;">
+        <div style="font-weight:700;">${escapeHtml(emp.emp_id)} - ${escapeHtml(emp.name)}</div>
+        <div style="font-size:12px; color:#94a3b8;">${escapeHtml(emp.section || "")}</div>
+      </button>
+    `).join("");
+
+    resultsBox.style.display = "block";
+
+    document.querySelectorAll(".employee-result-item").forEach(btn => {
+      btn.addEventListener("click", function () {
+        const idx = parseInt(this.getAttribute("data-index"), 10);
+        const emp = currentResults[idx];
+        if (emp) setSelected(emp);
+      });
+    });
+  }
+
+  function updateActiveItem() {
+    const items = resultsBox.querySelectorAll(".employee-result-item");
+    items.forEach((item, idx) => {
+      if (idx === activeIndex) {
+        item.style.background = "rgba(255,255,255,.10)";
+      } else {
+        item.style.background = "transparent";
+      }
+    });
+
+    if (activeIndex >= 0 && items[activeIndex]) {
+      items[activeIndex].scrollIntoView({ block: "nearest" });
+    }
+  }
+
+  function findExactEmpIdMatch(q) {
+    const exact = q.trim().toLowerCase();
+    if (!exact) return null;
+    return employees.find(emp => String(emp.emp_id).trim().toLowerCase() === exact) || null;
+  }
+
+  searchInput.addEventListener("input", function () {
+    const q = this.value.trim().toLowerCase();
+
+    hiddenEmpId.value = "";
+    selectedBox.innerHTML = "";
+
+    if (!q) {
+      resultsBox.style.display = "none";
+      resultsBox.innerHTML = "";
+      currentResults = [];
+      activeIndex = -1;
+      return;
+    }
+
+    // ถ้าพิมพ์รหัสตรงเป๊ะ ให้เลือกอัตโนมัติทันที
+    const exactEmp = findExactEmpIdMatch(q);
+    if (exactEmp) {
+      setSelected(exactEmp);
+      return;
+    }
+
+    const matched = employees
+      .filter(emp => emp.search_text.includes(q))
+      .slice(0, 20);
+
+    renderResults(matched);
+  });
+
+  searchInput.addEventListener("keydown", function (e) {
+    const isOpen = resultsBox.style.display === "block" && currentResults.length > 0;
+
+    if (e.key === "ArrowDown") {
+      if (!isOpen) return;
+      e.preventDefault();
+      activeIndex = Math.min(activeIndex + 1, currentResults.length - 1);
+      updateActiveItem();
+    }
+
+    if (e.key === "ArrowUp") {
+      if (!isOpen) return;
+      e.preventDefault();
+      activeIndex = Math.max(activeIndex - 1, 0);
+      updateActiveItem();
+    }
+
+    if (e.key === "Enter") {
+      // ถ้าพิมพ์รหัสตรงเป๊ะอยู่แล้ว ให้ submit ได้เลย
+      const exactEmp = findExactEmpIdMatch(searchInput.value);
+      if (exactEmp) {
+        e.preventDefault();
+        setSelected(exactEmp);
+        form.submit();
+        return;
+      }
+
+      // ถ้ามีรายการเปิดอยู่และเลือกด้วยลูกศร ให้เลือกคนนั้น
+      if (isOpen && activeIndex >= 0 && currentResults[activeIndex]) {
+        e.preventDefault();
+        setSelected(currentResults[activeIndex]);
+        return;
+      }
+
+      // ถ้ามีผลลัพธ์เดียว ให้เลือกอัตโนมัติ
+      if (isOpen && currentResults.length === 1) {
+        e.preventDefault();
+        setSelected(currentResults[0]);
+        return;
+      }
+    }
+
+    if (e.key === "Escape") {
+      resultsBox.style.display = "none";
+      activeIndex = -1;
+    }
+  });
+
+  document.addEventListener("click", function (e) {
+    if (!resultsBox.contains(e.target) && e.target !== searchInput) {
+      resultsBox.style.display = "none";
+    }
+  });
+
+  form.addEventListener("submit", function (e) {
+    if (!hiddenEmpId.value.trim()) {
+      const exactEmp = findExactEmpIdMatch(searchInput.value);
+      if (exactEmp) {
+        setSelected(exactEmp);
+        return;
+      }
+
+      e.preventDefault();
+      alert("กรุณาเลือกพนักงานจากรายการก่อน");
+    }
+  });
+});
+</script>
 
 <div class="card">
   <h3 style="margin-top:0;">Participants</h3>
