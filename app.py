@@ -3119,25 +3119,46 @@ def course_file_delete(file_id):
 @login_required
 @role_required("admin")
 def course_delete(course_id):
-
     c = db.session.get(TrainingCourse, course_id)
 
     if not c:
         flash("ไม่พบหลักสูตร", "error")
         return redirect(url_for("courses_list"))
 
-    # ป้องกันลบถ้ามี Event อยู่
+    # ถ้ามี Event อยู่ ห้ามลบ
     event_count = TrainingEvent.query.filter_by(course_id=c.id).count()
-
     if event_count > 0:
         flash("ไม่สามารถลบหลักสูตรได้ เพราะมี Training Event ใช้งานอยู่", "error")
         return redirect(url_for("course_edit", course_id=c.id))
 
-    db.session.delete(c)
+    course_code = c.course_code
+
+    # 1) ลบไฟล์จริงก่อน
+    files = CourseFile.query.filter_by(course_id=c.id).all()
+    for f in files:
+        try:
+            path = os.path.join(UPLOAD_COURSE_DIR, f.stored_name)
+            if os.path.exists(path):
+                os.remove(path)
+        except Exception:
+            pass
+
+    # 2) ลบ rows ลูกทั้งหมดก่อน
+    CourseFile.query.filter_by(course_id=c.id).delete(synchronize_session=False)
+    CourseCostItem.query.filter_by(course_id=c.id).delete(synchronize_session=False)
+
+    # ถ้ามี relation อื่นในอนาคตค่อยเพิ่มตรงนี้
+
+    # 3) expunge/refresh session แล้วค่อยลบ course
+    db.session.flush()
+
+    c = db.session.get(TrainingCourse, course_id)
+    if c:
+        db.session.delete(c)
+
     db.session.commit()
 
-    audit("COURSE_DELETE", f"course_code={c.course_code}")
-
+    audit("COURSE_DELETE", f"course_code={course_code}")
     flash("ลบหลักสูตรแล้ว", "success")
     return redirect(url_for("courses_list"))
     
