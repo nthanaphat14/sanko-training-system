@@ -2654,17 +2654,11 @@ def events_list():
     rows = TrainingEvent.query.order_by(TrainingEvent.created_at.desc()).all()
     return render_template("events_list.html", rows=rows)
 
-
 @app.route("/events/new", methods=["GET", "POST"])
 @login_required
 @role_required("admin")
 def events_new():
     courses = TrainingCourse.query.order_by(TrainingCourse.course_name.asc()).all()
-    if not trainer:
-        trainer = (course.vendor or "").strip()
-
-    if not location:
-        location = (course.location or "").strip()
 
     if request.method == "GET":
         return render_template("events_new.html", courses=courses)
@@ -2681,12 +2675,15 @@ def events_new():
         return redirect(url_for("events_new"))
 
     course = TrainingCourse.query.get_or_404(int(course_id))
+
+    # ดึงค่าจาก Course ถ้ายังไม่ได้กรอกเอง
     if not trainer:
         trainer = (course.vendor or "").strip()
 
-    # ✅ ดึงประเภท Event จาก Course โดยตรง
-    event_type = (course.course_type or "").strip().upper()
+    if not location:
+        location = (course.location or "").strip()
 
+    event_type = (course.course_type or "").strip().upper()
     if event_type not in ["OJT", "INH", "EXT"]:
         flash("ประเภทหลักสูตรของ Course ไม่ถูกต้อง", "error")
         return redirect(url_for("events_new"))
@@ -2719,7 +2716,6 @@ def events_new():
     flash("สร้าง Training Event สำเร็จ", "success")
 
     return redirect(url_for("event_detail", event_id=e.id))
-
 
 @app.get("/events/<int:event_id>")
 @login_required
