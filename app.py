@@ -2745,6 +2745,7 @@ def event_detail(event_id):
         total_before_vat=total_before_vat,
         total_vat=total_vat,
         total_amount=total_amount,
+        employees=employees,
     )
 
 
