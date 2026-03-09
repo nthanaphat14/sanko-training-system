@@ -2506,6 +2506,11 @@ def course_new():
     now = datetime.utcnow()
     owner = (request.form.get("owner") or "").strip()
     code = gen_course_code(course_type, owner, now)
+    training_hours_raw = (request.form.get("training_hours") or "").strip()
+    try:
+        training_hours = float(training_hours_raw) if training_hours_raw else None
+    except Exception:
+        training_hours = None
 
     c = TrainingCourse(
         course_type=course_type,
@@ -2545,6 +2550,12 @@ def course_edit(course_id):
         c.location = (request.form.get("location") or "").strip() or None
         c.status = (request.form.get("status") or "Draft").strip() or "Draft"
 
+        training_hours_raw = (request.form.get("training_hours") or "").strip()
+        try:
+            c.training_hours = float(training_hours_raw) if training_hours_raw else None
+        except Exception:
+            c.training_hours = None
+        
         db.session.commit()
 
         audit("COURSE_EDIT", f"course_code={c.course_code}")
