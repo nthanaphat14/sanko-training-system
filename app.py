@@ -2527,7 +2527,6 @@ def course_new():
 
     return redirect(url_for("course_edit", course_id=c.id))
 
-
 @app.route("/courses/<int:course_id>/edit", methods=["GET", "POST"])
 @login_required
 @role_required("admin")
@@ -2594,7 +2593,6 @@ def course_cost_add(course_id):
     flash("เพิ่มค่าใช้จ่ายแล้ว", "success")
 
     return redirect(url_for("course_edit", course_id=course_id))
-
 
 @app.post("/courses/<int:course_id>/file/add")
 @login_required
@@ -2677,27 +2675,6 @@ def course_delete(course_id):
     audit("COURSE_DELETE", f"course_code={course_code}")
     flash("ลบหลักสูตรแล้ว", "success")
     return redirect(url_for("courses_list"))
-
-@app.post("/courses/cost/<int:cost_id>/delete")
-@login_required
-@role_required("admin")
-def course_cost_delete(cost_id):
-    item = db.session.get(CourseCostItem, cost_id)
-
-    if not item:
-        flash("ไม่พบรายการ", "error")
-        return redirect(url_for("courses_list"))
-
-    course_id = item.course_id
-
-    db.session.delete(item)
-    db.session.commit()
-
-    audit("COURSE_COST_DELETE", f"cost_id={cost_id}, course_id={course_id}")
-    flash("ลบค่าใช้จ่ายแล้ว", "success")
-
-    return redirect(url_for("course_edit", course_id=course_id))
-
 
 @app.get("/events")
 @login_required
