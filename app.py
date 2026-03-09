@@ -437,16 +437,21 @@ def allowed_file(filename: str) -> bool:
     ext = filename.rsplit(".", 1)[1].lower()
     return ext in ALLOWED_EXT
 
+import re
 
-def gen_course_code(course_type: str, dt: datetime | None = None) -> str:
-    """
-    รูปแบบ: INH-YYYYMM-0001 (running แยกตาม type และรีเซ็ตทุกเดือน)
-    """
+def normalize_owner_code(owner: str | None) -> str:
+    owner = (owner or "").strip().upper()
+    owner = re.sub(r"[^A-Z0-9]", "", owner)
+    return owner or "GEN"
+
+def gen_course_code(course_type: str, owner: str | None = None, dt: datetime | None = None) -> str:
     dt = dt or datetime.utcnow()
-    yyyymm = f"{dt.year}{dt.month:02d}"
+    year = dt.year
     prefix = (course_type or "").strip().upper()
+    owner_code = normalize_owner_code(owner)
 
-    like = f"{prefix}-{yyyymm}-%"
+    like = f"{prefix}-{year}-{owner_code}-%"
+
     last_code = db.session.query(func.max(TrainingCourse.course_code)).filter(
         TrainingCourse.course_code.ilike(like)
     ).scalar()
@@ -460,7 +465,8 @@ def gen_course_code(course_type: str, dt: datetime | None = None) -> str:
         last_run = 0
 
     new_run = last_run + 1
-    return f"{prefix}-{yyyymm}-{new_run:04d}"
+    return f"{prefix}-{year}-{owner_code}-{new_run:04d}"
+
 
 
 def get_current_user():
@@ -844,12 +850,12 @@ def safe_date(v):
             pass
     return None
 
-def gen_event_code(event_type: str, dt: date | None = None):
-    dt = dt or datetime.utcnow().date()
-    yyyymm = f"{dt.year}{dt.month:02d}"
+def gen_event_code(event_type: str, event_date: date | None = None) -> str:
+    event_date = event_date or datetime.utcnow().date()
     prefix = (event_type or "").strip().upper()
+    ymd = event_date.strftime("%Y%m%d")
 
-    like = f"{prefix}-{yyyymm}-%"
+    like = f"{prefix}-{ymd}-%"
 
     last_code = db.session.query(func.max(TrainingEvent.event_code)).filter(
         TrainingEvent.event_code.ilike(like)
@@ -863,8 +869,7 @@ def gen_event_code(event_type: str, dt: date | None = None):
     else:
         last_run = 0
 
-    new_run = last_run + 1
-    return f"{prefix}-{yyyymm}-{new_run:04d}"
+    return f"{prefix}-{ymd}-{last_run + 1:04d}"
     
 # -------------------------------------------------
 # Routes
@@ -2498,7 +2503,8 @@ def course_new():
         return redirect(url_for("course_new"))
 
     now = datetime.utcnow()
-    code = gen_course_code(course_type, now)
+    owner = (request.form.get("owner") or "").strip()
+    code = gen_course_code(course_type, owner, now)
 
     c = TrainingCourse(
         course_type=course_type,
