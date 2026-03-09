@@ -2664,6 +2664,8 @@ def events_new():
         return redirect(url_for("events_new"))
 
     course = TrainingCourse.query.get_or_404(int(course_id))
+    if not trainer:
+        trainer = (course.vendor or "").strip()
 
     # ✅ ดึงประเภท Event จาก Course โดยตรง
     event_type = (course.course_type or "").strip().upper()
