@@ -262,6 +262,7 @@ class TrainingCourse(db.Model):
     owner = db.Column(db.String(120), nullable=True)
     vendor = db.Column(db.String(200), nullable=True)
     location = db.Column(db.String(200), nullable=True)
+    training_hours = db.Column(db.Float, nullable=True)
     training_date = db.Column(db.Date, nullable=True)
 
     course_year = db.Column(db.Integer, nullable=True, index=True)
