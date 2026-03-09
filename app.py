@@ -3249,6 +3249,71 @@ def events_calendar_api():
         })
 
     return data
+
+@app.post("/events/<int:event_id>/participants/pass-all")
+@login_required
+@role_required("admin")
+def event_participants_pass_all(event_id):
+    event = TrainingEvent.query.get_or_404(event_id)
+
+    rows = TrainingEventParticipant.query.filter_by(event_id=event.id).all()
+    for r in rows:
+        r.result = "PASS"
+
+    db.session.commit()
+    flash("ตั้งค่า PASS ให้ทุกคนแล้ว", "success")
+    return redirect(url_for("event_detail", event_id=event.id))
+
+@app.post("/events/<int:event_id>/participants/fill-hours")
+@login_required
+@role_required("admin")
+def event_participants_fill_hours(event_id):
+    event = TrainingEvent.query.get_or_404(event_id)
+
+    hours = event.course.training_hours
+    if hours is None:
+        flash("Course นี้ยังไม่ได้กำหนด Training Hours", "error")
+        return redirect(url_for("event_detail", event_id=event.id))
+
+    rows = TrainingEventParticipant.query.filter_by(event_id=event.id).all()
+    for r in rows:
+        r.training_hours = hours
+
+    db.session.commit()
+    flash("เติมชั่วโมงจาก Course ให้ทุกคนแล้ว", "success")
+    return redirect(url_for("event_detail", event_id=event.id))
+
+@app.post("/events/<int:event_id>/participants/save-all")
+@login_required
+@role_required("admin")
+def event_participants_save_all(event_id):
+    event = TrainingEvent.query.get_or_404(event_id)
+
+    rows = TrainingEventParticipant.query.filter_by(event_id=event.id).all()
+
+    for r in rows:
+        result = (request.form.get(f"result_{r.id}") or "").strip().upper()
+        score_raw = (request.form.get(f"score_{r.id}") or "").strip()
+        hours_raw = (request.form.get(f"hours_{r.id}") or "").strip()
+        remark = (request.form.get(f"remark_{r.id}") or "").strip()
+
+        r.result = result or None
+
+        try:
+            r.score = float(score_raw) if score_raw else None
+        except Exception:
+            r.score = None
+
+        try:
+            r.training_hours = float(hours_raw) if hours_raw else None
+        except Exception:
+            r.training_hours = None
+
+        r.remark = remark or None
+
+    db.session.commit()
+    flash("บันทึกข้อมูลผู้เข้าอบรมทั้งหมดแล้ว", "success")
+    return redirect(url_for("event_detail", event_id=event.id))
     
 # -------------------------------------------------
 # Run (Local Only)
