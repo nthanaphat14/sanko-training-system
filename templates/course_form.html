@@ -50,6 +50,13 @@
     </div>
 
     <div class="field">
+      <label>Training Hours</label>
+      <input class="input" type="number" step="0.5" name="training_hours"
+             value="{{ course.training_hours if course else '' }}"
+             placeholder="เช่น 3 หรือ 6">
+    </div>
+
+    <div class="field">
       <label>Owner</label>
       <input class="input" name="owner" value="{{ course.owner if course else '' }}">
     </div>
