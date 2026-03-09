@@ -18,6 +18,7 @@
         {% for c in courses %}
           <option value="{{ c.id }}"
                   data-trainer="{{ c.vendor or '' }}"
+                  data-location="{{ c.location or '' }}"
                   data-title="{{ c.course_name or '' }}">
             {{ c.course_code }} • {{ c.course_name }} • {{ c.course_type }}
           </option>
@@ -42,7 +43,7 @@
 
     <div class="field">
       <label>Location</label>
-      <input class="input" name="location">
+      <input class="input" id="location" name="location">
     </div>
 
     <div class="field">
@@ -62,6 +63,7 @@
 document.addEventListener("DOMContentLoaded", function () {
   const courseSelect = document.querySelector('select[name="course_id"]');
   const trainerInput = document.getElementById("trainer");
+  const locationInput = document.getElementById("location");
   const titleInput = document.getElementById("title");
 
   if (!courseSelect) return;
@@ -69,10 +71,15 @@ document.addEventListener("DOMContentLoaded", function () {
   courseSelect.addEventListener("change", function () {
     const selected = courseSelect.options[courseSelect.selectedIndex];
     const trainer = selected.getAttribute("data-trainer") || "";
+    const location = selected.getAttribute("data-location") || "";
     const title = selected.getAttribute("data-title") || "";
 
     if (trainerInput && !trainerInput.value.trim()) {
       trainerInput.value = trainer;
+    }
+
+    if (locationInput && !locationInput.value.trim()) {
+      locationInput.value = location;
     }
 
     if (titleInput && !titleInput.value.trim()) {
