@@ -2638,34 +2638,45 @@ def course_file_add(course_id):
 
     return redirect(url_for("course_edit", course_id=course_id))
 
-
-@app.post("/courses/file/<int:file_id>/delete")
+@app.post("/courses/<int:course_id>/delete")
 @login_required
 @role_required("admin")
-def course_file_delete(file_id):
-    f = db.session.get(CourseFile, file_id)
+def course_delete(course_id):
+    c = db.session.get(TrainingCourse, course_id)
 
-    if not f:
-        flash("ไม่พบไฟล์", "error")
+    if not c:
+        flash("ไม่พบหลักสูตร", "error")
         return redirect(url_for("courses_list"))
 
-    course_id = f.course_id
+    # ถ้ามี Event อยู่ ห้ามลบ
+    event_count = TrainingEvent.query.filter_by(course_id=c.id).count()
+    if event_count > 0:
+        flash("ไม่สามารถลบหลักสูตรได้ เพราะมี Training Event ใช้งานอยู่", "error")
+        return redirect(url_for("course_edit", course_id=c.id))
 
-    try:
-        path = os.path.join(UPLOAD_COURSE_DIR, f.stored_name)
-        if os.path.exists(path):
-            os.remove(path)
-    except Exception:
-        pass
+    course_code = c.course_code
 
-    db.session.delete(f)
+    # 1) ลบไฟล์จริง + ลบ record ใน course_files
+    files = CourseFile.query.filter_by(course_id=c.id).all()
+    for f in files:
+        try:
+            path = os.path.join(UPLOAD_COURSE_DIR, f.stored_name)
+            if os.path.exists(path):
+                os.remove(path)
+        except Exception:
+            pass
+        db.session.delete(f)
+
+    # 2) ลบ cost items
+    CourseCostItem.query.filter_by(course_id=c.id).delete()
+
+    # 3) ลบ course
+    db.session.delete(c)
     db.session.commit()
 
-    audit("COURSE_FILE_DELETE", f"file_id={file_id}, course_id={course_id}")
-    flash("ลบไฟล์แล้ว", "success")
-
-    return redirect(url_for("course_edit", course_id=course_id))
-
+    audit("COURSE_DELETE", f"course_code={course_code}")
+    flash("ลบหลักสูตรแล้ว", "success")
+    return redirect(url_for("courses_list"))
 
 @app.post("/courses/cost/<int:cost_id>/delete")
 @login_required
