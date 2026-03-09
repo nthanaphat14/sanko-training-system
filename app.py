@@ -2636,46 +2636,6 @@ def course_file_add(course_id):
 
     return redirect(url_for("course_edit", course_id=course_id))
 
-@app.post("/courses/<int:course_id>/delete")
-@login_required
-@role_required("admin")
-def course_delete(course_id):
-    c = db.session.get(TrainingCourse, course_id)
-
-    if not c:
-        flash("ไม่พบหลักสูตร", "error")
-        return redirect(url_for("courses_list"))
-
-    # ถ้ามี Event อยู่ ห้ามลบ
-    event_count = TrainingEvent.query.filter_by(course_id=c.id).count()
-    if event_count > 0:
-        flash("ไม่สามารถลบหลักสูตรได้ เพราะมี Training Event ใช้งานอยู่", "error")
-        return redirect(url_for("course_edit", course_id=c.id))
-
-    course_code = c.course_code
-
-    # 1) ลบไฟล์จริง + ลบ record ใน course_files
-    files = CourseFile.query.filter_by(course_id=c.id).all()
-    for f in files:
-        try:
-            path = os.path.join(UPLOAD_COURSE_DIR, f.stored_name)
-            if os.path.exists(path):
-                os.remove(path)
-        except Exception:
-            pass
-        db.session.delete(f)
-
-    # 2) ลบ cost items
-    CourseCostItem.query.filter_by(course_id=c.id).delete()
-
-    # 3) ลบ course
-    db.session.delete(c)
-    db.session.commit()
-
-    audit("COURSE_DELETE", f"course_code={course_code}")
-    flash("ลบหลักสูตรแล้ว", "success")
-    return redirect(url_for("courses_list"))
-
 @app.get("/events")
 @login_required
 def events_list():
