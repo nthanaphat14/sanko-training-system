@@ -16,7 +16,9 @@
       <select class="input" name="course_id" required>
         <option value="">-- เลือกหลักสูตร --</option>
         {% for c in courses %}
-          <option value="{{ c.id }}">
+          <option value="{{ c.id }}"
+                  data-trainer="{{ c.vendor or '' }}"
+                  data-title="{{ c.course_name or '' }}">
             {{ c.course_code }} • {{ c.course_name }} • {{ c.course_type }}
           </option>
         {% endfor %}
@@ -45,7 +47,7 @@
 
     <div class="field">
       <label>Trainer</label>
-      <input class="input" name="trainer">
+      <input class="input" id="trainer" name="trainer">
     </div>
 
     <div style="grid-column:1/-1; display:flex; gap:10px;">
@@ -55,5 +57,29 @@
 
   </form>
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const courseSelect = document.querySelector('select[name="course_id"]');
+  const trainerInput = document.getElementById("trainer");
+  const titleInput = document.getElementById("title");
+
+  if (!courseSelect) return;
+
+  courseSelect.addEventListener("change", function () {
+    const selected = courseSelect.options[courseSelect.selectedIndex];
+    const trainer = selected.getAttribute("data-trainer") || "";
+    const title = selected.getAttribute("data-title") || "";
+
+    if (trainerInput && !trainerInput.value.trim()) {
+      trainerInput.value = trainer;
+    }
+
+    if (titleInput && !titleInput.value.trim()) {
+      titleInput.value = title;
+    }
+  });
+});
+</script>
 
 {% endblock %}
