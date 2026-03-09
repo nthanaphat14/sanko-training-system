@@ -3088,6 +3088,33 @@ def event_generate_training_records(event_id):
 
     return redirect(url_for("event_detail", event_id=event.id))
 
+@app.post("/courses/file/<int:file_id>/delete")
+@login_required
+@role_required("admin")
+def course_file_delete(file_id):
+    f = db.session.get(CourseFile, file_id)
+
+    if not f:
+        flash("ไม่พบไฟล์", "error")
+        return redirect(url_for("courses_list"))
+
+    course_id = f.course_id
+
+    try:
+        path = os.path.join(UPLOAD_COURSE_DIR, f.stored_name)
+        if os.path.exists(path):
+            os.remove(path)
+    except Exception:
+        pass
+
+    db.session.delete(f)
+    db.session.commit()
+
+    audit("COURSE_FILE_DELETE", f"file_id={file_id}, course_id={course_id}")
+    flash("ลบไฟล์แล้ว", "success")
+
+    return redirect(url_for("course_edit", course_id=course_id))
+
 @app.post("/courses/<int:course_id>/delete")
 @login_required
 @role_required("admin")
