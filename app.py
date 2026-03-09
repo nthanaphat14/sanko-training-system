@@ -2660,6 +2660,11 @@ def events_list():
 @role_required("admin")
 def events_new():
     courses = TrainingCourse.query.order_by(TrainingCourse.course_name.asc()).all()
+    if not trainer:
+        trainer = (course.vendor or "").strip()
+
+    if not location:
+        location = (course.location or "").strip()
 
     if request.method == "GET":
         return render_template("events_new.html", courses=courses)
