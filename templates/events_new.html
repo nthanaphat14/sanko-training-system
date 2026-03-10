@@ -6,6 +6,11 @@
     <h1>New Training Event</h1>
     <div class="muted">สร้างรอบอบรมใหม่</div>
   </div>
+
+  <div style="display:flex; gap:10px; flex-wrap:wrap;">
+    <a class="btn ghost" href="{{ url_for('events_list') }}">Back</a>
+    <a class="btn" href="{{ url_for('course_new') }}">+ New Course</a>
+  </div>
 </div>
 
 <div class="card">
@@ -68,8 +73,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
   if (!courseSelect) return;
 
-  courseSelect.addEventListener("change", function () {
+  function fillFromSelected() {
     const selected = courseSelect.options[courseSelect.selectedIndex];
+    if (!selected) return;
+
     const trainer = selected.getAttribute("data-trainer") || "";
     const location = selected.getAttribute("data-location") || "";
     const title = selected.getAttribute("data-title") || "";
@@ -85,7 +92,12 @@ document.addEventListener("DOMContentLoaded", function () {
     if (titleInput && !titleInput.value.trim()) {
       titleInput.value = title;
     }
-  });
+  }
+
+  courseSelect.addEventListener("change", fillFromSelected);
+
+  // ← เพิ่มตรงนี้ เพื่อให้โหลดหน้ามาแล้ว fill ทันที
+  fillFromSelected();
 });
 </script>
 
