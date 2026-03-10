@@ -12,6 +12,9 @@
     <a class="btn primary" href="{{ url_for('events_new') }}">+ New Event</a>
     <a class="btn" href="{{ url_for('course_new') }}">+ New Course</a>
     <a class="btn" href="{{ url_for('events_calendar') }}">Calendar</a>
+    <a class="btn" href="{{ url_for('event_export_excel', event_id=event.id) }}">
+      Export Excel
+    </a>
   </div>
 </div>
 
