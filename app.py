@@ -2861,7 +2861,12 @@ def courses_list():
 @role_required("admin")
 def course_new():
     if request.method == "GET":
-        return render_template("course_form.html", mode="new", course=None)
+        selected_course_id = request.args.get("course_id", type=int)
+        return render_template(
+            "events_new.html",
+            courses=courses,
+            selected_course_id=selected_course_id
+        )
 
     course_type = (request.form.get("course_type") or "").strip().upper()
     course_name = (request.form.get("course_name") or "").strip()
@@ -2901,6 +2906,10 @@ def course_new():
 
     audit("COURSE_ADD", f"course_code={c.course_code}")
     flash(f"สร้างหลักสูตรสำเร็จ: {code}", "success")
+    action = (request.form.get("action") or "save").strip()
+
+    if action == "save_create_event":
+        return redirect(url_for("events_new", course_id=c.id))
 
     return redirect(url_for("course_edit", course_id=c.id))
 
