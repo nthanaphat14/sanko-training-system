@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="page-head">
+  <div>
+    <h1>Yearly Summary Report</h1>
+    <div class="muted">สรุปผลการฝึกอบรมและค่าใช้จ่ายประจำปี</div>
+  </div>
+</div>
+
+<div class="card">
+  <form method="get" style="display:flex; gap:10px; flex-wrap:wrap; align-items:end;">
+    <div class="field">
+      <label>ปี</label>
+      <input class="input" type="number" name="year" value="{{ year }}" style="width:160px;">
+    </div>
+    <div>
+      <button class="btn primary" type="submit">แสดงรายงาน</button>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>เดือน</th>
+          <th>จำนวนหลักสูตร</th>
+          <th>จำนวนผู้เข้าอบรม</th>
+          <th>จำนวนชั่วโมงรวม</th>
+          <th>จำนวนชั่วโมงเฉลี่ยต่อคน</th>
+          <th>ค่าใช้จ่ายทั้งหมด</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td>{{ r.month_name }}</td>
+          <td>{{ r.course_count }}</td>
+          <td>{{ r.participant_count }}</td>
+          <td>{{ "{:,.2f}".format(r.total_hours or 0) }}</td>
+          <td>{{ "{:,.2f}".format(r.avg_hours_per_person or 0) }}</td>
+          <td>{{ "{:,.2f}".format(r.total_cost or 0) }}</td>
+        </tr>
+        {% endfor %}
+        <tr>
+          <td><b>รวม</b></td>
+          <td><b>{{ total_course_count }}</b></td>
+          <td><b>{{ total_participant_count }}</b></td>
+          <td><b>{{ "{:,.2f}".format(total_hours or 0) }}</b></td>
+          <td><b>{{ "{:,.2f}".format(total_avg or 0) }}</b></td>
+          <td><b>{{ "{:,.2f}".format(total_cost or 0) }}</b></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
