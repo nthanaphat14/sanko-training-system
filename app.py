@@ -3507,63 +3507,149 @@ def event_export_excel(event_id):
             "Score": p.score or "",
             "Training Hours": p.training_hours or "",
             "Remark": p.remark or "",
+            "Signature": "",
         })
-
-    info_data = [{
-        "Event Code": event.event_code or "",
-        "Course Code": event.course.course_code if event.course else "",
-        "Course Name": event.course.course_name if event.course else "",
-        "Type": event.event_type or "",
-        "Start Date": event.start_date or "",
-        "End Date": event.end_date or "",
-        "Location": event.location or "",
-        "Trainer": event.trainer or "",
-        "Status": event.status or "",
-        "Description": event.description or "",
-    }]
-
-    df_info = pd.DataFrame(info_data)
-    df_participants = pd.DataFrame(participants_data)
 
     output = io.BytesIO()
 
     with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
-        df_info.to_excel(writer, index=False, sheet_name="Event Info")
-        df_participants.to_excel(writer, index=False, sheet_name="Participants")
-
         workbook = writer.book
-        header_format = workbook.add_format({
+        ws = workbook.add_worksheet("Training Record")
+        writer.sheets["Training Record"] = ws
+
+        # ---------- FORMATS ----------
+        title_fmt = workbook.add_format({
+            "bold": True,
+            "font_size": 16,
+            "align": "center",
+            "valign": "vcenter",
+            "border": 1
+        })
+
+        head_fmt = workbook.add_format({
             "bold": True,
             "bg_color": "#D9EAF7",
-            "border": 1
+            "border": 1,
+            "align": "center",
+            "valign": "vcenter"
         })
-        cell_format = workbook.add_format({
-            "border": 1
+
+        label_fmt = workbook.add_format({
+            "bold": True,
+            "border": 1,
+            "bg_color": "#F3F4F6",
+            "valign": "vcenter"
         })
 
-        # Event Info sheet
-        ws_info = writer.sheets["Event Info"]
-        for col_num, value in enumerate(df_info.columns.values):
-            ws_info.write(0, col_num, value, header_format)
-            ws_info.set_column(col_num, col_num, 22)
+        value_fmt = workbook.add_format({
+            "border": 1,
+            "valign": "vcenter"
+        })
 
-        for row in range(1, len(df_info) + 1):
-            for col in range(len(df_info.columns)):
-                ws_info.write(row, col, df_info.iloc[row - 1, col], cell_format)
+        cell_fmt = workbook.add_format({
+            "border": 1,
+            "valign": "top"
+        })
 
-        # Participants sheet
-        ws_p = writer.sheets["Participants"]
-        for col_num, value in enumerate(df_participants.columns.values):
-            ws_p.write(0, col_num, value, header_format)
-            ws_p.set_column(col_num, col_num, 18)
+        center_fmt = workbook.add_format({
+            "border": 1,
+            "align": "center",
+            "valign": "vcenter"
+        })
 
-        for row in range(1, len(df_participants) + 1):
-            for col in range(len(df_participants.columns)):
-                ws_p.write(row, col, df_participants.iloc[row - 1, col], cell_format)
+        # ---------- COLUMN WIDTHS ----------
+        ws.set_column("A:A", 6)    # No.
+        ws.set_column("B:B", 14)   # Emp ID
+        ws.set_column("C:C", 28)   # Name
+        ws.set_column("D:D", 18)   # Section
+        ws.set_column("E:E", 18)   # Position
+        ws.set_column("F:F", 12)   # Result
+        ws.set_column("G:G", 10)   # Score
+        ws.set_column("H:H", 14)   # Hours
+        ws.set_column("I:I", 24)   # Remark
+        ws.set_column("J:J", 18)   # Signature
+
+        # ---------- TITLE ----------
+        ws.merge_range("A1:J1", "ใบบันทึกการฝึกอบรม / TRAINING RECORD", title_fmt)
+        ws.set_row(0, 28)
+
+        # ---------- EVENT INFO ----------
+        row = 2
+
+        info_pairs = [
+            ("Event Code", event.event_code or ""),
+            ("Course Code", event.course.course_code if event.course else ""),
+            ("Course Name", event.course.course_name if event.course else ""),
+            ("Training Type", event.event_type or ""),
+            ("Start Date", str(event.start_date or "")),
+            ("End Date", str(event.end_date or "")),
+            ("Location", event.location or ""),
+            ("Trainer", event.trainer or ""),
+            ("Status", event.status or ""),
+            ("Description", event.description or ""),
+        ]
+
+        for i in range(0, len(info_pairs), 2):
+            left_label, left_value = info_pairs[i]
+            right_label, right_value = info_pairs[i + 1] if i + 1 < len(info_pairs) else ("", "")
+
+            ws.write(row, 0, left_label, label_fmt)
+            ws.merge_range(row, 1, row, 4, left_value, value_fmt)
+
+            if right_label:
+                ws.write(row, 5, right_label, label_fmt)
+                ws.merge_range(row, 6, row, 9, right_value, value_fmt)
+            else:
+                ws.merge_range(row, 5, row, 9, "", value_fmt)
+
+            row += 1
+
+        row += 1
+
+        # ---------- PARTICIPANT TABLE HEADER ----------
+        headers = ["No.", "Emp ID", "Name", "Section", "Position", "Result", "Score", "Training Hours", "Remark", "Signature"]
+        for col_num, h in enumerate(headers):
+            ws.write(row, col_num, h, head_fmt)
+
+        # ---------- PARTICIPANT ROWS ----------
+        row += 1
+        start_data_row = row
+
+        for item in participants_data:
+            ws.write(row, 0, item["No."], center_fmt)
+            ws.write(row, 1, item["Emp ID"], cell_fmt)
+            ws.write(row, 2, item["Name"], cell_fmt)
+            ws.write(row, 3, item["Section"], cell_fmt)
+            ws.write(row, 4, item["Position"], cell_fmt)
+            ws.write(row, 5, item["Result"], center_fmt)
+            ws.write(row, 6, item["Score"], center_fmt)
+            ws.write(row, 7, item["Training Hours"], center_fmt)
+            ws.write(row, 8, item["Remark"], cell_fmt)
+            ws.write(row, 9, item["Signature"], cell_fmt)
+            ws.set_row(row, 24)
+            row += 1
+
+        if not participants_data:
+            ws.merge_range(row, 0, row, 9, "ยังไม่มีผู้เข้าอบรม", center_fmt)
+            row += 1
+
+        # ---------- FOOTER SIGN ----------
+        row += 2
+        ws.merge_range(row, 0, row, 3, "ผู้จัดทำ / Prepared by: ____________________", value_fmt)
+        ws.merge_range(row, 4, row, 6, "ผู้สอน / Trainer: ____________________", value_fmt)
+        ws.merge_range(row, 7, row, 9, "ผู้อนุมัติ / Approved by: ____________________", value_fmt)
+
+        # ---------- PRINT SETTINGS ----------
+        ws.set_landscape()
+        ws.fit_to_pages(1, 0)
+        ws.repeat_rows(0, row if start_data_row <= row else 0)
+        ws.center_horizontally()
+        ws.set_paper(9)  # A4
+        ws.hide_gridlines(2)
 
     output.seek(0)
 
-    filename = f"{event.event_code or 'event'}_participants.xlsx"
+    filename = f"{event.event_code or 'event'}_training_record.xlsx"
 
     return send_file(
         output,
