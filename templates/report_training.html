@@ -32,7 +32,9 @@
       <div style="font-weight:900; font-size:16px;">Emp ID: {{ emp.em_id }}</div>
       <div>ชื่อ: {{ emp.th_full() }}</div>
       <div class="muted">Section: {{ emp.section or "-" }} | Position: {{ emp.position or "-" }}</div>
-      {% if emp.department %}<div class="muted">Department: {{ emp.department }}</div>{% endif %}
+      {% if emp.department %}
+      <div class="muted">Department: {{ emp.department }}</div>
+      {% endif %}
     </div>
 
     <div class="actions">
@@ -51,61 +53,67 @@
   </div>
 
   <div class="card">
-  <div class="muted" style="margin-bottom:10px;">รายการฝึกอบรม: {{ rows|length }} รายการ</div>
+    <div class="muted" style="margin-bottom:10px;">รายการฝึกอบรม: {{ rows|length }} รายการ</div>
 
-  <div class="table-wrap">
-    <table class="table">
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Emp ID</th>
-          <th>Name</th>
-          <th>Section</th>
-          <th>Position</th>
-          <th>Year</th>
-          <th>Month</th>
-          <th>Course Code</th>
-          <th>Course Name</th>
-          <th>Type</th>
-          <th>Start</th>
-          <th>End</th>
-          <th>Hours</th>
-          <th>Eval</th>
-          <th>Result</th>
-          <th>Score</th>
-          <th>Evaluator</th>
-          <th>Expire</th>
-          <th>Remark</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for t in rows %}
-        <tr>
-          <td>{{ loop.index }}</td>
-          <td>{{ t.emp_id or "" }}</td>
-          <td>{{ t.prefix or "" }} {{ t.first_name or "" }} {{ t.last_name or "" }}</td>
-          <td>{{ t.section or "" }}</td>
-          <td>{{ t.position or "" }}</td>
-          <td>{{ t.year or "" }}</td>
-          <td>{{ t.month or "" }}</td>
-          <td>{{ t.course_code or "" }}</td>
-          <td>{{ t.course_name or "" }}</td>
-          <td>{{ t.course_type or "" }}</td>
-          <td class="nowrap">{{ t.start_date or "" }}</td>
-          <td class="nowrap">{{ t.end_date or "" }}</td>
-          <td>{{ t.hours or "" }}</td>
-          <td>{{ t.evaluate_method or "" }}</td>
-          <td>{{ t.result or "" }}</td>
-          <td>{{ t.score or "" }}</td>
-          <td>{{ t.evaluator or "" }}</td>
-          <td class="nowrap">{{ t.expire_date or "" }}</td>
-          <td>{{ t.remark or "" }}</td>
-        </tr>
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Emp ID</th>
+            <th>Name</th>
+            <th>Section</th>
+            <th>Position</th>
+            <th>Year</th>
+            <th>Month</th>
+            <th>Course Code</th>
+            <th>Course Name</th>
+            <th>Type</th>
+            <th>Start</th>
+            <th>End</th>
+            <th>Hours</th>
+            <th>Eval</th>
+            <th>Result</th>
+            <th>Score</th>
+            <th>Evaluator</th>
+            <th>Expire</th>
+            <th>Remark</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in rows %}
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td>{{ t.emp_id or "" }}</td>
+            <td>{{ t.prefix or "" }} {{ t.first_name or "" }} {{ t.last_name or "" }}</td>
+            <td>{{ t.section or "" }}</td>
+            <td>{{ t.position or "" }}</td>
+            <td>{{ t.year or "" }}</td>
+            <td>{{ t.month or "" }}</td>
+            <td>{{ t.course_code or "" }}</td>
+            <td>{{ t.course_name or "" }}</td>
+            <td>{{ t.course_type or "" }}</td>
+            <td class="nowrap">{{ t.start_date or "" }}</td>
+            <td class="nowrap">{{ t.end_date or "" }}</td>
+            <td>{{ t.hours or "" }}</td>
+            <td>{{ t.evaluate_method or "" }}</td>
+            <td>{{ t.result or "" }}</td>
+            <td>{{ t.score or "" }}</td>
+            <td>{{ t.evaluator or "" }}</td>
+            <td class="nowrap">{{ t.expire_date or "" }}</td>
+            <td>{{ t.remark or "" }}</td>
+          </tr>
           {% endfor %}
-      </tbody>
-    </table>
+
+          {% if rows|length == 0 %}
+          <tr>
+            <td colspan="19" class="center muted">ไม่พบรายการฝึกอบรม</td>
+          </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
   </div>
-</div>
 
 {% else %}
   {% if q %}
