@@ -2861,7 +2861,7 @@ def courses_list():
 @role_required("admin")
 def course_new():
     if request.method == "GET":
-    return render_template("course_form.html", mode="new", course=None)
+        return render_template("course_form.html", mode="new", course=None)
 
     course_type = (request.form.get("course_type") or "").strip().upper()
     course_name = (request.form.get("course_name") or "").strip()
