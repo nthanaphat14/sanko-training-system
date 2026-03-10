@@ -38,6 +38,7 @@ from collections import defaultdict
 from datetime import date
 from sqlalchemy import extract
 
+from flask import send_file
 
 # -------------------------------------------------
 # App Config
@@ -2470,6 +2471,113 @@ def report_monthly():
         detail_rows=detail_rows,
     )
 
+@app.get("/report/yearly/export")
+@login_required
+def report_yearly_export():
+    year = request.args.get("year", type=int) or date.today().year
+
+    events = TrainingEvent.query.filter(
+        extract("year", TrainingEvent.start_date) == year
+    ).all()
+
+    month_map = {
+        m: {
+            "Month": MONTHS_TH[m],
+            "Course Count": 0,
+            "Participant Count": 0,
+            "Total Hours": 0.0,
+            "Avg Hours / Person": 0.0,
+            "Total Cost": 0.0,
+        }
+        for m in range(1, 13)
+    }
+
+    for e in events:
+        m = e.start_date.month
+        month_map[m]["Course Count"] += 1
+
+        p_count = len(e.participants) if hasattr(e, "participants") else 0
+        month_map[m]["Participant Count"] += p_count
+
+        total_hours = 0.0
+        if hasattr(e, "participants") and e.participants:
+            total_hours = sum(float(p.training_hours or 0) for p in e.participants)
+
+        month_map[m]["Total Hours"] += total_hours
+
+        total_cost = sum(float(x.amount_total or 0) for x in e.cost_items) if hasattr(e, "cost_items") and e.cost_items else 0.0
+        month_map[m]["Total Cost"] += total_cost
+
+    rows = []
+    for m in range(1, 13):
+        row = month_map[m]
+        if row["Participant Count"] > 0:
+            row["Avg Hours / Person"] = row["Total Hours"] / row["Participant Count"]
+        rows.append(row)
+
+    import io
+    import pandas as pd
+
+    df = pd.DataFrame(rows)
+    output = io.BytesIO()
+
+    with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+        df.to_excel(writer, index=False, sheet_name="Yearly Summary")
+
+    output.seek(0)
+    return send_file(
+        output,
+        download_name=f"yearly_summary_{year}.xlsx",
+        as_attachment=True,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    
+@app.get("/report/monthly/export")
+@login_required
+def report_monthly_export():
+    year = request.args.get("year", type=int) or date.today().year
+    month = request.args.get("month", type=int) or date.today().month
+
+    events = TrainingEvent.query.filter(
+        extract("year", TrainingEvent.start_date) == year,
+        extract("month", TrainingEvent.start_date) == month
+    ).order_by(TrainingEvent.start_date.asc()).all()
+
+    detail_rows = []
+
+    for e in events:
+        p_count = len(e.participants) if hasattr(e, "participants") else 0
+        total_hours = sum(float(p.training_hours or 0) for p in e.participants) if hasattr(e, "participants") and e.participants else 0.0
+        total_cost = sum(float(x.amount_total or 0) for x in e.cost_items) if hasattr(e, "cost_items") and e.cost_items else 0.0
+
+        detail_rows.append({
+            "Date": e.start_date,
+            "Event Code": e.event_code,
+            "Course Name": e.course.course_name if e.course else "",
+            "Trainer": e.trainer or "",
+            "Trainee Count": p_count,
+            "Total Hours": total_hours,
+            "Hours / Person": e.course.training_hours if e.course else "",
+            "Cost": total_cost,
+            "Training Type": TYPE_LABELS.get((e.event_type or "").upper(), e.event_type or "")
+        })
+
+    import io
+    import pandas as pd
+
+    df = pd.DataFrame(detail_rows)
+    output = io.BytesIO()
+
+    with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+        df.to_excel(writer, index=False, sheet_name="Monthly Report")
+
+    output.seek(0)
+    return send_file(
+        output,
+        download_name=f"monthly_report_{year}_{month:02d}.xlsx",
+        as_attachment=True,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
 
 @app.get("/report/records")
 @login_required
