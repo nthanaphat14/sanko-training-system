@@ -2324,15 +2324,36 @@ MONTHS_TH = {
     12: "ธันวาคม",
 }
 
-
 @app.get("/report/yearly")
 @login_required
 def report_yearly():
     year = request.args.get("year", type=int) or date.today().year
 
-    events = TrainingEvent.query.filter(
-        extract("year", TrainingEvent.start_date) == year
-    ).all()
+    rows_q = (
+        db.session.query(
+            TrainingRecord.month.label("month_no"),
+            func.count(TrainingRecord.id).label("trainee_count"),
+            func.count(func.distinct(TrainingRecord.course_code)).label("course_count"),
+            func.sum(func.coalesce(TrainingRecord.hours, 0)).label("total_hours"),
+        )
+        .filter(TrainingRecord.year == year)
+        .group_by(TrainingRecord.month)
+        .all()
+    )
+
+    # cost จาก events
+    cost_q = (
+        db.session.query(
+            extract("month", TrainingEvent.start_date).label("month_no"),
+            func.sum(func.coalesce(EventCostItem.amount_total, 0)).label("total_cost"),
+        )
+        .outerjoin(EventCostItem, EventCostItem.event_id == TrainingEvent.id)
+        .filter(extract("year", TrainingEvent.start_date) == year)
+        .group_by(extract("month", TrainingEvent.start_date))
+        .all()
+    )
+
+    cost_map = {int(r.month_no): float(r.total_cost or 0) for r in cost_q}
 
     month_map = {
         m: {
@@ -2347,48 +2368,27 @@ def report_yearly():
         for m in range(1, 13)
     }
 
-    for e in events:
-        m = e.start_date.month
-        month_map[m]["course_count"] += 1
+    for r in rows_q:
+        m = int(r.month_no or 0)
+        if m not in month_map:
+            continue
+        month_map[m]["course_count"] = int(r.course_count or 0)
+        month_map[m]["participant_count"] = int(r.trainee_count or 0)
+        month_map[m]["total_hours"] = float(r.total_hours or 0)
+        month_map[m]["total_cost"] = cost_map.get(m, 0.0)
 
-        p_count = len(e.participants) if hasattr(e, "participants") else 0
-        month_map[m]["participant_count"] += p_count
+        if month_map[m]["participant_count"] > 0:
+            month_map[m]["avg_hours_per_person"] = (
+                month_map[m]["total_hours"] / month_map[m]["participant_count"]
+            )
 
-        # รวมชั่วโมงจาก participant ก่อน ถ้าไม่มีค่อย fallback ที่ course.training_hours
-        event_total_hours = 0.0
-        if hasattr(e, "participants") and e.participants:
-            for p in e.participants:
-                event_total_hours += float(p.training_hours or 0)
-        else:
-            event_total_hours += float((e.course.training_hours or 0) * p_count)
+    rows = [month_map[m] for m in range(1, 13)]
 
-        month_map[m]["total_hours"] += event_total_hours
-
-        # ค่าใช้จ่าย
-        if hasattr(e, "cost_items") and e.cost_items:
-            month_map[m]["total_cost"] += sum(float(x.amount_total or 0) for x in e.cost_items)
-
-    rows = []
-    total_course_count = 0
-    total_participant_count = 0
-    total_hours = 0.0
-    total_cost = 0.0
-
-    for m in range(1, 13):
-        row = month_map[m]
-        if row["participant_count"] > 0:
-            row["avg_hours_per_person"] = row["total_hours"] / row["participant_count"]
-        else:
-            row["avg_hours_per_person"] = 0.0
-
-        rows.append(row)
-
-        total_course_count += row["course_count"]
-        total_participant_count += row["participant_count"]
-        total_hours += row["total_hours"]
-        total_cost += row["total_cost"]
-
-    total_avg = (total_hours / total_participant_count) if total_participant_count > 0 else 0.0
+    total_course_count = sum(r["course_count"] for r in rows)
+    total_participant_count = sum(r["participant_count"] for r in rows)
+    total_hours = sum(r["total_hours"] for r in rows)
+    total_cost = sum(r["total_cost"] for r in rows)
+    total_avg = total_hours / total_participant_count if total_participant_count > 0 else 0
 
     return render_template(
         "report_yearly.html",
@@ -2401,72 +2401,120 @@ def report_yearly():
         total_cost=total_cost,
     )
 
-
 @app.get("/report/monthly")
 @login_required
 def report_monthly():
     year = request.args.get("year", type=int) or date.today().year
     month = request.args.get("month", type=int) or date.today().month
 
-    events = TrainingEvent.query.filter(
-        extract("year", TrainingEvent.start_date) == year,
-        extract("month", TrainingEvent.start_date) == month
-    ).order_by(TrainingEvent.start_date.asc()).all()
+    # สรุปจาก training_records เป็นหลัก
+    summary_q = (
+        db.session.query(
+            TrainingRecord.course_type.label("course_type"),
+            func.count(TrainingRecord.id).label("trainee_count"),
+            func.count(func.distinct(TrainingRecord.course_code)).label("course_count"),
+            func.sum(func.coalesce(TrainingRecord.hours, 0)).label("total_hours"),
+        )
+        .filter(
+            TrainingRecord.year == year,
+            TrainingRecord.month == month,
+        )
+        .group_by(TrainingRecord.course_type)
+        .all()
+    )
 
-    summary_by_type = {
-        "OJT": {"label": TYPE_LABELS["OJT"], "course_count": 0, "trainee_count": 0, "total_hours": 0.0, "total_cost": 0.0},
-        "INH": {"label": TYPE_LABELS["INH"], "course_count": 0, "trainee_count": 0, "total_hours": 0.0, "total_cost": 0.0},
-        "EXT": {"label": TYPE_LABELS["EXT"], "course_count": 0, "trainee_count": 0, "total_hours": 0.0, "total_cost": 0.0},
-    }
+    # cost จาก events
+    cost_q = (
+        db.session.query(
+            TrainingEvent.event_type.label("event_type"),
+            func.sum(func.coalesce(EventCostItem.amount_total, 0)).label("total_cost"),
+        )
+        .outerjoin(EventCostItem, EventCostItem.event_id == TrainingEvent.id)
+        .filter(
+            extract("year", TrainingEvent.start_date) == year,
+            extract("month", TrainingEvent.start_date) == month,
+        )
+        .group_by(TrainingEvent.event_type)
+        .all()
+    )
+    cost_map = {(r.event_type or "").upper(): float(r.total_cost or 0) for r in cost_q}
 
-    detail_rows = []
+    summary_rows = []
+    for type_code in ["OJT", "INH", "EXT"]:
+        matched = next((x for x in summary_q if (x.course_type or "").upper() == type_code), None)
 
-    for e in events:
-        etype = (e.event_type or "").upper()
-        if etype not in summary_by_type:
-            continue
-
-        p_count = len(e.participants) if hasattr(e, "participants") else 0
-        total_hours = 0.0
-
-        if hasattr(e, "participants") and e.participants:
-            for p in e.participants:
-                total_hours += float(p.training_hours or 0)
-        else:
-            total_hours += float((e.course.training_hours or 0) * p_count)
-
-        total_cost = sum(float(x.amount_total or 0) for x in e.cost_items) if hasattr(e, "cost_items") and e.cost_items else 0.0
-
-        summary_by_type[etype]["course_count"] += 1
-        summary_by_type[etype]["trainee_count"] += p_count
-        summary_by_type[etype]["total_hours"] += total_hours
-        summary_by_type[etype]["total_cost"] += total_cost
-
-        detail_rows.append({
-            "date": e.start_date,
-            "course_name": e.course.course_name if e.course else "",
-            "trainer": e.trainer or "",
-            "trainee_count": p_count,
-            "total_hours": total_hours,
-            "hours_per_person": e.course.training_hours if e.course else None,
-            "cost": total_cost,
-            "training_type": TYPE_LABELS.get(etype, etype),
-            "event_code": e.event_code,
+        summary_rows.append({
+            "label": TYPE_LABELS.get(type_code, type_code),
+            "course_count": int(matched.course_count or 0) if matched else 0,
+            "trainee_count": int(matched.trainee_count or 0) if matched else 0,
+            "total_hours": float(matched.total_hours or 0) if matched else 0.0,
+            "total_cost": cost_map.get(type_code, 0.0),
         })
 
     total_row = {
-        "course_count": sum(x["course_count"] for x in summary_by_type.values()),
-        "trainee_count": sum(x["trainee_count"] for x in summary_by_type.values()),
-        "total_hours": sum(x["total_hours"] for x in summary_by_type.values()),
-        "total_cost": sum(x["total_cost"] for x in summary_by_type.values()),
+        "course_count": sum(x["course_count"] for x in summary_rows),
+        "trainee_count": sum(x["trainee_count"] for x in summary_rows),
+        "total_hours": sum(x["total_hours"] for x in summary_rows),
+        "total_cost": sum(x["total_cost"] for x in summary_rows),
     }
+
+    # detail จาก training_records
+    detail_q = (
+        db.session.query(
+            TrainingRecord.start_date,
+            TrainingRecord.course_code,
+            TrainingRecord.course_name,
+            TrainingRecord.course_type,
+            func.count(TrainingRecord.id).label("trainee_count"),
+            func.sum(func.coalesce(TrainingRecord.hours, 0)).label("total_hours"),
+            func.max(TrainingRecord.evaluator).label("evaluator"),
+            func.max(TrainingRecord.event_id).label("event_id"),
+        )
+        .filter(
+            TrainingRecord.year == year,
+            TrainingRecord.month == month,
+        )
+        .group_by(
+            TrainingRecord.start_date,
+            TrainingRecord.course_code,
+            TrainingRecord.course_name,
+            TrainingRecord.course_type,
+        )
+        .order_by(TrainingRecord.start_date.asc(), TrainingRecord.course_code.asc())
+        .all()
+    )
+
+    # map event info เฉพาะที่มี event_id
+    event_ids = [r.event_id for r in detail_q if r.event_id]
+    event_map = {}
+    if event_ids:
+        event_rows = TrainingEvent.query.filter(TrainingEvent.id.in_(event_ids)).all()
+        event_map = {e.id: e for e in event_rows}
+
+    detail_rows = []
+    for r in detail_q:
+        e = event_map.get(r.event_id)
+        detail_rows.append({
+            "date": r.start_date,
+            "event_code": e.event_code if e else "",
+            "course_name": r.course_name or "",
+            "trainer": (e.trainer if e else None) or r.evaluator or "",
+            "trainee_count": int(r.trainee_count or 0),
+            "total_hours": float(r.total_hours or 0),
+            "hours_per_person": (
+                float(r.total_hours or 0) / int(r.trainee_count or 1)
+                if int(r.trainee_count or 0) > 0 else 0
+            ),
+            "cost": sum(float(x.amount_total or 0) for x in e.cost_items) if e and hasattr(e, "cost_items") and e.cost_items else 0.0,
+            "training_type": TYPE_LABELS.get((r.course_type or "").upper(), r.course_type or ""),
+        })
 
     return render_template(
         "report_monthly.html",
         year=year,
         month=month,
         month_name=MONTHS_TH.get(month, str(month)),
-        summary_rows=list(summary_by_type.values()),
+        summary_rows=summary_rows,
         total_row=total_row,
         detail_rows=detail_rows,
     )
