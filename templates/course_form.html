@@ -76,8 +76,15 @@
       <input class="input" name="description" value="{{ course.description if course else '' }}">
     </div>
 
-    <div style="grid-column:1/-1; display:flex; gap:10px; justify-content:flex-end;">
-      <button class="btn primary" type="submit">Save</button>
+    <div style="grid-column:1/-1; display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap;">
+      <button class="btn primary" type="submit" name="action" value="save">Save</button>
+
+      {% if mode == 'new' %}
+      <button class="btn" type="submit" name="action" value="save_create_event">
+        Save & Create Event
+      </button>
+      {% endif %}
+
       <a class="btn ghost" href="{{ url_for('courses_list') }}">Cancel</a>
     </div>
   </form>
