@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="page-head">
+  <div>
+    <h1>Training Records Report</h1>
+    <div class="muted">รายงานประวัติการอบรมรายคน</div>
+  </div>
+</div>
+
+<div class="card">
+  <form method="get" style="display:flex; gap:10px; flex-wrap:wrap; align-items:end;">
+    <div class="field">
+      <label>ค้นหา</label>
+      <input class="input" name="q" value="{{ q }}" placeholder="Emp ID / ชื่อ / รหัสหลักสูตร / ชื่อหลักสูตร" style="width:360px;">
+    </div>
+
+    <div class="field">
+      <label>ปี</label>
+      <input class="input" type="number" name="year" value="{{ year }}" style="width:140px;">
+    </div>
+
+    <div>
+      <button class="btn primary" type="submit">ค้นหา</button>
+      <a class="btn ghost" href="{{ url_for('report_records') }}">ล้าง</a>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <div style="display:flex; gap:16px; flex-wrap:wrap;">
+    <div><b>Total Records:</b> {{ total_count }}</div>
+    <div><b>Total Hours:</b> {{ "{:,.2f}".format(total_hours or 0) }}</div>
+    <div><b>PASS:</b> {{ pass_count }}</div>
+    <div><b>FAIL:</b> {{ fail_count }}</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Emp ID</th>
+          <th>Name</th>
+          <th>Section</th>
+          <th>Position</th>
+          <th>Course Code</th>
+          <th>Course Name</th>
+          <th>Type</th>
+          <th>Date</th>
+          <th>Hours</th>
+          <th>Score</th>
+          <th>Result</th>
+          <th>Evaluator</th>
+          <th>Remark</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td>{{ r.emp_id }}</td>
+          <td>{{ r.prefix or "" }} {{ r.first_name or "" }} {{ r.last_name or "" }}</td>
+          <td>{{ r.section or "" }}</td>
+          <td>{{ r.position or "" }}</td>
+          <td>{{ r.course_code or "" }}</td>
+          <td>{{ r.course_name or "" }}</td>
+          <td>{{ r.course_type or "" }}</td>
+          <td>
+            {{ r.start_date or "" }}
+            {% if r.end_date %} - {{ r.end_date }}{% endif %}
+          </td>
+          <td>{{ r.hours or "" }}</td>
+          <td>{{ r.score or "" }}</td>
+          <td>{{ r.result or "" }}</td>
+          <td>{{ r.evaluator or "" }}</td>
+          <td>{{ r.remark or "" }}</td>
+        </tr>
+        {% endfor %}
+        {% if rows|length == 0 %}
+        <tr>
+          <td colspan="13" class="center muted">ไม่พบข้อมูล</td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
