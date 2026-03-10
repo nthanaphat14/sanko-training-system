@@ -2861,12 +2861,7 @@ def courses_list():
 @role_required("admin")
 def course_new():
     if request.method == "GET":
-        selected_course_id = request.args.get("course_id", type=int)
-        return render_template(
-            "events_new.html",
-            courses=courses,
-            selected_course_id=selected_course_id
-        )
+    return render_template("course_form.html", mode="new", course=None)
 
     course_type = (request.form.get("course_type") or "").strip().upper()
     course_name = (request.form.get("course_name") or "").strip()
