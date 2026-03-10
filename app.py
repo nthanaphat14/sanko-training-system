@@ -3481,6 +3481,94 @@ def event_generate_training_records(event_id):
 
     return redirect(url_for("event_detail", event_id=event.id))
 
+@app.get("/events/<int:event_id>/export")
+@login_required
+def event_export_excel(event_id):
+    event = TrainingEvent.query.get_or_404(event_id)
+
+    participant_rows = TrainingEventParticipant.query.filter_by(
+        event_id=event.id
+    ).order_by(TrainingEventParticipant.id.asc()).all()
+
+    participants_data = []
+    for idx, p in enumerate(participant_rows, start=1):
+        emp = Employee.query.filter_by(em_id=p.emp_id).first()
+
+        participants_data.append({
+            "No.": idx,
+            "Emp ID": p.emp_id,
+            "Name": emp.th_full() if emp else "",
+            "Section": emp.section if emp else "",
+            "Position": emp.position if emp else "",
+            "Result": p.result or "",
+            "Score": p.score or "",
+            "Training Hours": p.training_hours or "",
+            "Remark": p.remark or "",
+        })
+
+    info_data = [{
+        "Event Code": event.event_code or "",
+        "Course Code": event.course.course_code if event.course else "",
+        "Course Name": event.course.course_name if event.course else "",
+        "Type": event.event_type or "",
+        "Start Date": event.start_date or "",
+        "End Date": event.end_date or "",
+        "Location": event.location or "",
+        "Trainer": event.trainer or "",
+        "Status": event.status or "",
+        "Description": event.description or "",
+    }]
+
+    df_info = pd.DataFrame(info_data)
+    df_participants = pd.DataFrame(participants_data)
+
+    output = io.BytesIO()
+
+    with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+        df_info.to_excel(writer, index=False, sheet_name="Event Info")
+        df_participants.to_excel(writer, index=False, sheet_name="Participants")
+
+        workbook = writer.book
+        header_format = workbook.add_format({
+            "bold": True,
+            "bg_color": "#D9EAF7",
+            "border": 1
+        })
+        cell_format = workbook.add_format({
+            "border": 1
+        })
+
+        # Event Info sheet
+        ws_info = writer.sheets["Event Info"]
+        for col_num, value in enumerate(df_info.columns.values):
+            ws_info.write(0, col_num, value, header_format)
+            ws_info.set_column(col_num, col_num, 22)
+
+        for row in range(1, len(df_info) + 1):
+            for col in range(len(df_info.columns)):
+                ws_info.write(row, col, df_info.iloc[row - 1, col], cell_format)
+
+        # Participants sheet
+        ws_p = writer.sheets["Participants"]
+        for col_num, value in enumerate(df_participants.columns.values):
+            ws_p.write(0, col_num, value, header_format)
+            ws_p.set_column(col_num, col_num, 18)
+
+        for row in range(1, len(df_participants) + 1):
+            for col in range(len(df_participants.columns)):
+                ws_p.write(row, col, df_participants.iloc[row - 1, col], cell_format)
+
+    output.seek(0)
+
+    filename = f"{event.event_code or 'event'}_participants.xlsx"
+
+    return send_file(
+        output,
+        download_name=filename,
+        as_attachment=True,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    
 @app.post("/courses/file/<int:file_id>/delete")
 @login_required
 @role_required("admin")
