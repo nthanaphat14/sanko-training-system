@@ -2738,6 +2738,8 @@ def event_detail(event_id):
     total_vat = sum((x.amount_vat or 0) for x in event.cost_items)
     total_amount = sum((x.amount_total or 0) for x in event.cost_items)
 
+    employees = Employee.query.order_by(Employee.first_name_th.asc()).all()
+
     return render_template(
         "event_detail.html",
         event=event,
