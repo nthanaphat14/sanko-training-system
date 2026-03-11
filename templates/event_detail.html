@@ -84,9 +84,7 @@
 <div class="card">
   <h3 style="margin-top:0;">Add Participant</h3>
 
-  <form method="post"
-        action="{{ url_for('event_participant_add', event_id=event.id) }}"
-        id="addParticipantForm"
+  <form id="addParticipantForm"
         style="display:flex; flex-direction:column; gap:10px; align-items:stretch;">
 
     <div class="field" style="max-width:560px; position:relative;">
@@ -106,6 +104,7 @@
     </div>
 
     <div id="selectedEmployeeBox" class="muted" style="min-height:20px;"></div>
+    <div id="participantAddMessage" class="muted" style="min-height:20px;"></div>
 
     <div>
       <button class="btn primary" type="submit">+ Add Participant</button>
