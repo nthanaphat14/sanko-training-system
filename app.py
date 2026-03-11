@@ -3201,6 +3201,49 @@ def event_participant_add(event_id):
 
     return redirect(url_for("event_detail", event_id=event.id))
 
+@app.post("/events/<int:event_id>/participants/add-ajax")
+@login_required
+def event_participant_add_ajax(event_id):
+    event = TrainingEvent.query.get_or_404(event_id)
+
+    emp_id = (request.form.get("emp_id") or "").strip()
+
+    if not emp_id:
+        return {"ok": False, "message": "กรุณาระบุ Emp ID"}, 400
+
+    emp = Employee.query.filter_by(em_id=emp_id).first()
+    if not emp:
+        return {"ok": False, "message": "ไม่พบ Emp ID นี้ในระบบพนักงาน"}, 404
+
+    exists = TrainingEventParticipant.query.filter_by(
+        event_id=event.id,
+        emp_id=emp_id
+    ).first()
+
+    if exists:
+        return {"ok": False, "message": "พนักงานคนนี้อยู่ใน Event แล้ว"}, 409
+
+    row = TrainingEventParticipant(
+        event_id=event.id,
+        emp_id=emp_id
+    )
+
+    db.session.add(row)
+    db.session.commit()
+
+    audit("EVENT_PARTICIPANT_ADD", f"event_code={event.event_code}, emp_id={emp_id}")
+
+    return {
+        "ok": True,
+        "message": "เพิ่มผู้เข้าอบรมสำเร็จ",
+        "participant": {
+            "id": row.id,
+            "emp_id": emp.em_id,
+            "name": emp.th_full(),
+            "section": emp.section or "",
+            "position": emp.position or "",
+        }
+    }
 
 @app.post("/events/participants/<int:participant_id>/delete")
 @login_required
