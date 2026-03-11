@@ -120,27 +120,45 @@ document.addEventListener("DOMContentLoaded", function () {
       emp_id: {{ (e.em_id or "")|tojson }},
       name: {{ (e.th_full() or "")|tojson }},
       section: {{ (e.section or "")|tojson }},
+      position: {{ (e.position or "")|tojson }},
       search_text: {{ (((e.em_id or "") ~ " " ~ (e.th_full() or "") ~ " " ~ (e.section or ""))|lower)|tojson }}
     }{% if not loop.last %},{% endif %}
     {% endfor %}
   ];
 
+  const eventId = {{ event.id }};
   const form = document.getElementById("addParticipantForm");
   const searchInput = document.getElementById("employeeSearch");
   const hiddenEmpId = document.getElementById("selectedEmpId");
   const resultsBox = document.getElementById("employeeResults");
   const selectedBox = document.getElementById("selectedEmployeeBox");
+  const msgBox = document.getElementById("participantAddMessage");
 
   let currentResults = [];
   let activeIndex = -1;
 
   function escapeHtml(text) {
-    return String(text)
+    return String(text ?? "")
       .replaceAll("&", "&amp;")
       .replaceAll("<", "&lt;")
       .replaceAll(">", "&gt;")
       .replaceAll('"', "&quot;")
       .replaceAll("'", "&#039;");
+  }
+
+  function setMessage(text, ok = true) {
+    msgBox.innerHTML = text ? `<span style="color:${ok ? '#86efac' : '#fca5a5'}">${escapeHtml(text)}</span>` : "";
+  }
+
+  function clearSelection() {
+    hiddenEmpId.value = "";
+    searchInput.value = "";
+    selectedBox.innerHTML = "";
+    resultsBox.innerHTML = "";
+    resultsBox.style.display = "none";
+    currentResults = [];
+    activeIndex = -1;
+    searchInput.focus();
   }
 
   function setSelected(emp) {
@@ -174,10 +192,12 @@ document.addEventListener("DOMContentLoaded", function () {
     resultsBox.style.display = "block";
 
     document.querySelectorAll(".employee-result-item").forEach(btn => {
-      btn.addEventListener("click", function () {
+      btn.addEventListener("click", async function () {
         const idx = parseInt(this.getAttribute("data-index"), 10);
         const emp = currentResults[idx];
-        if (emp) setSelected(emp);
+        if (!emp) return;
+        setSelected(emp);
+        await submitParticipant(emp.emp_id);
       });
     });
   }
@@ -185,13 +205,8 @@ document.addEventListener("DOMContentLoaded", function () {
   function updateActiveItem() {
     const items = resultsBox.querySelectorAll(".employee-result-item");
     items.forEach((item, idx) => {
-      if (idx === activeIndex) {
-        item.style.background = "rgba(255,255,255,.10)";
-      } else {
-        item.style.background = "transparent";
-      }
+      item.style.background = (idx === activeIndex) ? "rgba(255,255,255,.10)" : "transparent";
     });
-
     if (activeIndex >= 0 && items[activeIndex]) {
       items[activeIndex].scrollIntoView({ block: "nearest" });
     }
@@ -203,11 +218,47 @@ document.addEventListener("DOMContentLoaded", function () {
     return employees.find(emp => String(emp.emp_id).trim().toLowerCase() === exact) || null;
   }
 
+  async function submitParticipant(empId) {
+    try {
+      setMessage("กำลังเพิ่มผู้เข้าอบรม...", true);
+
+      const formData = new FormData();
+      formData.append("emp_id", empId);
+
+      const res = await fetch(`/events/${eventId}/participants/add-ajax`, {
+        method: "POST",
+        body: formData,
+        credentials: "same-origin"
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.ok) {
+        setMessage(data.message || "เกิดข้อผิดพลาด", false);
+        searchInput.focus();
+        searchInput.select();
+        return;
+      }
+
+      setMessage(`${data.message}: ${data.participant.emp_id} - ${data.participant.name}`, true);
+
+      // รีโหลดหน้าเพื่อให้ participant table อัปเดตทันที
+      // ถ้าอยากให้ไม่รีโหลดเลย รอบหน้าเราทำ append row ได้
+      setTimeout(() => {
+        window.location.reload();
+      }, 350);
+
+    } catch (err) {
+      setMessage("ไม่สามารถเพิ่มผู้เข้าอบรมได้", false);
+      searchInput.focus();
+    }
+  }
+
   searchInput.addEventListener("input", function () {
     const q = this.value.trim().toLowerCase();
-
     hiddenEmpId.value = "";
     selectedBox.innerHTML = "";
+    setMessage("");
 
     if (!q) {
       resultsBox.style.display = "none";
@@ -217,7 +268,6 @@ document.addEventListener("DOMContentLoaded", function () {
       return;
     }
 
-    // ถ้าพิมพ์รหัสตรงเป๊ะ ให้เลือกอัตโนมัติทันที
     const exactEmp = findExactEmpIdMatch(q);
     if (exactEmp) {
       setSelected(exactEmp);
@@ -231,7 +281,7 @@ document.addEventListener("DOMContentLoaded", function () {
     renderResults(matched);
   });
 
-  searchInput.addEventListener("keydown", function (e) {
+  searchInput.addEventListener("keydown", async function (e) {
     const isOpen = resultsBox.style.display === "block" && currentResults.length > 0;
 
     if (e.key === "ArrowDown") {
@@ -249,26 +299,26 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     if (e.key === "Enter") {
-      // ถ้าพิมพ์รหัสตรงเป๊ะอยู่แล้ว ให้ submit ได้เลย
+      e.preventDefault();
+
       const exactEmp = findExactEmpIdMatch(searchInput.value);
       if (exactEmp) {
-        e.preventDefault();
         setSelected(exactEmp);
-        form.submit();
+        await submitParticipant(exactEmp.emp_id);
         return;
       }
 
-      // ถ้ามีรายการเปิดอยู่และเลือกด้วยลูกศร ให้เลือกคนนั้น
       if (isOpen && activeIndex >= 0 && currentResults[activeIndex]) {
-        e.preventDefault();
-        setSelected(currentResults[activeIndex]);
+        const emp = currentResults[activeIndex];
+        setSelected(emp);
+        await submitParticipant(emp.emp_id);
         return;
       }
 
-      // ถ้ามีผลลัพธ์เดียว ให้เลือกอัตโนมัติ
       if (isOpen && currentResults.length === 1) {
-        e.preventDefault();
-        setSelected(currentResults[0]);
+        const emp = currentResults[0];
+        setSelected(emp);
+        await submitParticipant(emp.emp_id);
         return;
       }
     }
@@ -285,18 +335,28 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   });
 
-  form.addEventListener("submit", function (e) {
-    if (!hiddenEmpId.value.trim()) {
+  form.addEventListener("submit", async function (e) {
+    e.preventDefault();
+
+    const empId = hiddenEmpId.value.trim();
+    if (!empId) {
       const exactEmp = findExactEmpIdMatch(searchInput.value);
       if (exactEmp) {
         setSelected(exactEmp);
+        await submitParticipant(exactEmp.emp_id);
         return;
       }
 
-      e.preventDefault();
-      alert("กรุณาเลือกพนักงานจากรายการก่อน");
+      setMessage("กรุณาเลือกพนักงานจากรายการก่อน", false);
+      searchInput.focus();
+      return;
     }
+
+    await submitParticipant(empId);
   });
+
+  // โฟกัสช่องค้นหาอัตโนมัติเมื่อเข้า page
+  searchInput.focus();
 });
 </script>
 
