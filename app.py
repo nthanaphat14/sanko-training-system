@@ -1571,6 +1571,7 @@ def trainings_import():
             # - ถ้า key นี้ไม่เคยมี → Added
             # - ถ้าเคยมี → พยายามเติมช่องว่าง (Updated) ไม่งั้น Duplicate
             # ======================================================
+        with db.session.no_autoflush:
             existing = (
                 TrainingRecord.query
                 .filter(TrainingRecord.emp_id == emp_id)
