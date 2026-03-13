@@ -1575,6 +1575,14 @@ def trainings_import():
             # - ถ้า key นี้ไม่เคยมี → Added
             # - ถ้าเคยมี → พยายามเติมช่องว่าง (Updated) ไม่งั้น Duplicate
             # ======================================================
+            record_key = (emp_id, course_code, course_type, start_date, end_date)
+
+            if record_key in seen_keys:
+                duplicated += 1
+                continue
+
+            seen_keys.add(record_key)
+            
             with db.session.no_autoflush:
                 existing = (
                         TrainingRecord.query
