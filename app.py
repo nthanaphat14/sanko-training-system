@@ -1411,10 +1411,12 @@ def trainings_import():
         flash("กรุณาเลือกไฟล์ Excel", "error")
         return redirect(url_for("trainings_import"))
 
+    filename = f.filename
+
     # ---- สร้าง Batch รอบนี้ ----
-    batch = ImportBatch(filename=f.filename)
+    batch = ImportBatch(filename=filename)
     db.session.add(batch)
-    db.session.commit()  # ต้อง commit ก่อนเพื่อได้ batch.id
+    db.session.commit()
 
     def log_item(status, reason=None, row_no=None, **kw):
         it = ImportItem(
