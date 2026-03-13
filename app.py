@@ -1758,6 +1758,25 @@ def trainings_import():
                     start_date=start_date,
                     end_date=end_date,
                 )
+
+        batch.added = added
+        batch.updated = updated
+        batch.duplicated = duplicated
+        batch.skipped = skipped
+
+        db.session.commit()
+        audit("TRAINING_IMPORT", f"file={filename}, added={added}, updated={updated}, skipped={skipped}")
+
+        flash(
+            f"Import สำเร็จ: เพิ่ม {added} | อัปเดต {updated} | ซ้ำ {duplicated} | ข้าม {skipped}",
+            "success"
+        )
+        return redirect(url_for("import_batch_detail", batch_id=batch.id))
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Import ไม่สำเร็จ: {e}", "error")
+        return redirect(url_for("trainings_import"))
 # =========================================================
 # IMPORT HISTORY LIST
 # =========================================================
