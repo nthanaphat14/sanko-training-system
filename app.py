@@ -1598,166 +1598,166 @@ def trainings_import():
             # - ถ้าเคยมี → พยายามเติมช่องว่าง (Updated) ไม่งั้น Duplicate
             # ======================================================
             with db.session.no_autoflush:
-    existing = (
-        TrainingRecord.query
-        .filter(TrainingRecord.emp_id == emp_id)
-        .filter(TrainingRecord.course_code == course_code)
-        .filter(TrainingRecord.course_type == course_type)
-        .filter(TrainingRecord.start_date == start_date)
-        .filter(TrainingRecord.end_date == end_date)
-        .first()
-    )
+                existing = (
+                    TrainingRecord.query
+                    .filter(TrainingRecord.emp_id == emp_id)
+                    .filter(TrainingRecord.course_code == course_code)
+                    .filter(TrainingRecord.course_type == course_type)
+                    .filter(TrainingRecord.start_date == start_date)
+                    .filter(TrainingRecord.end_date == end_date)
+                    .first()
+                )
 
-if existing is None:
-    try:
-        tr = TrainingRecord(
-            year=year,
-            month=month,
-            emp_id=emp_id,
-            prefix=prefix,
-            first_name=first_name,
-            last_name=last_name,
-            section=section,
-            position=position,
-            course_code=course_code,
-            course_name=course_name,
-            course_type=course_type,
-            start_date=start_date,
-            end_date=end_date,
-            hours=hours,
-            evaluate_method=evaluate_method,
-            result=result,
-            score=score,
-            evaluator=evaluator,
-            expire_date=expire_date,
-            remark=remark,
-        )
-        db.session.add(tr)
-        db.session.flush()   # สำคัญมาก: เช็กชนซ้ำทันทีทีละแถว
+            if existing is None:
+                try:
+                    tr = TrainingRecord(
+                        year=year,
+                        month=month,
+                        emp_id=emp_id,
+                        prefix=prefix,
+                        first_name=first_name,
+                        last_name=last_name,
+                        section=section,
+                        position=position,
+                        course_code=course_code,
+                        course_name=course_name,
+                        course_type=course_type,
+                        start_date=start_date,
+                        end_date=end_date,
+                        hours=hours,
+                        evaluate_method=evaluate_method,
+                        result=result,
+                        score=score,
+                        evaluator=evaluator,
+                        expire_date=expire_date,
+                        remark=remark,
+                    )
+                    db.session.add(tr)
+                    db.session.flush()   # สำคัญมาก: เช็กชนซ้ำทันทีทีละแถว
 
-        added += 1
-        log_item(
-            "Added",
-            row_no=r,
-            emp_id=emp_id,
-            prefix=prefix,
-            first_name=first_name,
-            last_name=last_name,
-            section=section,
-            position=position,
-            course_code=course_code,
-            course_name=course_name,
-            course_type=course_type,
-            start_date=start_date,
-            end_date=end_date,
-        )
-    except IntegrityError:
-        db.session.rollback()
-        duplicated += 1
-        log_item(
-            "Duplicate",
-            reason="ชน unique constraint ในฐานข้อมูล",
-            row_no=r,
-            emp_id=emp_id,
-            prefix=prefix,
-            first_name=first_name,
-            last_name=last_name,
-            section=section,
-            position=position,
-            course_code=course_code,
-            course_name=course_name,
-            course_type=course_type,
-            start_date=start_date,
-            end_date=end_date,
-        )
-    continue
+                    added += 1
+                    log_item(
+                        "Added",
+                        row_no=r,
+                        emp_id=emp_id,
+                        prefix=prefix,
+                        first_name=first_name,
+                        last_name=last_name,
+                        section=section,
+                        position=position,
+                        course_code=course_code,
+                        course_name=course_name,
+                        course_type=course_type,
+                        start_date=start_date,
+                        end_date=end_date,
+                    )
+                except IntegrityError:
+                    db.session.rollback()
+                    duplicated += 1
+                    log_item(
+                        "Duplicate",
+                        reason="ชน unique constraint ในฐานข้อมูล",
+                        row_no=r,
+                        emp_id=emp_id,
+                        prefix=prefix,
+                        first_name=first_name,
+                        last_name=last_name,
+                        section=section,
+                        position=position,
+                        course_code=course_code,
+                        course_name=course_name,
+                        course_type=course_type,
+                        start_date=start_date,
+                        end_date=end_date,
+                    )
+                continue
 
-# ---- มีตัวเดิมแล้ว: UPDATE เฉพาะช่องที่เดิมว่าง + ใหม่มีค่า ----
-updated_flag = False
+            # ---- มีตัวเดิมแล้ว: UPDATE เฉพาะช่องที่เดิมว่าง + ใหม่มีค่า ----
+            updated_flag = False
 
-def fill_if_empty(field, new_value):
-    nonlocal updated_flag
-    old = getattr(existing, field)
-    old_empty = (old is None) or (isinstance(old, str) and old.strip() == "")
-    new_ok = (new_value is not None) and (not (isinstance(new_value, str) and new_value.strip() == ""))
-    if old_empty and new_ok:
-        setattr(existing, field, new_value)
-        updated_flag = True
+            def fill_if_empty(field, new_value):
+                nonlocal updated_flag
+                old = getattr(existing, field)
+                old_empty = (old is None) or (isinstance(old, str) and old.strip() == "")
+                new_ok = (new_value is not None) and (not (isinstance(new_value, str) and new_value.strip() == ""))
+                if old_empty and new_ok:
+                    setattr(existing, field, new_value)
+                    updated_flag = True
 
-fill_if_empty("course_name", course_name)
-fill_if_empty("course_type", course_type)
-fill_if_empty("hours", hours)
-fill_if_empty("evaluate_method", evaluate_method)
-fill_if_empty("result", result)
-fill_if_empty("score", score)
-fill_if_empty("evaluator", evaluator)
-fill_if_empty("expire_date", expire_date)
-fill_if_empty("remark", remark)
+            fill_if_empty("course_name", course_name)
+            fill_if_empty("course_type", course_type)
+            fill_if_empty("hours", hours)
+            fill_if_empty("evaluate_method", evaluate_method)
+            fill_if_empty("result", result)
+            fill_if_empty("score", score)
+            fill_if_empty("evaluator", evaluator)
+            fill_if_empty("expire_date", expire_date)
+            fill_if_empty("remark", remark)
 
-fill_if_empty("prefix", prefix)
-fill_if_empty("first_name", first_name)
-fill_if_empty("last_name", last_name)
-fill_if_empty("section", section)
-fill_if_empty("position", position)
-fill_if_empty("year", year)
-fill_if_empty("month", month)
-
-if updated_flag:
-    try:
-        db.session.flush()
-        updated += 1
-        log_item(
-            "Updated",
-            row_no=r,
-            emp_id=emp_id,
-            prefix=prefix,
-            first_name=first_name,
-            last_name=last_name,
-            section=section,
-            position=position,
-            course_code=course_code,
-            course_name=course_name,
-            course_type=course_type,
-            start_date=start_date,
-            end_date=end_date,
-        )
-    except IntegrityError:
-        db.session.rollback()
-        duplicated += 1
-        log_item(
-            "Duplicate",
-            reason="Update แล้วชน unique constraint",
-            row_no=r,
-            emp_id=emp_id,
-            prefix=prefix,
-            first_name=first_name,
-            last_name=last_name,
-            section=section,
-            position=position,
-            course_code=course_code,
-            course_name=course_name,
-            course_type=course_type,
-            start_date=start_date,
-            end_date=end_date,
-        )
-else:
-    duplicated += 1
-    log_item(
-        "Duplicate",
-        reason="พบรายการเดิมแล้ว และไม่มีข้อมูลใหม่เพื่อเติม",
-        row_no=r,
-        emp_id=emp_id,
-        prefix=prefix,
-        first_name=first_name,
-        last_name=last_name,
-        section=section,
-        position=position,
-        course_code=course_code,
-        course_name=course_name,
-        course_type=course_type,
-        start_date=start_date,
-        end_date=end_date,
-    )
+            fill_if_empty("prefix", prefix)
+            fill_if_empty("first_name", first_name)
+            fill_if_empty("last_name", last_name)
+            fill_if_empty("section", section)
+            fill_if_empty("position", position)
+            fill_if_empty("year", year)
+            fill_if_empty("month", month)
+            
+            if updated_flag:
+                try:
+                    db.session.flush()
+                    updated += 1
+                    log_item(
+                        "Updated",
+                        row_no=r,
+                        emp_id=emp_id,
+                        prefix=prefix,
+                        first_name=first_name,
+                        last_name=last_name,
+                        section=section,
+                        position=position,
+                        course_code=course_code,
+                        course_name=course_name,
+                        course_type=course_type,
+                        start_date=start_date,
+                        end_date=end_date,
+                    )
+                except IntegrityError:
+                    db.session.rollback()
+                    duplicated += 1
+                    log_item(
+                        "Duplicate",
+                        reason="Update แล้วชน unique constraint",
+                        row_no=r,
+                        emp_id=emp_id,
+                        prefix=prefix,
+                        first_name=first_name,
+                        last_name=last_name,
+                        section=section,
+                        position=position,
+                        course_code=course_code,
+                        course_name=course_name,
+                        course_type=course_type,
+                        start_date=start_date,
+                        end_date=end_date,
+                    )
+            else:
+                duplicated += 1
+                log_item(
+                    "Duplicate",
+                    reason="พบรายการเดิมแล้ว และไม่มีข้อมูลใหม่เพื่อเติม",
+                    row_no=r,
+                    emp_id=emp_id,
+                    prefix=prefix,
+                    first_name=first_name,
+                    last_name=last_name,
+                    section=section,
+                    position=position,
+                    course_code=course_code,
+                    course_name=course_name,
+                    course_type=course_type,
+                    start_date=start_date,
+                    end_date=end_date,
+                )
 # =========================================================
 # IMPORT HISTORY LIST
 # =========================================================
