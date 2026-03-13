@@ -1569,16 +1569,32 @@ def trainings_import():
                     end_date=end_date,
                 )
                 continue
-            seen_keys.add(record_key)
-            # ======================================================
-            # KEY “ตัวเดิม” = emp_id + start_date + end_date + course_code
-            # - ถ้า key นี้ไม่เคยมี → Added
-            # - ถ้าเคยมี → พยายามเติมช่องว่าง (Updated) ไม่งั้น Duplicate
+
+                        # ======================================================
+            # KEY “ตัวเดิม” = emp_id + course_code + course_type + start_date + end_date
+            # - ถ้า key นี้ซ้ำในไฟล์เดียวกัน → Duplicate
+            # - ถ้าไม่ซ้ำในไฟล์ ค่อยไปเช็กต่อใน database
             # ======================================================
             record_key = (emp_id, course_code, course_type, start_date, end_date)
 
             if record_key in seen_keys:
                 duplicated += 1
+                log_item(
+                    "Duplicate",
+                    reason="พบข้อมูลซ้ำภายในไฟล์ import เดียวกัน",
+                    row_no=r,
+                    emp_id=emp_id,
+                    prefix=prefix,
+                    first_name=first_name,
+                    last_name=last_name,
+                    section=section,
+                    position=position,
+                    course_code=course_code,
+                    course_name=course_name,
+                    course_type=course_type,
+                    start_date=start_date,
+                    end_date=end_date,
+                )
                 continue
 
             seen_keys.add(record_key)
