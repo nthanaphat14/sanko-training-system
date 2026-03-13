@@ -1514,6 +1514,7 @@ def trainings_import():
 
         # ======= counters =======
         added = updated = duplicated = skipped = 0
+        seen_keys = set()
 
         # ======= loop data =======
         for r in range(header_row + 1, (ws.max_row or 1) + 1):
@@ -1541,6 +1542,8 @@ def trainings_import():
             expire_date = safe_date(cellv(r, "expire_date"))
             remark = safe_str(cellv(r, "remark"))
 
+            record_key = (emp_id, course_code, course_type, start_date, end_date)
+            
             # ---- ถ้าแถวว่างมาก ๆ ให้ข้ามแบบเงียบ ----
             if not emp_id and not course_code and not course_name and not start_date:
                 continue
@@ -1571,6 +1574,27 @@ def trainings_import():
             # - ถ้า key นี้ไม่เคยมี → Added
             # - ถ้าเคยมี → พยายามเติมช่องว่าง (Updated) ไม่งั้น Duplicate
             # ======================================================
+            # กันซ้ำในไฟล์ import เดียวกัน
+            if record_key in seen_keys:
+                duplicated += 1
+                log_item(
+                    "Duplicate",
+                    reason="พบข้อมูลซ้ำภายในไฟล์ import เดียวกัน",
+                    row_no=r,
+                    emp_id=emp_id,
+                    prefix=prefix,
+                    first_name=first_name,
+                    last_name=last_name,
+                    section=section,
+                    position=position,
+                    course_code=course_code,
+                    course_name=course_name,
+                    course_type=course_type,
+                    start_date=start_date,
+                    end_date=end_date,
+                )
+                continue
+            
             with db.session.no_autoflush:
                 existing = (
                     TrainingRecord.query
@@ -1605,6 +1629,7 @@ def trainings_import():
                     remark=remark,
                 )
                 db.session.add(tr)
+                seen_keys.add(record_key)
                 added += 1
                 log_item(
                     "Added",
