@@ -1518,7 +1518,7 @@ def trainings_import():
 
         # ======= counters =======
         added = updated = duplicated = skipped = 0
-
+        seen_keys = set()
         # ======= loop data =======
         for r in range(header_row + 1, (ws.max_row or 1) + 1):
             emp_id = safe_str(cellv(r, "emp_id"))
@@ -1569,7 +1569,7 @@ def trainings_import():
                     end_date=end_date,
                 )
                 continue
-
+            seen_keys.add(record_key)
             # ======================================================
             # KEY “ตัวเดิม” = emp_id + start_date + end_date + course_code
             # - ถ้า key นี้ไม่เคยมี → Added
@@ -1712,7 +1712,6 @@ def trainings_import():
 
     except Exception as e:
         db.session.rollback()
-    
         flash(f"Import ไม่สำเร็จ: {e}", "error")
         return redirect(url_for("trainings_import"))
 
