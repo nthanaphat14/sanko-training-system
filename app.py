@@ -43,6 +43,8 @@ from sqlalchemy import extract
 
 from flask import send_file
 
+from sqlalchemy.exc import IntegrityError
+
 # -------------------------------------------------
 # App Config
 # -------------------------------------------------
