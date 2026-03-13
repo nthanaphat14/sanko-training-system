@@ -1572,15 +1572,15 @@ def trainings_import():
             # - ถ้าเคยมี → พยายามเติมช่องว่าง (Updated) ไม่งั้น Duplicate
             # ======================================================
             with db.session.no_autoflush:
-            existing = (
-                TrainingRecord.query
-                .filter(TrainingRecord.emp_id == emp_id)
-                .filter(TrainingRecord.course_code == course_code)
-                .filter(TrainingRecord.course_type == course_type)
-                .filter(TrainingRecord.start_date == start_date)
-                .filter(TrainingRecord.end_date == end_date)
-                .first()
-            )
+                existing = (
+                    TrainingRecord.query
+                    .filter(TrainingRecord.emp_id == emp_id)
+                    .filter(TrainingRecord.course_code == course_code)
+                    .filter(TrainingRecord.course_type == course_type)
+                    .filter(TrainingRecord.start_date == start_date)
+                    .filter(TrainingRecord.end_date == end_date)
+                    .first()
+                )
 
             if existing is None:
                 tr = TrainingRecord(
