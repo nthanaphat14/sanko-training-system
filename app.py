@@ -1635,7 +1635,8 @@ def trainings_import():
                     end_date=end_date,
                 )
                 continue
-
+                
+            seen_key.add(record_key)
             # ---- มีตัวเดิมแล้ว: UPDATE เฉพาะช่องที่เดิมว่าง + ใหม่มีค่า ----
             updated_flag = False
 
