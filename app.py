@@ -1407,7 +1407,6 @@ from sqlalchemy.exc import IntegrityError
 @app.route("/trainings/import", methods=["GET", "POST"])
 @role_required("admin")
 def trainings_import():
-
     if request.method == "GET":
         return render_template("training_import.html")
 
@@ -1418,6 +1417,7 @@ def trainings_import():
 
     filename = f.filename
 
+    # ---- สร้าง Batch รอบนี้ ----
     batch = ImportBatch(filename=filename)
     db.session.add(batch)
     db.session.commit()
@@ -1443,27 +1443,65 @@ def trainings_import():
         db.session.add(it)
 
     try:
-
         wb = load_workbook(f, data_only=True)
         ws = wb["Record Training"] if "Record Training" in wb.sheetnames else wb.active
 
+        # ======= NORMALIZE HEADER =======
         def norm(x):
             s = safe_str(x).strip().lower()
             for ch in ["\u00a0", ".", "-", "_", "/", "(", ")", "[", "]", ":"]:
                 s = s.replace(ch, " ")
             return " ".join(s.split())
 
+        # ✅ เพิ่ม alias ให้ตรงไฟล์คุณ (ชื่อไทย / name-th ฯลฯ)
         ALIASES = {
-            "emp_id": ["emp id", "empid", "รหัสพนักงาน", "employee id"],
+            "seq": ["ลำดับ", "no", "seq", "#"],
+            "year": ["year", "year.", "ปี"],
+            "month": ["month", "mon", "เดือน"],
+
+            "emp_id": ["em id", "emp id", "empid", "รหัสพนักงาน", "รหัส", "employee id"],
+            "prefix": ["คำนำหน้า", "prefix"],
+            "first_name": ["ชื่อ", "ชื่อไทย", "name th", "thai name", "first name", "firstname"],
+            "last_name": ["นามสกุล", "last name", "lastname"],
+            "section": ["section", "แผนก", "ฝ่าย", "หน่วยงาน", "department"],
+            "position": ["position", "ตำแหน่ง"],
+
             "course_code": ["course code", "coursecode", "รหัสหลักสูตร"],
             "course_name": ["course name", "coursename", "ชื่อหลักสูตร"],
-            "course_type": ["course type", "ประเภท"],
-            "start_date": ["start date", "startdate", "วันที่เริ่ม"],
-            "end_date": ["end date", "enddate", "วันที่จบ"],
+            "course_type": ["course type", "type", "category", "ประเภท"],
+
+            "start_date": ["startdate", "start date", "วันที่เริ่ม", "เริ่ม"],
+            "end_date": ["enddate", "end date", "วันที่จบ", "จบ"],
+            "hours": ["ชั่วโมง", "hours", "hour"],
+
+            "evaluate_method": ["วิธีประเมิน", "evaluate method", "ประเมิน"],
+            "result": ["ผล", "result"],
+            "score": ["คะแนน", "score"],
+            "evaluator": ["ผู้ประเมิน", "evaluator"],
+            "expire_date": ["วันหมดอายุ", "expire date", "expiry"],
+            "remark": ["หมายเหตุ", "remark", "note"],
         }
 
-        header = [norm(ws.cell(1, c).value) for c in range(1, ws.max_column + 1)]
-        header_map = {h: i + 1 for i, h in enumerate(header) if h}
+        def find_header_row(scan_rows=10):
+            best_row, best_score = 1, -1
+            max_r = min(scan_rows, ws.max_row or 1)
+            max_c = ws.max_column or 1
+            must_keys = ["emp_id", "course_code", "course_name", "start_date"]
+
+            for r in range(1, max_r + 1):
+                vals = [norm(ws.cell(r, c).value) for c in range(1, max_c + 1)]
+                score = 0
+                for k in must_keys:
+                    if any(norm(a) in vals for a in ALIASES[k]):
+                        score += 1
+                if score > best_score:
+                    best_score, best_row = score, r
+            return best_row
+
+        header_row = find_header_row()
+        max_c = ws.max_column or 1
+        headers = [norm(ws.cell(header_row, c).value) for c in range(1, max_c + 1)]
+        header_map = {h: i + 1 for i, h in enumerate(headers) if h}
 
         def col(key):
             for alt in ALIASES.get(key, []):
@@ -1478,31 +1516,52 @@ def trainings_import():
                 return None
             return ws.cell(r, idx).value
 
-        added = 0
-        updated = 0
-        duplicated = 0
-        skipped = 0
+        # ======= counters =======
+        added = updated = duplicated = skipped = 0
 
-        for r in range(2, ws.max_row + 1):
-
+        # ======= loop data =======
+        for r in range(header_row + 1, (ws.max_row or 1) + 1):
             emp_id = safe_str(cellv(r, "emp_id"))
             course_code = safe_str(cellv(r, "course_code"))
-            course_name = safe_str(cellv(r, "course_name"))
-            course_type = safe_str(cellv(r, "course_type"))
-
             start_date = safe_date(cellv(r, "start_date"))
             end_date = safe_date(cellv(r, "end_date"))
 
-            if not emp_id and not course_code:
+            prefix = safe_str(cellv(r, "prefix"))
+            first_name = safe_str(cellv(r, "first_name"))
+            last_name = safe_str(cellv(r, "last_name"))
+            section = safe_str(cellv(r, "section"))
+            position = safe_str(cellv(r, "position"))
+
+            year = safe_int(cellv(r, "year"))
+            month = safe_month(cellv(r, "month"))
+
+            course_name = safe_str(cellv(r, "course_name"))
+            course_type = safe_str(cellv(r, "course_type"))
+            hours = safe_float(cellv(r, "hours"))
+            evaluate_method = safe_str(cellv(r, "evaluate_method"))
+            result = safe_str(cellv(r, "result"))
+            score = safe_float(cellv(r, "score"))
+            evaluator = safe_str(cellv(r, "evaluator"))
+            expire_date = safe_date(cellv(r, "expire_date"))
+            remark = safe_str(cellv(r, "remark"))
+
+            # ---- ถ้าแถวว่างมาก ๆ ให้ข้ามแบบเงียบ ----
+            if not emp_id and not course_code and not course_name and not start_date:
                 continue
 
-            if not emp_id or not course_code or not start_date or not end_date:
+            # ---- SKIPPED: ข้อมูลขั้นต่ำไม่ครบ ----
+            if not emp_id or not start_date or not end_date or not course_code:
                 skipped += 1
                 log_item(
                     "Skipped",
-                    reason="ข้อมูลไม่ครบ",
+                    reason="ข้อมูลขั้นต่ำไม่ครบ (ต้องมี Emp ID + StartDate + EndDate + Course code)",
                     row_no=r,
                     emp_id=emp_id,
+                    prefix=prefix,
+                    first_name=first_name,
+                    last_name=last_name,
+                    section=section,
+                    position=position,
                     course_code=course_code,
                     course_name=course_name,
                     course_type=course_type,
@@ -1511,75 +1570,124 @@ def trainings_import():
                 )
                 continue
 
+            # ======================================================
+            # KEY “ตัวเดิม” = emp_id + start_date + end_date + course_code
+            # - ถ้า key นี้ไม่เคยมี → Added
+            # - ถ้าเคยมี → พยายามเติมช่องว่าง (Updated) ไม่งั้น Duplicate
+            # ======================================================
             with db.session.no_autoflush:
+            existing = (
+                TrainingRecord.query
+                .filter(TrainingRecord.emp_id == emp_id)
+                .filter(TrainingRecord.course_code == course_code)
+                .filter(TrainingRecord.course_type == course_type)
+                .filter(TrainingRecord.start_date == start_date)
+                .filter(TrainingRecord.end_date == end_date)
+                .first()
+            )
 
-                existing = (
-                    TrainingRecord.query
-                    .filter_by(
-                        emp_id=emp_id,
-                        course_code=course_code,
-                        course_type=course_type,
-                        start_date=start_date,
-                        end_date=end_date,
-                    )
-                    .first()
-                )
-
-            if existing:
-
-                duplicated += 1
-
-                log_item(
-                    "Duplicate",
-                    row_no=r,
-                    emp_id=emp_id,
-                    course_code=course_code,
-                    course_name=course_name,
-                    course_type=course_type,
-                    start_date=start_date,
-                    end_date=end_date,
-                )
-
-                continue
-
-            try:
-
+            if existing is None:
                 tr = TrainingRecord(
+                    year=year,
+                    month=month,
                     emp_id=emp_id,
+                    prefix=prefix,
+                    first_name=first_name,
+                    last_name=last_name,
+                    section=section,
+                    position=position,
                     course_code=course_code,
                     course_name=course_name,
                     course_type=course_type,
                     start_date=start_date,
                     end_date=end_date,
+                    hours=hours,
+                    evaluate_method=evaluate_method,
+                    result=result,
+                    score=score,
+                    evaluator=evaluator,
+                    expire_date=expire_date,
+                    remark=remark,
                 )
-
                 db.session.add(tr)
-                db.session.flush()
-
                 added += 1
-
                 log_item(
                     "Added",
                     row_no=r,
                     emp_id=emp_id,
+                    prefix=prefix,
+                    first_name=first_name,
+                    last_name=last_name,
+                    section=section,
+                    position=position,
                     course_code=course_code,
                     course_name=course_name,
                     course_type=course_type,
                     start_date=start_date,
                     end_date=end_date,
                 )
+                continue
 
-            except IntegrityError:
+            # ---- มีตัวเดิมแล้ว: UPDATE เฉพาะช่องที่เดิมว่าง + ใหม่มีค่า ----
+            updated_flag = False
 
-                db.session.rollback()
+            def fill_if_empty(field, new_value):
+                nonlocal updated_flag
+                old = getattr(existing, field)
+                old_empty = (old is None) or (isinstance(old, str) and old.strip() == "")
+                new_ok = (new_value is not None) and (not (isinstance(new_value, str) and new_value.strip() == ""))
+                if old_empty and new_ok:
+                    setattr(existing, field, new_value)
+                    updated_flag = True
+                    
+            fill_if_empty("course_name", course_name)
+            fill_if_empty("course_type", course_type)
+            fill_if_empty("hours", hours)
+            fill_if_empty("evaluate_method", evaluate_method)
+            fill_if_empty("result", result)
+            fill_if_empty("score", score)
+            fill_if_empty("evaluator", evaluator)
+            fill_if_empty("expire_date", expire_date)
+            fill_if_empty("remark", remark)
 
-                duplicated += 1
+            # ✅ แนะนำ: เติม prefix/name/section/position ได้ด้วย (เพราะตอนนี้ของคุณ first_name/section ว่างอยู่)
+            fill_if_empty("prefix", prefix)
+            fill_if_empty("first_name", first_name)
+            fill_if_empty("last_name", last_name)
+            fill_if_empty("section", section)
+            fill_if_empty("position", position)
+            fill_if_empty("year", year)
+            fill_if_empty("month", month)
 
+            if updated_flag:
+                updated += 1
                 log_item(
-                    "Duplicate",
-                    reason="ชน unique constraint",
+                    "Updated",
                     row_no=r,
                     emp_id=emp_id,
+                    prefix=prefix,
+                    first_name=first_name,
+                    last_name=last_name,
+                    section=section,
+                    position=position,
+                    course_code=course_code,
+                    course_name=course_name,
+                    course_type=course_type,
+                    start_date=start_date,
+                    end_date=end_date,
+                )
+            else:
+                duplicated += 1
+                log_item(
+                    "Duplicate",
+                    reason="พบรายการเดิมแล้ว และไม่มีข้อมูลใหม่เพื่อเติม",
+                    row_no=r,
+                    emp_id=emp_id,
+                    prefix=prefix,
+                    first_name=first_name,
+                    last_name=last_name,
+                    section=section,
+                    position=position,
                     course_code=course_code,
                     course_name=course_name,
                     course_type=course_type,
@@ -1587,27 +1695,27 @@ def trainings_import():
                     end_date=end_date,
                 )
 
+        # ---- บันทึกผลลง batch ----
         batch.added = added
         batch.updated = updated
         batch.duplicated = duplicated
         batch.skipped = skipped
 
         db.session.commit()
-
+        audit("TRAINING_IMPORT", f"file={filename}, added={added}, updated={updated}, skipped={skipped}")
+        
         flash(
-            f"Import สำเร็จ: เพิ่ม {added} | ซ้ำ {duplicated} | ข้าม {skipped}",
+            f"Import สำเร็จ: เพิ่ม {added} | อัปเดต {updated} | ซ้ำ {duplicated} | ข้าม {skipped}",
             "success"
         )
-
         return redirect(url_for("import_batch_detail", batch_id=batch.id))
 
     except Exception as e:
-
         db.session.rollback()
-
+    
         flash(f"Import ไม่สำเร็จ: {e}", "error")
-
         return redirect(url_for("trainings_import"))
+
 
 # =========================================================
 # IMPORT HISTORY LIST
