@@ -413,6 +413,7 @@ class TrainingEventParticipant(db.Model):
 
     emp_id = db.Column(db.String(40), nullable=False, index=True)
 
+    sort_order = db.Column(db.Integer, nullable=True, index=True)
     # ✅ เพิ่ม 4 ช่องนี้
     result = db.Column(db.String(20), nullable=True)
     score = db.Column(db.Float, nullable=True)
@@ -420,7 +421,7 @@ class TrainingEventParticipant(db.Model):
     remark = db.Column(db.String(255), nullable=True)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
+    
     event = db.relationship(
         "TrainingEvent",
         backref=db.backref("participants", lazy=True, cascade="all, delete-orphan")
@@ -3154,7 +3155,10 @@ def event_detail(event_id):
 
     participant_rows = TrainingEventParticipant.query.filter_by(
         event_id=event.id
-    ).order_by(TrainingEventParticipant.id.asc()).all()
+    ).order_by(
+        TrainingEventParticipant.sort_order.asc(),
+        TrainingEventParticipant.id.asc()
+    ).all()
 
     participants = []
     for p in participant_rows:
@@ -3239,10 +3243,16 @@ def event_participant_add(event_id):
     if exists:
         flash("พนักงานคนนี้อยู่ใน Event แล้ว", "error")
         return redirect(url_for("event_detail", event_id=event.id))
+    last_sort = db.session.query(func.max(TrainingEventParticipant.sort_order)).filter(
+        TrainingEventParticipant.event_id == event.id
+    ).scalar()
 
+    next_sort = (last_sort or 0) + 1
+    
     row = TrainingEventParticipant(
         event_id=event.id,
-        emp_id=emp_id
+        emp_id=emp_id,
+        sort_order=next_sort
     )
 
     db.session.add(row)
@@ -3612,7 +3622,10 @@ def event_export_excel(event_id):
     # -------------------------
     participant_rows = TrainingEventParticipant.query.filter_by(
         event_id=event.id
-    ).order_by(TrainingEventParticipant.id.asc()).all()
+    ).order_by(
+        TrainingEventParticipant.sort_order.asc(),
+        TrainingEventParticipant.id.asc()
+    ).all()
 
     participants_data = []
     for idx, p in enumerate(participant_rows, start=1):
@@ -3714,6 +3727,51 @@ def event_export_excel(event_id):
         as_attachment=True,
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+
+@app.post("/events/participants/<int:participant_id>/move-up")
+@login_required
+@role_required("admin")
+def event_participant_move_up(participant_id):
+    row = TrainingEventParticipant.query.get_or_404(participant_id)
+
+    current_order = row.sort_order or row.id
+
+    prev_row = TrainingEventParticipant.query.filter(
+        TrainingEventParticipant.event_id == row.event_id,
+        TrainingEventParticipant.sort_order < current_order
+    ).order_by(TrainingEventParticipant.sort_order.desc()).first()
+
+    if prev_row:
+        row.sort_order, prev_row.sort_order = prev_row.sort_order, row.sort_order
+        db.session.commit()
+        flash("เลื่อนขึ้นแล้ว", "success")
+    else:
+        flash("รายการนี้อยู่บนสุดแล้ว", "error")
+
+    return redirect(url_for("event_detail", event_id=row.event_id))
+
+
+@app.post("/events/participants/<int:participant_id>/move-down")
+@login_required
+@role_required("admin")
+def event_participant_move_down(participant_id):
+    row = TrainingEventParticipant.query.get_or_404(participant_id)
+
+    current_order = row.sort_order or row.id
+
+    next_row = TrainingEventParticipant.query.filter(
+        TrainingEventParticipant.event_id == row.event_id,
+        TrainingEventParticipant.sort_order > current_order
+    ).order_by(TrainingEventParticipant.sort_order.asc()).first()
+
+    if next_row:
+        row.sort_order, next_row.sort_order = next_row.sort_order, row.sort_order
+        db.session.commit()
+        flash("เลื่อนลงแล้ว", "success")
+    else:
+        flash("รายการนี้อยู่ล่างสุดแล้ว", "error")
+
+    return redirect(url_for("event_detail", event_id=row.event_id))
 
 @app.post("/courses/file/<int:file_id>/delete")
 @login_required
