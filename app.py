@@ -3575,80 +3575,140 @@ def event_generate_training_records(event_id):
 
     return redirect(url_for("event_detail", event_id=event.id))
 
-@app.route("/events/<int:event_id>/export")
+@app.get("/events/<int:event_id>/export")
 @login_required
 def event_export_excel(event_id):
     event = TrainingEvent.query.get_or_404(event_id)
 
-    participants = TrainingEventParticipant.query.filter_by(
-        event_id=event.id
-    ).order_by(TrainingEventParticipant.id.asc()).all()
-
-    # โหลด Template
     template_path = get_event_template_path(event.event_type)
+
+    if not os.path.exists(template_path):
+        flash(f"ไม่พบไฟล์ template: {os.path.basename(template_path)}", "error")
+        return redirect(url_for("event_detail", event_id=event.id))
+
     wb = load_workbook(template_path)
     ws = wb.active
 
-    # ---------------------------
-    # 🟢 HEADER (ข้อมูลหลัก)
-    # ---------------------------
-    ws["C6"] = event.course_name or ""
-    ws["C8"] = event.location or ""
-    ws["C9"] = event.platform or ""
+    def safe_write(cell_ref, value):
+        """
+        เขียนค่าเฉพาะกรณีที่ cell ไม่ใช่ merged-cell ปลายทาง
+        กัน error: 'MergedCell' object attribute 'value' is read-only
+        """
+        cell = ws[cell_ref]
+        if isinstance(cell, MergedCell):
+            return
+        cell.value = value
 
-    # วันที่
-    if event.start_date:
-        ws["H6"] = event.start_date.strftime("%d/%m/%Y")
+    # -------------------------
+    # ดึงผู้เข้าอบรม
+    # -------------------------
+    participant_rows = TrainingEventParticipant.query.filter_by(
+        event_id=event.id
+    ).order_by(TrainingEventParticipant.id.asc()).all()
 
-    # ---------------------------
-    # 🟢 INTERNAL / EXTERNAL
-    # ❗ ห้ามเขียนช่อง merged ตรง ๆ
-    # ---------------------------
-    if event.training_type == "internal":
-        ws["E6"] = "/"   # ภายใน
-    elif event.training_type == "external":
-        ws["J6"] = "/"   # ภายนอก (ใช้ cell ซ้ายสุดของ merge)
-
-    # ---------------------------
-    # 🟢 ตารางพนักงาน
-    # ---------------------------
-    start_row = 14
-
-    for i, p in enumerate(participants, start=1):
-        row = start_row + i - 1
-
+    participants_data = []
+    for idx, p in enumerate(participant_rows, start=1):
         emp = Employee.query.filter_by(em_id=p.emp_id).first()
 
-        ws[f"A{row}"] = i
-        ws[f"B{row}"] = p.emp_id or ""
-        ws[f"C{row}"] = emp.th_full() if emp else ""
-        ws[f"D{row}"] = emp.position if emp else ""
-        ws[f"E{row}"] = emp.section if emp else ""
-        ws[f"F{row}"] = p.result or ""
-        ws[f"G{row}"] = p.score or ""
-        ws[f"H{row}"] = p.training_hours or ""
-        ws[f"I{row}"] = p.remark or ""
+        participants_data.append({
+            "No.": idx,
+            "Emp ID": p.emp_id or "",
+            "Name": emp.th_full() if emp else "",
+            "Section": emp.section if emp else "",
+            "Position": emp.position if emp else "",
+            "Result": p.result or "",
+            "Score": p.score or "",
+            "Training Hours": p.training_hours or "",
+            "Remark": p.remark or "",
+            "Signature": "",
+        })
 
-        # จัดกลาง
-        for col in ["A","B","F","G","H"]:
-            ws[f"{col}{row}"].alignment = Alignment(horizontal="center")
+    # -------------------------
+    # ค่าพื้นฐาน
+    # -------------------------
+    course_name = event.title or (event.course.course_name if event.course and event.course.course_name else "")
+    event_date = event.start_date.strftime("%d/%m/%Y") if event.start_date else ""
+    location = event.location or ""
+    trainer = event.trainer or ""
+    owner = event.course.owner if event.course and event.course.owner else ""
+    vendor = event.course.vendor if event.course and event.course.vendor else ""
 
-    # ---------------------------
-    # 🟢 SAVE FILE
-    # ---------------------------
+    # =========================================================
+    # FM-PN009 : IN-HOUSE / OJT
+    # =========================================================
+    if event.event_type in ["INH", "OJT"]:
+        safe_write("C5", course_name)
+        safe_write("K5", event_date)
+        safe_write("C6", location)
+        safe_write("K6", "")   # ตอนนี้ model ยังไม่มีเวลา
+        safe_write("C7", trainer)
+
+        start_row = 16
+        max_row = 38
+
+        for i, item in enumerate(participants_data, start=start_row):
+            if i > max_row:
+                break
+
+            safe_write(f"A{i}", item["No."])
+            safe_write(f"B{i}", item["Emp ID"])
+            safe_write(f"D{i}", item["Name"])
+            safe_write(f"G{i}", item["Position"])
+            safe_write(f"H{i}", item["Section"])
+            safe_write(f"K{i}", item["Score"])
+            safe_write(f"M{i}", item["Remark"])
+
+    # =========================================================
+    # FM-PN010 : EXTERNAL
+    # =========================================================
+    elif event.event_type == "EXT":
+        # ---------- Header ----------
+        # อิงจากฟอร์ม FM-PN010 ที่คุณส่งมา
+        safe_write("B5", course_name)               # หลักสูตร
+        safe_write("E6", event_date)                # วันที่เข้าอบรม
+        safe_write("I6", "")                        # เวลา (ยังไม่มี field เวลา)
+        safe_write("B7", owner or vendor)           # หน่วยงานที่จัดฝึกอบรม
+        safe_write("B8", location or vendor or trainer)  # สถาบันอบรม / Platform
+        safe_write("L9", "External Training")       # อื่น ๆ ระบุ
+        safe_write("A10", current_user.email if getattr(current_user, "email", None) else "")
+        safe_write("H10", trainer)
+
+        # ---------- Participants ----------
+        start_row = 13
+        max_row = 30
+
+        for i, item in enumerate(participants_data, start=start_row):
+            if i > max_row:
+                break
+
+            # mapping นี้เลือก cell ที่ค่อนข้างปลอดภัยก่อน
+            safe_write(f"A{i}", item["No."])        # ลำดับ
+            safe_write(f"B{i}", item["Emp ID"])     # รหัสพนักงาน
+            safe_write(f"C{i}", item["Name"])       # ชื่อ-นามสกุล
+            safe_write(f"G{i}", item["Position"])   # ตำแหน่ง
+            safe_write(f"I{i}", item["Section"])    # แผนก
+            safe_write(f"K{i}", item["Remark"])     # หมายเหตุ
+
+    else:
+        flash(f"ไม่รองรับประเภท Event: {event.event_type}", "error")
+        return redirect(url_for("event_detail", event_id=event.id))
+
+    # -------------------------
+    # ส่งไฟล์กลับ
+    # -------------------------
     output = BytesIO()
     wb.save(output)
     output.seek(0)
 
-    filename = f"Training_{event.id}.xlsx"
+    filename = f"{event.event_code or 'event'}_export.xlsx"
 
     return send_file(
         output,
-        as_attachment=True,
         download_name=filename,
+        as_attachment=True,
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-    
+
 @app.post("/courses/file/<int:file_id>/delete")
 @login_required
 @role_required("admin")
