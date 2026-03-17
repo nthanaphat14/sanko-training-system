@@ -56,6 +56,12 @@ ALLOWED_ADMIN_EMAIL = "admin@sanko.local"
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_EVENT_DIR = os.path.join(BASE_DIR, "static", "uploads", "events")
 os.makedirs(UPLOAD_EVENT_DIR, exist_ok=True)
+TEMPLATE_DIR = os.path.join(BASE_DIR, "excel_templates")
+os.makedirs(TEMPLATE_DIR, exist_ok=True)
+
+FM_PN009_TEMPLATE = os.path.join(TEMPLATE_DIR, "FM-PN009.xlsx")
+FM_PN010_TEMPLATE = os.path.join(TEMPLATE_DIR, "FM-PN010.xlsx")
+
 
 # Flask-Login
 login_manager = LoginManager()
