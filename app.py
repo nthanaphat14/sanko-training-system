@@ -130,7 +130,6 @@ class AuditLog(db.Model):
     detail = db.Column(db.Text, nullable=True)
     ip = db.Column(db.String(64), nullable=True)
 
-
 class Employee(db.Model):
     __tablename__ = "employees"
 
@@ -161,16 +160,20 @@ class Employee(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    def th_full_with_prefix(self):
+    def th_full(self):
         first = (self.first_name_th or "").strip()
         last = (self.last_name_th or "").strip()
-        return f"{self.prefix or ''}{self.th_full()}"
+        return f"{first} {last}".strip()
+
+    def th_full_with_prefix(self):
+        prefix = (self.title_th or "").strip()
+        full_name = self.th_full()
+        return f"{prefix} {full_name}".strip()
 
     def en_full(self):
         first = (self.first_name_en or "").strip()
         last = (self.last_name_en or "").strip()
         return f"{first} {last}".strip()
-
 
 class TrainingRecord(db.Model):
     __tablename__ = "training_records"
