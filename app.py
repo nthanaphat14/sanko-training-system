@@ -3588,14 +3588,25 @@ def event_export_excel(event_id):
         return redirect(url_for("event_detail", event_id=event.id))
 
     wb = load_workbook(template_path)
-    ws = wb.active
+    base_ws = wb.active
 
-    def safe_write(cell_ref, value):
+    def safe_write(ws, cell_ref, value):
+        """
+        เขียนค่าเฉพาะกรณีที่ cell ไม่ใช่ merged-cell ปลายทาง
+        กัน error: 'MergedCell' object attribute 'value' is read-only
+        """
         cell = ws[cell_ref]
         if isinstance(cell, MergedCell):
             return
         cell.value = value
 
+    def chunked(data, size):
+        for i in range(0, len(data), size):
+            yield data[i:i + size]
+
+    # -------------------------
+    # ดึงผู้เข้าอบรม
+    # -------------------------
     participant_rows = TrainingEventParticipant.query.filter_by(
         event_id=event.id
     ).order_by(TrainingEventParticipant.id.asc()).all()
@@ -3617,6 +3628,9 @@ def event_export_excel(event_id):
             "Signature": "",
         })
 
+    # -------------------------
+    # ค่าพื้นฐาน
+    # -------------------------
     course_name = event.title or (event.course.course_name if event.course and event.course.course_name else "")
     event_date = event.start_date.strftime("%d/%m/%Y") if event.start_date else ""
     location = event.location or ""
@@ -3624,53 +3638,67 @@ def event_export_excel(event_id):
     owner = event.course.owner if event.course and event.course.owner else ""
     vendor = event.course.vendor if event.course and event.course.vendor else ""
 
-    if event.event_type in ["INH", "OJT"]:
-        safe_write("C5", course_name)
-        safe_write("K5", event_date)
-        safe_write("C6", location)
-        safe_write("K6", "")
-        safe_write("C7", trainer)
+    per_page = 23
+    pages = list(chunked(participants_data, per_page)) if participants_data else [[]]
 
-        start_row = 16
-        max_row = 38
+    # ถ้ามีหลายหน้า ให้ copy worksheet เพิ่ม
+    worksheets = [base_ws]
+    for _ in range(1, len(pages)):
+        worksheets.append(wb.copy_worksheet(base_ws))
 
-        for i, item in enumerate(participants_data, start=start_row):
-            if i > max_row:
-                break
+    for page_no, ws in enumerate(worksheets, start=1):
+        page_data = pages[page_no - 1]
+        ws.title = f"Page {page_no}"
 
-            safe_write(f"A{i}", item["No."])
-            safe_write(f"B{i}", item["Emp ID"])
-            safe_write(f"D{i}", item["Name"])
-            safe_write(f"G{i}", item["Position"])
-            safe_write(f"H{i}", item["Section"])
-            safe_write(f"K{i}", item["Score"])
-            safe_write(f"M{i}", item["Remark"])
+        # =========================================================
+        # FM-PN009 : IN-HOUSE / OJT
+        # =========================================================
+        if event.event_type in ["INH", "OJT"]:
+            safe_write(ws, "C5", course_name)
+            safe_write(ws, "K5", event_date)
+            safe_write(ws, "C6", location)
+            safe_write(ws, "K6", "")   # ยังไม่มีเวลาใน model
+            safe_write(ws, "C7", trainer)
 
-    elif event.event_type == "EXT":
-        safe_write("C7", course_name)
-        safe_write("C8", event_date)
-        safe_write("J8", "")
-        safe_write("D9", trainer)
-        safe_write("D10", location )
+            start_row = 16
 
-        start_row = 16
-        max_row = 38
+            for row_idx, item in enumerate(page_data, start=start_row):
+                safe_write(ws, f"A{row_idx}", item["No."])
+                safe_write(ws, f"B{row_idx}", item["Emp ID"])
+                safe_write(ws, f"D{row_idx}", item["Name"])
+                safe_write(ws, f"G{row_idx}", item["Position"])
+                safe_write(ws, f"H{row_idx}", item["Section"])
+                safe_write(ws, f"K{row_idx}", item["Score"])
+                safe_write(ws, f"M{row_idx}", item["Remark"])
 
-        for i, item in enumerate(participants_data, start=start_row):
-            if i > max_row:
-                break
+        # =========================================================
+        # FM-PN010 : EXTERNAL
+        # =========================================================
+        elif event.event_type == "EXT":
+            safe_write(ws, "N5", "/")                     # ภายนอก
+            safe_write(ws, "C7", course_name)            # หลักสูตร
+            safe_write(ws, "C8", event_date)             # วันที่ฝึกอบรม
+            safe_write(ws, "J8", "")                     # เวลา (ยังไม่มี)
+            safe_write(ws, "D9", trainer or owner or vendor)   # หน่วยงานที่จัดฝึกอบรม
+            safe_write(ws, "D10", location or vendor or trainer)  # สถานที่อบรม / Platform
 
-            safe_write(f"A{i}", item["No."])
-            safe_write(f"B{i}", item["Emp ID"])
-            safe_write(f"D{i}", item["Name"])
-            safe_write(f"J{i}", item["Position"])
-            safe_write(f"M{i}", item["Section"])
-            safe_write(f"O{i}", item["Remark"])
+            start_row = 16
 
-    else:
-        flash(f"ไม่รองรับประเภท Event: {event.event_type}", "error")
-        return redirect(url_for("event_detail", event_id=event.id))
+            for row_idx, item in enumerate(page_data, start=start_row):
+                safe_write(ws, f"A{row_idx}", item["No."])      # ลำดับ
+                safe_write(ws, f"B{row_idx}", item["Emp ID"])   # รหัสพนักงาน
+                safe_write(ws, f"D{row_idx}", item["Name"])     # ชื่อ-นามสกุล
+                safe_write(ws, f"J{row_idx}", item["Position"]) # ตำแหน่ง
+                safe_write(ws, f"M{row_idx}", item["Section"])  # แผนก
+                safe_write(ws, f"O{row_idx}", item["Remark"])   # หมายเหตุ
 
+        else:
+            flash(f"ไม่รองรับประเภท Event: {event.event_type}", "error")
+            return redirect(url_for("event_detail", event_id=event.id))
+
+    # -------------------------
+    # ส่งไฟล์กลับ
+    # -------------------------
     output = BytesIO()
     wb.save(output)
     output.seek(0)
