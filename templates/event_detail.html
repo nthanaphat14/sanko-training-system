@@ -694,5 +694,14 @@ document.addEventListener("DOMContentLoaded", function () {
     <button class="btn danger" type="submit">Delete Event</button>
   </form>
 </div>
+<td class="text-nowrap">
+  <form method="post" action="{{ url_for('event_participant_move_up', participant_id=p.row.id) }}" style="display:inline;">
+    <button type="submit" class="btn btn-sm btn-outline-light">↑</button>
+  </form>
+
+  <form method="post" action="{{ url_for('event_participant_move_down', participant_id=p.row.id) }}" style="display:inline;">
+    <button type="submit" class="btn btn-sm btn-outline-light">↓</button>
+  </form>
+</td>
 
 {% endblock %}
