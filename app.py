@@ -161,10 +161,10 @@ class Employee(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    def th_full(self):
+    def th_full_with_prefix(self):
         first = (self.first_name_th or "").strip()
         last = (self.last_name_th or "").strip()
-        return f"{first} {last}".strip()
+        return f"{self.prefix or ''}{self.th_full()}"
 
     def en_full(self):
         first = (self.first_name_en or "").strip()
@@ -3618,7 +3618,7 @@ def event_export_excel(event_id):
         participants_data.append({
             "No.": idx,
             "Emp ID": p.emp_id or "",
-            "Name": f"{(emp.prefix or '')}{emp.th_full()}" if emp else "",
+            "Name": emp.th_full_with_prefix() if emp else "",
             "Section": emp.section if emp else "",
             "Position": emp.position if emp else "",
             "Result": p.result or "",
