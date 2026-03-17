@@ -3647,12 +3647,11 @@ def event_export_excel(event_id):
             safe_write(f"M{i}", item["Remark"])
 
     elif event.event_type == "EXT":
-        safe_write("N5", "/")
         safe_write("C7", course_name)
         safe_write("C8", event_date)
         safe_write("J8", "")
-        safe_write("D9", owner or vendor)
-        safe_write("D10", location or vendor or trainer)
+        safe_write("D9", trainer)
+        safe_write("D10", location )
 
         start_row = 16
         max_row = 38
