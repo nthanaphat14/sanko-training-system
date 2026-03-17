@@ -3505,7 +3505,7 @@ def event_cost_delete(cost_id):
 @role_required("admin")
 def event_generate_training_records(event_id):
     event = TrainingEvent.query.get_or_404(event_id)
-
+    
     participants = TrainingEventParticipant.query.filter_by(
         event_id=event.id
     ).order_by(TrainingEventParticipant.id.asc()).all()
@@ -3578,7 +3578,15 @@ def event_generate_training_records(event_id):
 @login_required
 def event_export_excel(event_id):
     event = TrainingEvent.query.get_or_404(event_id)
+    template_path = get_event_template_path(event.event_type)
 
+    if not os.path.exists(template_path):
+        flash(f"ไม่พบไฟล์ template: {os.path.basename(template_path)}", "error")
+        return redirect(url_for("event_detail", event_id=event.id))
+
+    wb = load_workbook(template_path)
+    ws = wb.active
+    
     participant_rows = TrainingEventParticipant.query.filter_by(
         event_id=event.id
     ).order_by(TrainingEventParticipant.id.asc()).all()
@@ -3599,7 +3607,7 @@ def event_export_excel(event_id):
             "Remark": p.remark or "",
             "Signature": "",
         })
-
+    # TODO: ส่วน export แบบ xlsxwriter เดิม จะถูกแทนด้วยการเขียนลง template
     output = io.BytesIO()
 
     with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
