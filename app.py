@@ -3623,7 +3623,7 @@ def event_export_excel(event_id):
         for i, item in enumerate(participants_data, start=start_row):
             if i > max_row:
                 break
-
+    
             ws[f"A{i}"] = item["No."]
             ws[f"B{i}"] = item["Emp ID"]
             ws[f"D{i}"] = item["Name"]
@@ -3632,6 +3632,28 @@ def event_export_excel(event_id):
             ws[f"K{i}"] = item["Score"]
             ws[f"M{i}"] = item["Remark"]
 
+    elif event.event_type == "EXT":
+        ws["C5"] = event.title or (event.course.course_name if event.course else "")
+        ws["K5"] = event.start_date.strftime("%d/%m/%Y") if event.start_date else ""
+        ws["C6"] = event.location or ""
+        ws["K6"] = ""
+        ws["C7"] = event.trainer or ""
+
+        start_row = 16
+        max_row = 38
+
+        for i, item in enumerate(participants_data, start=start_row):
+            if i > max_row:
+                break
+
+            ws[f"A{i}"] = item["No."]
+            ws[f"B{i}"] = item["Emp ID"]
+            ws[f"D{i}"] = item["Name"]
+            ws[f"G{i}"] = item["Position"]
+            ws[f"H{i}"] = item["Section"]
+            ws[f"K{i}"] = item["Score"]
+            ws[f"M{i}"] = item["Remark"]
+            
     output = BytesIO()
     wb.save(output)
     output.seek(0)
