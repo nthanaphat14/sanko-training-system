@@ -3668,10 +3668,6 @@ def event_export_excel(event_id):
         # สถาบันอบรม / Platform
         ws["B8"] = location or vendor or trainer
 
-        # เลือก ภายนอก
-        # ใส่เครื่องหมาย / ไว้ในช่องภายนอก
-        ws["K4"] = "/"
-
         # ประเภทหลักสูตร
         # ตอนนี้ยังไม่รู้หมวดจริง ให้ใส่ไว้ที่ "อื่น ๆ ระบุ"
         ws["L9"] = "External Training"
