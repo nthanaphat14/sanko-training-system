@@ -3618,7 +3618,7 @@ def event_export_excel(event_id):
         participants_data.append({
             "No.": idx,
             "Emp ID": p.emp_id or "",
-            "Name": f"{emp.prefix}{emp.th_full()}" if emp else "",
+            "Name": f"{(emp.prefix or '')}{emp.th_full()}" if emp else "",
             "Section": emp.section if emp else "",
             "Position": emp.position if emp else "",
             "Result": p.result or "",
