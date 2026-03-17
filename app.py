@@ -3980,6 +3980,22 @@ def event_participants_save_all(event_id):
     db.session.commit()
     flash("บันทึกข้อมูลผู้เข้าอบรมทั้งหมดแล้ว", "success")
     return redirect(url_for("event_detail", event_id=event.id))
+
+@app.get("/fix-sort-order")
+def fix_sort_order():
+    events = TrainingEvent.query.all()
+
+    for e in events:
+        rows = TrainingEventParticipant.query.filter_by(event_id=e.id)\
+            .order_by(TrainingEventParticipant.id.asc()).all()
+
+        for idx, r in enumerate(rows, start=1):
+            if r.sort_order is None:
+                r.sort_order = idx
+
+    db.session.commit()
+
+    return "OK - sort_order updated"
     
 # -------------------------------------------------
 # Run (Local Only)
