@@ -3575,142 +3575,76 @@ def event_generate_training_records(event_id):
 
     return redirect(url_for("event_detail", event_id=event.id))
 
-@app.get("/events/<int:event_id>/export")
+@app.route("/events/<int:event_id>/export")
 @login_required
 def event_export_excel(event_id):
     event = TrainingEvent.query.get_or_404(event_id)
 
-    # เลือก template
-    template_path = get_event_template_path(event.event_type)
-
-    if not os.path.exists(template_path):
-        flash(f"ไม่พบไฟล์ template: {os.path.basename(template_path)}", "error")
-        return redirect(url_for("event_detail", event_id=event.id))
-
-    wb = load_workbook(template_path)
-    ws = wb.active
-
-    # -------------------------
-    # ดึง participant
-    # -------------------------
-    participant_rows = TrainingEventParticipant.query.filter_by(
+    participants = TrainingEventParticipant.query.filter_by(
         event_id=event.id
     ).order_by(TrainingEventParticipant.id.asc()).all()
 
-    participants_data = []
-    for idx, p in enumerate(participant_rows, start=1):
+    # โหลด Template
+    wb = load_workbook("FM-PN010.xlsx")
+    ws = wb.active
+
+    # ---------------------------
+    # 🟢 HEADER (ข้อมูลหลัก)
+    # ---------------------------
+    ws["C6"] = event.course_name or ""
+    ws["C8"] = event.location or ""
+    ws["C9"] = event.platform or ""
+
+    # วันที่
+    if event.start_date:
+        ws["H6"] = event.start_date.strftime("%d/%m/%Y")
+
+    # ---------------------------
+    # 🟢 INTERNAL / EXTERNAL
+    # ❗ ห้ามเขียนช่อง merged ตรง ๆ
+    # ---------------------------
+    if event.training_type == "internal":
+        ws["E6"] = "/"   # ภายใน
+    elif event.training_type == "external":
+        ws["J6"] = "/"   # ภายนอก (ใช้ cell ซ้ายสุดของ merge)
+
+    # ---------------------------
+    # 🟢 ตารางพนักงาน
+    # ---------------------------
+    start_row = 14
+
+    for i, p in enumerate(participants, start=1):
+        row = start_row + i - 1
+
         emp = Employee.query.filter_by(em_id=p.emp_id).first()
 
-        participants_data.append({
-            "No.": idx,
-            "Emp ID": p.emp_id,
-            "Name": emp.th_full() if emp else "",
-            "Section": emp.section if emp else "",
-            "Position": emp.position if emp else "",
-            "Result": p.result or "",
-            "Score": p.score or "",
-            "Training Hours": p.training_hours or "",
-            "Remark": p.remark or "",
-            "Signature": "",
-        })
+        ws[f"A{row}"] = i
+        ws[f"B{row}"] = p.emp_id or ""
+        ws[f"C{row}"] = emp.th_full() if emp else ""
+        ws[f"D{row}"] = emp.position if emp else ""
+        ws[f"E{row}"] = emp.section if emp else ""
+        ws[f"F{row}"] = p.result or ""
+        ws[f"G{row}"] = p.score or ""
+        ws[f"H{row}"] = p.training_hours or ""
+        ws[f"I{row}"] = p.remark or ""
 
-    # -------------------------
-    # IN-HOUSE / OJT (FM-PN009)
-    # -------------------------
-    if event.event_type in ["INH", "OJT"]:
-        ws["C5"] = event.title or (event.course.course_name if event.course else "")
-        ws["K5"] = event.start_date.strftime("%d/%m/%Y") if event.start_date else ""
-        ws["C6"] = event.location or ""
-        ws["K6"] = ""
-        ws["C7"] = event.trainer or ""
+        # จัดกลาง
+        for col in ["A","B","F","G","H"]:
+            ws[f"{col}{row}"].alignment = Alignment(horizontal="center")
 
-        start_row = 16
-        max_row = 38
-
-        for i, item in enumerate(participants_data, start=start_row):
-            if i > max_row:
-                break
-
-            ws[f"A{i}"] = item["No."]
-            ws[f"B{i}"] = item["Emp ID"]
-            ws[f"D{i}"] = item["Name"]
-            ws[f"G{i}"] = item["Position"]
-            ws[f"H{i}"] = item["Section"]
-            ws[f"K{i}"] = item["Score"]
-            ws[f"M{i}"] = item["Remark"]
-
-    # -------------------------
-    # EXTERNAL (FM-PN010)
-    # -------------------------
-    elif event.event_type == "EXT":
-        course_name = event.title or (event.course.course_name if event.course else "")
-        event_date = event.start_date.strftime("%d/%m/%Y") if event.start_date else ""
-        location = event.location or ""
-        trainer = event.trainer or ""
-        vendor = event.course.vendor if event.course and event.course.vendor else ""
-        owner = event.course.owner if event.course and event.course.owner else ""
-
-        # -------------------------
-        # FM-PN010 HEADER
-        # -------------------------
-        # หลักสูตร
-        ws["B5"] = course_name
-
-        # วันที่เข้าอบรม
-        ws["E6"] = event_date
-
-        # เวลา (ตอนนี้ model ยังไม่มีเวลา)
-        ws["I6"] = ""
-
-        # หน่วยงานที่จัดฝึกอบรม
-        ws["B7"] = owner or vendor
-
-        # สถาบันอบรม / Platform
-        ws["B8"] = location or vendor or trainer
-
-        # ประเภทหลักสูตร
-        # ตอนนี้ยังไม่รู้หมวดจริง ให้ใส่ไว้ที่ "อื่น ๆ ระบุ"
-        ws["L9"] = "External Training"
-
-        # ผู้จัดส่ง / ผู้อนุมัติ
-        ws["A10"] = current_user.email if current_user and getattr(current_user, "email", None) else ""
-        ws["H10"] = event.trainer or ""
-
-        # -------------------------
-        # PARTICIPANTS
-        # -------------------------
-        start_row = 13
-        max_row = 30
-
-        for i, item in enumerate(participants_data, start=start_row):
-            if i > max_row:
-                break
-
-            ws[f"A{i}"] = item["No."]
-            ws[f"B{i}"] = item["Emp ID"]
-            ws[f"C{i}"] = item["Name"]
-            ws[f"G{i}"] = item["Position"]
-            ws[f"I{i}"] = item["Section"]
-            ws[f"K{i}"] = item["Remark"]
-
-            # ❗ ค่อยมาเปิดทีหลังถ้ารู้ตำแหน่งจริง
-            # ws[f"G{i}"] = item["Position"]
-            # ws[f"H{i}"] = item["Section"]
-            # ws[f"K{i}"] = item["Score"]
-
-    # -------------------------
-    # Export file
-    # -------------------------
+    # ---------------------------
+    # 🟢 SAVE FILE
+    # ---------------------------
     output = BytesIO()
     wb.save(output)
     output.seek(0)
 
-    filename = f"{event.event_code or 'event'}_training_record.xlsx"
+    filename = f"Training_{event.id}.xlsx"
 
     return send_file(
         output,
-        download_name=filename,
         as_attachment=True,
+        download_name=filename,
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
     
