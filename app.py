@@ -3585,7 +3585,8 @@ def event_export_excel(event_id):
     ).order_by(TrainingEventParticipant.id.asc()).all()
 
     # โหลด Template
-    wb = load_workbook("FM-PN010.xlsx")
+    template_path = get_event_template_path(event.event_type)
+    wb = load_workbook(template_path)
     ws = wb.active
 
     # ---------------------------
