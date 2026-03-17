@@ -36,6 +36,7 @@ from werkzeug.utils import secure_filename
 
 from openpyxl import Workbook, load_workbook
 from openpyxl.utils import get_column_letter
+from openpyxl.utils import get_column_letter
 
 from collections import defaultdict
 from datetime import date
