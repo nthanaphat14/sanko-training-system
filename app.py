@@ -3586,6 +3586,27 @@ def event_export_excel(event_id):
 
     wb = load_workbook(template_path)
     ws = wb.active
+    if event.event_type in ["INH", "OJT"]:
+        ws["C5"] = event.title or (event.course.course_name if event.course else "")
+        ws["K5"] = event.start_date.strftime("%d/%m/%Y") if event.start_date else ""
+        ws["C6"] = event.location or ""
+        ws["K6"] = ""
+        ws["C7"] = event.trainer or ""
+    
+        start_row = 16
+        max_row = 38
+
+        for i, item in enumerate(participants_data, start=start_row):
+            if i > max_row:
+                break
+
+            ws[f"A{i}"] = item["No."]
+            ws[f"B{i}"] = item["Emp ID"]
+            ws[f"D{i}"] = item["Name"]
+            ws[f"G{i}"] = item["Position"]
+            ws[f"H{i}"] = item["Section"]
+            ws[f"K{i}"] = item["Score"]
+            ws[f"M{i}"] = item["Remark"]
     
     participant_rows = TrainingEventParticipant.query.filter_by(
         event_id=event.id
@@ -3609,142 +3630,8 @@ def event_export_excel(event_id):
         })
     # TODO: ส่วน export แบบ xlsxwriter เดิม จะถูกแทนด้วยการเขียนลง template
     output = io.BytesIO()
-
-    with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
-        workbook = writer.book
-        ws = workbook.add_worksheet("Training Record")
-        writer.sheets["Training Record"] = ws
-
-        # ---------- FORMATS ----------
-        title_fmt = workbook.add_format({
-            "bold": True,
-            "font_size": 16,
-            "align": "center",
-            "valign": "vcenter",
-            "border": 1
-        })
-
-        head_fmt = workbook.add_format({
-            "bold": True,
-            "bg_color": "#D9EAF7",
-            "border": 1,
-            "align": "center",
-            "valign": "vcenter"
-        })
-
-        label_fmt = workbook.add_format({
-            "bold": True,
-            "border": 1,
-            "bg_color": "#F3F4F6",
-            "valign": "vcenter"
-        })
-
-        value_fmt = workbook.add_format({
-            "border": 1,
-            "valign": "vcenter"
-        })
-
-        cell_fmt = workbook.add_format({
-            "border": 1,
-            "valign": "top"
-        })
-
-        center_fmt = workbook.add_format({
-            "border": 1,
-            "align": "center",
-            "valign": "vcenter"
-        })
-
-        # ---------- COLUMN WIDTHS ----------
-        ws.set_column("A:A", 6)    # No.
-        ws.set_column("B:B", 14)   # Emp ID
-        ws.set_column("C:C", 28)   # Name
-        ws.set_column("D:D", 18)   # Section
-        ws.set_column("E:E", 18)   # Position
-        ws.set_column("F:F", 12)   # Result
-        ws.set_column("G:G", 10)   # Score
-        ws.set_column("H:H", 14)   # Hours
-        ws.set_column("I:I", 24)   # Remark
-        ws.set_column("J:J", 18)   # Signature
-
-        # ---------- TITLE ----------
-        ws.merge_range("A1:J1", "ใบบันทึกการฝึกอบรม / TRAINING RECORD", title_fmt)
-        ws.set_row(0, 28)
-
-        # ---------- EVENT INFO ----------
-        row = 2
-
-        info_pairs = [
-            ("Event Code", event.event_code or ""),
-            ("Course Code", event.course.course_code if event.course else ""),
-            ("Course Name", event.course.course_name if event.course else ""),
-            ("Training Type", event.event_type or ""),
-            ("Start Date", str(event.start_date or "")),
-            ("End Date", str(event.end_date or "")),
-            ("Location", event.location or ""),
-            ("Trainer", event.trainer or ""),
-            ("Status", event.status or ""),
-            ("Description", event.description or ""),
-        ]
-
-        for i in range(0, len(info_pairs), 2):
-            left_label, left_value = info_pairs[i]
-            right_label, right_value = info_pairs[i + 1] if i + 1 < len(info_pairs) else ("", "")
-
-            ws.write(row, 0, left_label, label_fmt)
-            ws.merge_range(row, 1, row, 4, left_value, value_fmt)
-
-            if right_label:
-                ws.write(row, 5, right_label, label_fmt)
-                ws.merge_range(row, 6, row, 9, right_value, value_fmt)
-            else:
-                ws.merge_range(row, 5, row, 9, "", value_fmt)
-
-            row += 1
-
-        row += 1
-
-        # ---------- PARTICIPANT TABLE HEADER ----------
-        headers = ["No.", "Emp ID", "Name", "Section", "Position", "Result", "Score", "Training Hours", "Remark", "Signature"]
-        for col_num, h in enumerate(headers):
-            ws.write(row, col_num, h, head_fmt)
-
-        # ---------- PARTICIPANT ROWS ----------
-        row += 1
-        start_data_row = row
-
-        for item in participants_data:
-            ws.write(row, 0, item["No."], center_fmt)
-            ws.write(row, 1, item["Emp ID"], cell_fmt)
-            ws.write(row, 2, item["Name"], cell_fmt)
-            ws.write(row, 3, item["Section"], cell_fmt)
-            ws.write(row, 4, item["Position"], cell_fmt)
-            ws.write(row, 5, item["Result"], center_fmt)
-            ws.write(row, 6, item["Score"], center_fmt)
-            ws.write(row, 7, item["Training Hours"], center_fmt)
-            ws.write(row, 8, item["Remark"], cell_fmt)
-            ws.write(row, 9, item["Signature"], cell_fmt)
-            ws.set_row(row, 24)
-            row += 1
-
-        if not participants_data:
-            ws.merge_range(row, 0, row, 9, "ยังไม่มีผู้เข้าอบรม", center_fmt)
-            row += 1
-
-        # ---------- FOOTER SIGN ----------
-        row += 2
-        ws.merge_range(row, 0, row, 3, "ผู้จัดทำ / Prepared by: ____________________", value_fmt)
-        ws.merge_range(row, 4, row, 6, "ผู้สอน / Trainer: ____________________", value_fmt)
-        ws.merge_range(row, 7, row, 9, "ผู้อนุมัติ / Approved by: ____________________", value_fmt)
-
-        # ---------- PRINT SETTINGS ----------
-        ws.set_landscape()
-        ws.fit_to_pages(1, 0)
-        ws.repeat_rows(0, row if start_data_row <= row else 0)
-        ws.center_horizontally()
-        ws.set_paper(9)  # A4
-        ws.hide_gridlines(2)
-
+    output = BytesIO()
+    wb.save(output)
     output.seek(0)
 
     filename = f"{event.event_code or 'event'}_training_record.xlsx"
