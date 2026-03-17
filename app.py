@@ -3643,24 +3643,59 @@ def event_export_excel(event_id):
     # EXTERNAL (FM-PN010)
     # -------------------------
     elif event.event_type == "EXT":
-        ws["C5"] = event.title or (event.course.course_name if event.course else "")
-        ws["K5"] = event.start_date.strftime("%d/%m/%Y") if event.start_date else ""
-        ws["C6"] = event.location or ""
-        ws["K6"] = ""
-        ws["C7"] = event.trainer or ""
+        course_name = event.title or (event.course.course_name if event.course else "")
+        event_date = event.start_date.strftime("%d/%m/%Y") if event.start_date else ""
+        location = event.location or ""
+        trainer = event.trainer or ""
+        vendor = event.course.vendor if event.course and event.course.vendor else ""
+        owner = event.course.owner if event.course and event.course.owner else ""
 
-        start_row = 16
-        max_row = 38
+        # -------------------------
+        # FM-PN010 HEADER
+        # -------------------------
+        # หลักสูตร
+        ws["B5"] = course_name
+
+        # วันที่เข้าอบรม
+        ws["E6"] = event_date
+
+        # เวลา (ตอนนี้ model ยังไม่มีเวลา)
+        ws["I6"] = ""
+
+        # หน่วยงานที่จัดฝึกอบรม
+        ws["B7"] = owner or vendor
+
+        # สถาบันอบรม / Platform
+        ws["B8"] = location or vendor or trainer
+
+        # เลือก ภายนอก
+        # ใส่เครื่องหมาย / ไว้ในช่องภายนอก
+        ws["K4"] = "/"
+
+        # ประเภทหลักสูตร
+        # ตอนนี้ยังไม่รู้หมวดจริง ให้ใส่ไว้ที่ "อื่น ๆ ระบุ"
+        ws["L9"] = "External Training"
+
+        # ผู้จัดส่ง / ผู้อนุมัติ
+        ws["A10"] = current_user.email if current_user and getattr(current_user, "email", None) else ""
+        ws["H10"] = event.trainer or ""
+
+        # -------------------------
+        # PARTICIPANTS
+        # -------------------------
+        start_row = 13
+        max_row = 30
 
         for i, item in enumerate(participants_data, start=start_row):
             if i > max_row:
                 break
 
-            # ⚠️ ใช้เฉพาะ cell ที่ไม่ merge ก่อน
             ws[f"A{i}"] = item["No."]
             ws[f"B{i}"] = item["Emp ID"]
-            ws[f"D{i}"] = item["Name"]
-            ws[f"M{i}"] = item["Remark"]
+            ws[f"C{i}"] = item["Name"]
+            ws[f"G{i}"] = item["Position"]
+            ws[f"I{i}"] = item["Section"]
+            ws[f"K{i}"] = item["Remark"]
 
             # ❗ ค่อยมาเปิดทีหลังถ้ารู้ตำแหน่งจริง
             # ws[f"G{i}"] = item["Position"]
