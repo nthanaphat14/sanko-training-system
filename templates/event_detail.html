@@ -147,7 +147,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   function setMessage(text, ok = true) {
-    msgBox.innerHTML = text ? `<span style="color:${ok ? '#86efac' : '#fca5a5'}">${escapeHtml(text)}</span>` : "";
+    msgBox.innerHTML = text ? <span style="color:${ok ? '#86efac' : '#fca5a5'}">${escapeHtml(text)}</span> : "";
   }
 
   function clearSelection() {
@@ -163,8 +163,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
   function setSelected(emp) {
     hiddenEmpId.value = emp.emp_id;
-    searchInput.value = `${emp.emp_id} - ${emp.name}`;
-    selectedBox.innerHTML = `<b>เลือกแล้ว:</b> ${escapeHtml(emp.emp_id)} - ${escapeHtml(emp.name)}${emp.section ? " - " + escapeHtml(emp.section) : ""}`;
+    searchInput.value = ${emp.emp_id} - ${emp.name};
+    selectedBox.innerHTML = <b>เลือกแล้ว:</b> ${escapeHtml(emp.emp_id)} - ${escapeHtml(emp.name)}${emp.section ? " - " + escapeHtml(emp.section) : ""};
     resultsBox.style.display = "none";
     activeIndex = -1;
   }
@@ -225,7 +225,7 @@ document.addEventListener("DOMContentLoaded", function () {
       const formData = new FormData();
       formData.append("emp_id", empId);
 
-      const res = await fetch(`/events/${eventId}/participants/add-ajax`, {
+      const res = await fetch(/events/${eventId}/participants/add-ajax, {
         method: "POST",
         body: formData,
         credentials: "same-origin"
@@ -240,10 +240,8 @@ document.addEventListener("DOMContentLoaded", function () {
         return;
       }
 
-      setMessage(`${data.message}: ${data.participant.emp_id} - ${data.participant.name}`, true);
+      setMessage(${data.message}: ${data.participant.emp_id} - ${data.participant.name}, true);
 
-      // รีโหลดหน้าเพื่อให้ participant table อัปเดตทันที
-      // ถ้าอยากให้ไม่รีโหลดเลย รอบหน้าเราทำ append row ได้
       setTimeout(() => {
         window.location.reload();
       }, 350);
@@ -355,7 +353,6 @@ document.addEventListener("DOMContentLoaded", function () {
     await submitParticipant(empId);
   });
 
-  // โฟกัสช่องค้นหาอัตโนมัติเมื่อเข้า page
   searchInput.focus();
 });
 </script>
@@ -376,6 +373,7 @@ document.addEventListener("DOMContentLoaded", function () {
             <th>Name</th>
             <th>Section</th>
             <th>Position</th>
+            <th class="nowrap">Order</th>
             <th>Result</th>
             <th>Score</th>
             <th>Hours</th>
@@ -399,6 +397,20 @@ document.addEventListener("DOMContentLoaded", function () {
 
             <td>{% if x.emp %}{{ x.emp.section or "" }}{% endif %}</td>
             <td>{% if x.emp %}{{ x.emp.position or "" }}{% endif %}</td>
+
+            <td class="text-nowrap">
+              <form method="post"
+                    action="{{ url_for('event_participant_move_up', participant_id=x.row.id) }}"
+                    style="display:inline;">
+                <button class="btn sm" type="submit">↑</button>
+              </form>
+
+              <form method="post"
+                    action="{{ url_for('event_participant_move_down', participant_id=x.row.id) }}"
+                    style="display:inline;">
+                <button class="btn sm" type="submit">↓</button>
+              </form>
+            </td>
 
             <td>
               <select name="result_{{ x.row.id }}" class="input" style="width:110px;">
@@ -433,7 +445,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
           {% if participants|length == 0 %}
           <tr>
-            <td colspan="9" class="muted center" style="padding:14px;">
+            <td colspan="10" class="muted center" style="padding:14px;">
               ยังไม่มีผู้เข้าอบรม
             </td>
           </tr>
@@ -694,14 +706,5 @@ document.addEventListener("DOMContentLoaded", function () {
     <button class="btn danger" type="submit">Delete Event</button>
   </form>
 </div>
-<td class="text-nowrap">
-  <form method="post" action="{{ url_for('event_participant_move_up', participant_id=p.row.id) }}" style="display:inline;">
-    <button type="submit" class="btn btn-sm btn-outline-light">↑</button>
-  </form>
-
-  <form method="post" action="{{ url_for('event_participant_move_down', participant_id=p.row.id) }}" style="display:inline;">
-    <button type="submit" class="btn btn-sm btn-outline-light">↓</button>
-  </form>
-</td>
 
 {% endblock %}
