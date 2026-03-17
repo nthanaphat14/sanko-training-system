@@ -3579,6 +3579,7 @@ def event_generate_training_records(event_id):
 @login_required
 def event_export_excel(event_id):
     event = TrainingEvent.query.get_or_404(event_id)
+
     template_path = get_event_template_path(event.event_type)
 
     if not os.path.exists(template_path):
@@ -3587,28 +3588,7 @@ def event_export_excel(event_id):
 
     wb = load_workbook(template_path)
     ws = wb.active
-    if event.event_type in ["INH", "OJT"]:
-        ws["C5"] = event.title or (event.course.course_name if event.course else "")
-        ws["K5"] = event.start_date.strftime("%d/%m/%Y") if event.start_date else ""
-        ws["C6"] = event.location or ""
-        ws["K6"] = ""
-        ws["C7"] = event.trainer or ""
-    
-        start_row = 16
-        max_row = 38
 
-        for i, item in enumerate(participants_data, start=start_row):
-            if i > max_row:
-                break
-
-            ws[f"A{i}"] = item["No."]
-            ws[f"B{i}"] = item["Emp ID"]
-            ws[f"D{i}"] = item["Name"]
-            ws[f"G{i}"] = item["Position"]
-            ws[f"H{i}"] = item["Section"]
-            ws[f"K{i}"] = item["Score"]
-            ws[f"M{i}"] = item["Remark"]
-    
     participant_rows = TrainingEventParticipant.query.filter_by(
         event_id=event.id
     ).order_by(TrainingEventParticipant.id.asc()).all()
@@ -3629,8 +3609,29 @@ def event_export_excel(event_id):
             "Remark": p.remark or "",
             "Signature": "",
         })
-    # TODO: ส่วน export แบบ xlsxwriter เดิม จะถูกแทนด้วยการเขียนลง template
-    output = io.BytesIO()
+
+    if event.event_type in ["INH", "OJT"]:
+        ws["C5"] = event.title or (event.course.course_name if event.course else "")
+        ws["K5"] = event.start_date.strftime("%d/%m/%Y") if event.start_date else ""
+        ws["C6"] = event.location or ""
+        ws["K6"] = ""
+        ws["C7"] = event.trainer or ""
+
+        start_row = 16
+        max_row = 38
+
+        for i, item in enumerate(participants_data, start=start_row):
+            if i > max_row:
+                break
+
+            ws[f"A{i}"] = item["No."]
+            ws[f"B{i}"] = item["Emp ID"]
+            ws[f"D{i}"] = item["Name"]
+            ws[f"G{i}"] = item["Position"]
+            ws[f"H{i}"] = item["Section"]
+            ws[f"K{i}"] = item["Score"]
+            ws[f"M{i}"] = item["Remark"]
+
     output = BytesIO()
     wb.save(output)
     output.seek(0)
