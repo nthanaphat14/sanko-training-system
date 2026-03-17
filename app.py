@@ -449,6 +449,16 @@ class EventFile(db.Model):
 # Helper Functions
 # -------------------------------------------------
 def allowed_file(filename: str) -> bool:
+def get_event_template_path(event_type: str) -> str:
+    event_type = (event_type or "").strip().upper()
+
+    if event_type in ["INH", "OJT"]:
+        return FM_PN009_TEMPLATE
+    if event_type == "EXT":
+        return FM_PN010_TEMPLATE
+
+    raise ValueError(f"ไม่รองรับ event_type: {event_type}")
+    
     if not filename or "." not in filename:
         return False
     ext = filename.rsplit(".", 1)[1].lower()
