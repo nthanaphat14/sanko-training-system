@@ -3580,6 +3580,7 @@ def event_generate_training_records(event_id):
 def event_export_excel(event_id):
     event = TrainingEvent.query.get_or_404(event_id)
 
+    # เลือก template
     template_path = get_event_template_path(event.event_type)
 
     if not os.path.exists(template_path):
@@ -3589,6 +3590,9 @@ def event_export_excel(event_id):
     wb = load_workbook(template_path)
     ws = wb.active
 
+    # -------------------------
+    # ดึง participant
+    # -------------------------
     participant_rows = TrainingEventParticipant.query.filter_by(
         event_id=event.id
     ).order_by(TrainingEventParticipant.id.asc()).all()
@@ -3610,6 +3614,9 @@ def event_export_excel(event_id):
             "Signature": "",
         })
 
+    # -------------------------
+    # IN-HOUSE / OJT (FM-PN009)
+    # -------------------------
     if event.event_type in ["INH", "OJT"]:
         ws["C5"] = event.title or (event.course.course_name if event.course else "")
         ws["K5"] = event.start_date.strftime("%d/%m/%Y") if event.start_date else ""
@@ -3623,7 +3630,7 @@ def event_export_excel(event_id):
         for i, item in enumerate(participants_data, start=start_row):
             if i > max_row:
                 break
-    
+
             ws[f"A{i}"] = item["No."]
             ws[f"B{i}"] = item["Emp ID"]
             ws[f"D{i}"] = item["Name"]
@@ -3632,6 +3639,9 @@ def event_export_excel(event_id):
             ws[f"K{i}"] = item["Score"]
             ws[f"M{i}"] = item["Remark"]
 
+    # -------------------------
+    # EXTERNAL (FM-PN010)
+    # -------------------------
     elif event.event_type == "EXT":
         ws["C5"] = event.title or (event.course.course_name if event.course else "")
         ws["K5"] = event.start_date.strftime("%d/%m/%Y") if event.start_date else ""
@@ -3646,14 +3656,20 @@ def event_export_excel(event_id):
             if i > max_row:
                 break
 
+            # ⚠️ ใช้เฉพาะ cell ที่ไม่ merge ก่อน
             ws[f"A{i}"] = item["No."]
             ws[f"B{i}"] = item["Emp ID"]
             ws[f"D{i}"] = item["Name"]
-            ws[f"G{i}"] = item["Position"]
-            ws[f"H{i}"] = item["Section"]
-            ws[f"K{i}"] = item["Score"]
             ws[f"M{i}"] = item["Remark"]
-            
+
+            # ❗ ค่อยมาเปิดทีหลังถ้ารู้ตำแหน่งจริง
+            # ws[f"G{i}"] = item["Position"]
+            # ws[f"H{i}"] = item["Section"]
+            # ws[f"K{i}"] = item["Score"]
+
+    # -------------------------
+    # Export file
+    # -------------------------
     output = BytesIO()
     wb.save(output)
     output.seek(0)
