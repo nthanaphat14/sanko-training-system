@@ -1228,14 +1228,21 @@ def employee_new():
 from sqlalchemy.exc import IntegrityError, DataError
 
 def normalize_status(x):
-    if not x:
+    if x is None:
         return None
+
     s = str(x).strip().upper()
+
     if s in ("W", "WORKING", "ACTIVE", "ทำงาน", "ยังอยู่"):
-        return "W"
+        return "Active"
+
     if s in ("RS", "RESIGN", "RESIGNED", "ลาออก", "ออก"):
-        return "RS"
-    return s
+        return "Resign"
+
+    if s == "ALL":
+        return "All"
+
+    return str(x).strip()
 
 @app.route("/employees/<string:em_id>/edit", methods=["GET", "POST"])
 def employee_edit(em_id):
