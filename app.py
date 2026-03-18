@@ -1243,25 +1243,42 @@ def employee_edit(em_id):
 
     if request.method == "POST":
         try:
+            emp.no = safe_int(request.form.get("no"))
             emp.id_card = safe_str(request.form.get("id_card"))
+
+            emp.title_th = safe_str(request.form.get("title_th"))
             emp.first_name_th = safe_str(request.form.get("first_name_th"))
-            emp.last_name_th  = safe_str(request.form.get("last_name_th"))
+            emp.last_name_th = safe_str(request.form.get("last_name_th"))
+
+            emp.title_en = safe_str(request.form.get("title_en"))
             emp.first_name_en = safe_str(request.form.get("first_name_en"))
-            emp.last_name_en  = safe_str(request.form.get("last_name_en"))
-            emp.status = normalize_status(request.form.get("status"))
+            emp.last_name_en = safe_str(request.form.get("last_name_en"))
+
+            emp.position = safe_str(request.form.get("position"))
+            emp.section = safe_str(request.form.get("section"))
+            emp.department = safe_str(request.form.get("department"))
+
+            emp.start_work = safe_date(request.form.get("start_work"))
+            emp.resign = safe_date(request.form.get("resign"))
+
+            emp.degree = safe_str(request.form.get("degree"))
+            emp.major = safe_str(request.form.get("major"))
+
+            status_raw = request.form.get("status")
+            if status_raw is not None and str(status_raw).strip() != "":
+                emp.status = normalize_status(status_raw)
 
             db.session.commit()
             flash("แก้ไขข้อมูลเรียบร้อย", "success")
             return redirect(url_for("employees_list"))
 
-        except (IntegrityError, DataError) as e:
+        except (IntegrityError, DataError):
             db.session.rollback()
-            audit("EMPLOYEE_EDIT", f"em_id={emp.em_id}")
-            
             flash("บันทึกไม่สำเร็จ: ข้อมูลไม่ถูกต้องหรือซ้ำในระบบ", "error")
         except Exception as e:
             db.session.rollback()
             flash(f"เกิดข้อผิดพลาด: {e}", "error")
+
     return render_template("employee_form.html", employee=emp)
 
 @app.route("/employees/<string:em_id>/delete", methods=["POST"])
