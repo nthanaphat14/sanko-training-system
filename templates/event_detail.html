@@ -212,10 +212,20 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  f (!exact) return null;
-    return employees.find(emp => String(emp.emp_id).trim().toLowerCase() === exact) || null;
-  }function findExactEmpIdMatch(q) {
+  function normalizeEmpId(value) {
+    return String(value || "").trim().toLowerCase().replace(/^[a-z]/, "");
+  }
+
+  function findExactEmpIdMatch(q) {
     const exact = q.trim().toLowerCase();
+    if (!exact) return null;
+
+    return employees.find(emp => {
+      const fullId = String(emp.emp_id || "").trim().toLowerCase();
+      const shortId = normalizeEmpId(emp.emp_id);
+      return fullId === exact || shortId === exact;
+    }) || null;
+  }
 
   async function submitParticipant(empId) {
     try {
@@ -224,7 +234,7 @@ document.addEventListener("DOMContentLoaded", function () {
       const formData = new FormData();
       formData.append("emp_id", empId);
 
-      const res = await fetch(/events/${eventId}/participants/add-ajax, {
+      const res = await fetch(`/events/${eventId}/participants/add-ajax`, {
         method: "POST",
         body: formData,
         credentials: "same-origin"
@@ -239,7 +249,7 @@ document.addEventListener("DOMContentLoaded", function () {
         return;
       }
 
-      setMessage(${data.message}: ${data.participant.emp_id} - ${data.participant.name}, true);
+      setMessage(`${data.message}: ${data.participant.emp_id} - ${data.participant.name}`, true);
 
       setTimeout(() => {
         window.location.reload();
