@@ -3111,8 +3111,33 @@ def course_file_add(course_id):
 @app.get("/events")
 @login_required
 def events_list():
-    rows = TrainingEvent.query.order_by(TrainingEvent.created_at.desc()).all()
-    return render_template("events_list.html", rows=rows)
+    q = (request.args.get("q") or "").strip()
+    event_type = (request.args.get("event_type") or "").strip().upper()
+
+    query = TrainingEvent.query.join(TrainingCourse, TrainingEvent.course_id == TrainingCourse.id)
+
+    if event_type in ["INH", "EXT", "OJT"]:
+        query = query.filter(TrainingEvent.event_type == event_type)
+
+    if q:
+        like = f"%{q}%"
+        query = query.filter(
+            or_(
+                TrainingEvent.event_code.ilike(like),
+                TrainingEvent.location.ilike(like),
+                TrainingCourse.course_name.ilike(like),
+                TrainingCourse.course_code.ilike(like),
+            )
+        )
+
+    rows = query.order_by(TrainingEvent.start_date.desc(), TrainingEvent.id.desc()).all()
+
+    return render_template(
+        "events.html",
+        rows=rows,
+        q=q,
+        event_type=event_type,
+    )
 
 @app.route("/events/new", methods=["GET", "POST"])
 @login_required
