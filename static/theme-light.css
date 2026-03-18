@@ -1,1 +1,91 @@
+/* ===== SANKO Light Theme v1 ===== */
 
+/* ===== BODY ===== */
+body {
+  background: #F6F8FC !important;
+  color: #1F2D3D;
+}
+
+/* ===== CARD ===== */
+.card {
+  background: #FFFFFF !important;
+  border: 1px solid #DCE6F2;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+/* ===== HEADER / TOPBAR ===== */
+.navbar, .topbar {
+  background: #FFFFFF !important;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+/* ===== BUTTON ===== */
+.btn-primary {
+  background: linear-gradient(135deg, #8B5CF6, #EC4899) !important;
+  border: none;
+  color: #fff;
+}
+
+.btn-primary:hover {
+  opacity: 0.9;
+}
+
+/* ปุ่มทั่วไป */
+.btn {
+  border-radius: 10px;
+}
+
+/* ===== TABLE ===== */
+table {
+  background: #FFFFFF !important;
+}
+
+thead {
+  background: #EEF3FA !important;
+}
+
+tbody tr {
+  border-bottom: 1px solid #E5EAF2;
+}
+
+tbody tr:hover {
+  background: #F1F6FF !important;
+}
+
+/* ===== INPUT / SELECT ===== */
+input, select {
+  border: 1px solid #DCE6F2 !important;
+  border-radius: 8px;
+  background: #FFFFFF;
+  color: #1F2D3D;
+}
+
+/* ===== BADGE ===== */
+.badge {
+  border-radius: 20px;
+  padding: 4px 10px;
+}
+
+.badge.active {
+  background: #E6F9F0;
+  color: #22A06B;
+}
+
+.badge.resign {
+  background: #FFEAEA;
+  color: #E25563;
+}
+
+/* ===== TITLE ===== */
+h1, h2, h3 {
+  color: #163A70;
+}
+
+/* ===== FILTER BOX ===== */
+.filter-box {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 10px;
+}
