@@ -377,7 +377,7 @@ document.addEventListener("DOMContentLoaded", function () {
             <th>Name</th>
             <th>Section</th>
             <th>Position</th>
-            <th class="nowrap">Order</th>
+            <th class="nowrap">Move</th>
             <th>Result</th>
             <th>Score</th>
             <th>Hours</th>
@@ -386,9 +386,9 @@ document.addEventListener("DOMContentLoaded", function () {
           </tr>
         </thead>
 
-        <tbody>
+        <tbody id="participantsSortable">
           {% for x in participants %}
-          <tr>
+          <tr data-participant-id="{{ x.row.id }}">
             <td class="nowrap">{{ x.row.emp_id }}</td>
 
             <td>
@@ -402,19 +402,9 @@ document.addEventListener("DOMContentLoaded", function () {
             <td>{% if x.emp %}{{ x.emp.section or "" }}{% endif %}</td>
             <td>{% if x.emp %}{{ x.emp.position or "" }}{% endif %}</td>
 
-            <td class="text-nowrap">
-              <form method="post"
-                    action="{{ url_for('event_participant_move_up', participant_id=x.row.id) }}"
-                    style="display:inline;">
-                <button class="btn sm" type="submit">↑</button>
-              </form>
-
-              <form method="post"
-                    action="{{ url_for('event_participant_move_down', participant_id=x.row.id) }}"
-                    style="display:inline;">
-                <button class="btn sm" type="submit">↓</button>
-              </form>
-            </td>
+            <td class="text-nowrap drag-handle" style="cursor:grab; user-select:none; font-size:18px;">
+              ☰
+<           </td>
 
             <td>
               <select name="result_{{ x.row.id }}" class="input" style="width:110px;">
@@ -710,5 +700,55 @@ document.addEventListener("DOMContentLoaded", function () {
     <button class="btn danger" type="submit">Delete Event</button>
   </form>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.3/Sortable.min.js"></script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const tbody = document.getElementById("participantsSortable");
+  if (!tbody) return;
+
+  Sortable.create(tbody, {
+    animation: 150,
+    handle: ".drag-handle",
+    ghostClass: "drag-ghost",
+    onEnd: async function () {
+      const ids = Array.from(
+        tbody.querySelectorAll("tr[data-participant-id]")
+      ).map(tr => tr.dataset.participantId);
+
+      try {
+        const res = await fetch("{{ url_for('event_participants_reorder', event_id=event.id) }}", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          credentials: "same-origin",
+          body: JSON.stringify({
+            participant_ids: ids
+          })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || !data.ok) {
+          alert(data.message || "บันทึกลำดับไม่สำเร็จ");
+          window.location.reload();
+        }
+      } catch (err) {
+        alert("ไม่สามารถบันทึกลำดับได้");
+        window.location.reload();
+      }
+    }
+  });
+});
+</script>
+
+<style>
+.drag-ghost {
+  opacity: 0.5;
+  background: rgba(255,255,255,.08);
+}
+</style>
 
 {% endblock %}
