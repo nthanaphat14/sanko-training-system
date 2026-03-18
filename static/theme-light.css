@@ -171,3 +171,33 @@ input::placeholder {
 h1, h2, h3 {
   color: #163A70;
 }
+
+/* ===== FIX TABLE HEADER ===== */
+thead,
+.table thead {
+  background: #EEF3FA !important;
+}
+
+thead th,
+.table thead th {
+  color: #163A70 !important;
+  font-weight: 600;
+  border-bottom: 1px solid #DCE6F2;
+}
+
+table {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+tbody td {
+  padding: 12px 14px;
+}
+
+.card {
+  padding: 18px;
+}
+
+.btn.active {
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25);
+}
