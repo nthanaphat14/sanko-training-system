@@ -1099,19 +1099,23 @@ def healthz():
 def employees_list():
     q = (request.args.get("q") or "").strip()
 
-    # รับค่า filter/sort จาก URL
+    # รับค่า filter/sort/page จาก URL
     status = (request.args.get("status") or "Active").strip()
     dept = (request.args.get("dept") or "").strip()
     section = (request.args.get("section") or "").strip()
     sort = (request.args.get("sort") or "no").strip()
     direction = (request.args.get("direction") or "asc").strip().lower()
 
+    page = request.args.get("page", 1, type=int)
+    per_page = request.args.get("per_page", 50, type=int)
+    if per_page not in [20, 50, 100]:
+        per_page = 50
+
     query = Employee.query
 
     # Filter: Status
     if status in ["Active", "Resign"]:
         query = query.filter(Employee.status == status)
-    # ถ้าเป็น All หรือค่าอื่น → ไม่กรอง
 
     # Filter: Department / Section
     if dept:
@@ -1156,9 +1160,9 @@ def employees_list():
         .all()
     ]
 
-    # เรียงลำดับ:
-    # - Active / Resign: เรียงตามวันเริ่มงาน
-    # - All: Active มาก่อน แล้วค่อยเรียงวันเริ่มงาน
+    # Sort logic
+    # ถ้าเลือก All -> Active มาก่อน แล้วค่อยเรียงวันเริ่มงาน
+    # ถ้าเลือก Active/Resign -> เรียงวันเริ่มงานอย่างเดียว
     if status == "All":
         query = query.order_by(
             case(
@@ -1174,7 +1178,8 @@ def employees_list():
             Employee.em_id.asc()
         )
 
-    employees = query.all()
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    employees = pagination.items
 
     # Summary counts
     total_active = Employee.query.filter(Employee.status == "Active").count()
@@ -1184,7 +1189,10 @@ def employees_list():
     return render_template(
         "employees.html",
         employees=employees,
-        total=len(employees),
+        total=pagination.total,
+        pagination=pagination,
+        page=page,
+        per_page=per_page,
         q=q,
         status=status,
         dept=dept,
