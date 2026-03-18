@@ -12,7 +12,26 @@
     </a>
   </div>
 </div>
+<div class="card" style="margin-bottom:14px;">
+  <form method="get" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+    <select class="input" name="event_type" style="max-width:180px;">
+      <option value="" {% if not event_type %}selected{% endif %}>All</option>
+      <option value="INH" {% if event_type == "INH" %}selected{% endif %}>INH</option>
+      <option value="EXT" {% if event_type == "EXT" %}selected{% endif %}>EXT</option>
+      <option value="OJT" {% if event_type == "OJT" %}selected{% endif %}>OJT</option>
+    </select>
 
+    <input class="input"
+           type="text"
+           name="q"
+           value="{{ q or '' }}"
+           placeholder="ค้นหา: event code / course / location"
+           style="flex:1; min-width:280px;">
+
+    <button class="btn" type="submit">ค้นหา</button>
+    <a class="btn ghost" href="{{ url_for('events_list') }}">ล้าง</a>
+  </form>
+</div>
 <div class="card">
   <table class="table">
     <thead>
