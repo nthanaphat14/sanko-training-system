@@ -282,7 +282,11 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     const matched = employees
-      .filter(emp => emp.search_text.includes(q))
+      .filter(emp => {
+        const fullId = String(emp.emp_id || "").trim().toLowerCase();
+        const shortId = normalizeEmpId(emp.emp_id);
+        return emp.search_text.includes(q) || fullId.includes(q) || shortId.includes(q);
+      })
       .slice(0, 20);
 
     renderResults(matched);
