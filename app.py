@@ -40,6 +40,7 @@ from openpyxl.utils import get_column_letter
 from openpyxl.cell.cell import MergedCell
 from sqlalchemy import asc, nulls_last
 from sqlalchemy import or_, case
+from sqlalchemy import or_
 
 from collections import defaultdict
 from datetime import date
