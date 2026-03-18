@@ -18,13 +18,30 @@
 
     <div class="field" style="grid-column:1/-1;">
       <label>Course</label>
-      <select class="input" name="course_id" required>
+
+      <div style="display:flex; gap:10px; margin-bottom:10px; flex-wrap:wrap;">
+        <select class="input" id="courseTypeFilter" style="max-width:180px;">
+          <option value="">All Type</option>
+          <option value="INH">INH</option>
+          <option value="EXT">EXT</option>
+          <option value="OJT">OJT</option>
+        </select>
+
+        <input class="input" id="courseSearch" type="text"
+               placeholder="ค้นหา code / course name..."
+               style="flex:1; min-width:260px;">
+      </div>
+
+      <select class="input" name="course_id" id="courseSelect" required>
         <option value="">-- เลือกหลักสูตร --</option>
         {% for c in courses %}
           <option value="{{ c.id }}"
                   data-trainer="{{ c.vendor or '' }}"
                   data-location="{{ c.location or '' }}"
-                  data-title="{{ c.course_name or '' }}">
+                  data-title="{{ c.course_name or '' }}"
+                  data-type="{{ c.course_type or '' }}"
+                  data-code="{{ (c.course_code or '')|lower }}"
+                  data-name="{{ (c.course_name or '')|lower }}">
             {{ c.course_code }} • {{ c.course_name }} • {{ c.course_type }}
           </option>
         {% endfor %}
@@ -33,7 +50,7 @@
 
     <div class="field">
       <label>Title</label>
-      <input class="input" name="title" placeholder="ถ้าไม่กรอก จะใช้ชื่อหลักสูตร">
+      <input class="input" id="title" name="title" placeholder="ถ้าไม่กรอก จะใช้ชื่อหลักสูตร">
     </div>
 
     <div class="field">
@@ -63,19 +80,20 @@
 
   </form>
 </div>
-
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-  const courseSelect = document.querySelector('select[name="course_id"]');
+  const courseSelect = document.getElementById("courseSelect");
   const trainerInput = document.getElementById("trainer");
   const locationInput = document.getElementById("location");
   const titleInput = document.getElementById("title");
+  const courseSearch = document.getElementById("courseSearch");
+  const courseTypeFilter = document.getElementById("courseTypeFilter");
 
   if (!courseSelect) return;
 
   function fillFromSelected() {
     const selected = courseSelect.options[courseSelect.selectedIndex];
-    if (!selected) return;
+    if (!selected || !selected.value) return;
 
     const trainer = selected.getAttribute("data-trainer") || "";
     const location = selected.getAttribute("data-location") || "";
@@ -84,21 +102,47 @@ document.addEventListener("DOMContentLoaded", function () {
     if (trainerInput && !trainerInput.value.trim()) {
       trainerInput.value = trainer;
     }
-
     if (locationInput && !locationInput.value.trim()) {
       locationInput.value = location;
     }
-
     if (titleInput && !titleInput.value.trim()) {
       titleInput.value = title;
     }
   }
 
-  courseSelect.addEventListener("change", fillFromSelected);
+  function filterCourses() {
+    const keyword = (courseSearch?.value || "").trim().toLowerCase();
+    const type = (courseTypeFilter?.value || "").trim().toUpperCase();
 
-  // ← เพิ่มตรงนี้ เพื่อให้โหลดหน้ามาแล้ว fill ทันที
+    Array.from(courseSelect.options).forEach((opt, idx) => {
+      if (idx === 0) {
+        opt.hidden = false;
+        return;
+      }
+
+      const code = (opt.getAttribute("data-code") || "").toLowerCase();
+      const name = (opt.getAttribute("data-name") || "").toLowerCase();
+      const optType = (opt.getAttribute("data-type") || "").toUpperCase();
+
+      const matchKeyword = !keyword || code.includes(keyword) || name.includes(keyword);
+      const matchType = !type || optType === type;
+
+      opt.hidden = !(matchKeyword && matchType);
+    });
+
+    const selected = courseSelect.options[courseSelect.selectedIndex];
+    if (selected && selected.hidden) {
+      courseSelect.selectedIndex = 0;
+    }
+  }
+
+  courseSelect.addEventListener("change", fillFromSelected);
+  if (courseSearch) courseSearch.addEventListener("input", filterCourses);
+  if (courseTypeFilter) courseTypeFilter.addEventListener("change", filterCourses);
+
   fillFromSelected();
 });
 </script>
+
 
 {% endblock %}
