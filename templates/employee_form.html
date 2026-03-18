@@ -104,9 +104,12 @@
     </div>
     <div class="field">
       <label>Status</label>
-      <input name="status" value="{{ employee.status if employee else '' }}" placeholder="W / RS">
+      <select name="status" class="input">
+        <option value="">-- เลือกสถานะ --</option>
+        <option value="Active" {% if employee and employee.status == "Active" %}selected{% endif %}>Active</option>
+        <option value="Resign" {% if employee and employee.status == "Resign" %}selected{% endif %}>Resign</option>
+      </select>
     </div>
-
     <div class="field">
       <label>Degree</label>
       <input name="degree" value="{{ employee.degree if employee else '' }}">
