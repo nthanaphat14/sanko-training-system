@@ -39,6 +39,7 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.utils import get_column_letter
 from openpyxl.cell.cell import MergedCell
 from sqlalchemy import asc, nulls_last
+from sqlalchemy import or_, case
 
 from collections import defaultdict
 from datetime import date
@@ -1098,7 +1099,7 @@ def healthz():
 def employees_list():
     q = (request.args.get("q") or "").strip()
 
-    # ✅ รับค่า filter/sort จาก URL
+    # รับค่า filter/sort จาก URL
     status = (request.args.get("status") or "Active").strip()
     dept = (request.args.get("dept") or "").strip()
     section = (request.args.get("section") or "").strip()
@@ -1107,18 +1108,18 @@ def employees_list():
 
     query = Employee.query
 
-    # ✅ Filter: Status
+    # Filter: Status
     if status in ["Active", "Resign"]:
         query = query.filter(Employee.status == status)
     # ถ้าเป็น All หรือค่าอื่น → ไม่กรอง
 
-    # ✅ Filter: Department / Section
+    # Filter: Department / Section
     if dept:
         query = query.filter(Employee.department == dept)
     if section:
         query = query.filter(Employee.section == section)
 
-    # ✅ Search
+    # Search
     if q:
         like = f"%{q}%"
         query = query.filter(
@@ -1136,7 +1137,7 @@ def employees_list():
             )
         )
 
-    # ✅ Dropdown options (ต้องเป็น list ของ string)
+    # Dropdown options
     dept_options = [
         d[0] for d in db.session.query(Employee.department)
         .filter(Employee.department.isnot(None))
@@ -1155,30 +1156,27 @@ def employees_list():
         .all()
     ]
 
-    # ✅ Sort
-    sort_map = {
-        "no": Employee.no,
-        "em_id": Employee.em_id,
-        "department": Employee.department,
-        "section": Employee.section,
-    }
-    sort_col = sort_map.get(sort, Employee.no)
-
-    if direction == "desc":
-        query = query.order_by(nullslast(sort_col.desc()))
-    else:
-        query = query.order_by(nullslast(sort_col.asc()))
-
-    # เสริมเรียง em_id ต่อท้ายกันข้อมูลกระโดด
-    if sort != "em_id":
+    # เรียงลำดับ:
+    # - Active / Resign: เรียงตามวันเริ่มงาน
+    # - All: Active มาก่อน แล้วค่อยเรียงวันเริ่มงาน
+    if status == "All":
         query = query.order_by(
-            nullslast(sort_col.desc() if direction == "desc" else sort_col.asc()),
+            case(
+                (Employee.status == "Active", 0),
+                else_=1
+            ),
+            nullslast(Employee.start_work.asc()),
+            Employee.em_id.asc()
+        )
+    else:
+        query = query.order_by(
+            nullslast(Employee.start_work.asc()),
             Employee.em_id.asc()
         )
 
-    employees = Employee.query.order_by(Employee.start_work.asc()).all()
+    employees = query.all()
 
-    # ✅ Summary counts (นับจากฐานจริง ไม่ใช่จาก filter)
+    # Summary counts
     total_active = Employee.query.filter(Employee.status == "Active").count()
     total_resign = Employee.query.filter(Employee.status == "Resign").count()
     total_all = Employee.query.count()
@@ -1188,16 +1186,13 @@ def employees_list():
         employees=employees,
         total=len(employees),
         q=q,
-
         status=status,
         dept=dept,
         section=section,
         sort=sort,
         direction=direction,
-
         dept_options=dept_options,
         section_options=section_options,
-
         total_active=total_active,
         total_resign=total_resign,
         total_all=total_all,
