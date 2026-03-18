@@ -33,6 +33,7 @@ from sqlalchemy.sql import nullslast
 from sqlalchemy.exc import IntegrityError, DataError
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
+from flask import jsonify
 
 from openpyxl import Workbook, load_workbook
 from openpyxl.utils import get_column_letter
@@ -3980,6 +3981,39 @@ def event_participants_fill_hours(event_id):
     db.session.commit()
     flash("เติมชั่วโมงจาก Course ให้ทุกคนแล้ว", "success")
     return redirect(url_for("event_detail", event_id=event.id))
+
+@app.post("/events/<int:event_id>/participants/reorder")
+@login_required
+@role_required("admin")
+def event_participants_reorder(event_id):
+    event = TrainingEvent.query.get_or_404(event_id)
+
+    data = request.get_json(silent=True) or {}
+    participant_ids = data.get("participant_ids", [])
+
+    if not isinstance(participant_ids, list) or not participant_ids:
+        return jsonify({"ok": False, "message": "ข้อมูลลำดับไม่ถูกต้อง"}), 400
+
+    rows = TrainingEventParticipant.query.filter_by(event_id=event.id).all()
+    row_map = {r.id: r for r in rows}
+
+    valid_ids = []
+    for pid in participant_ids:
+        try:
+            pid = int(pid)
+        except Exception:
+            continue
+        if pid in row_map:
+            valid_ids.append(pid)
+
+    if len(valid_ids) != len(rows):
+        return jsonify({"ok": False, "message": "จำนวนรายการไม่ตรงกับข้อมูลใน Event"}), 400
+
+    for idx, pid in enumerate(valid_ids, start=1):
+        row_map[pid].sort_order = idx
+
+    db.session.commit()
+    return jsonify({"ok": True, "message": "บันทึกลำดับเรียบร้อย"})
 
 @app.post("/events/<int:event_id>/participants/save-all")
 @login_required
