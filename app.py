@@ -3159,7 +3159,11 @@ def event_detail(event_id):
         TrainingEventParticipant.sort_order.asc(),
         TrainingEventParticipant.id.asc()
     ).all()
-
+    
+    emp_ids = [p.emp_id for p in participant_rows if p.emp_id]
+    employees = Employee.query.filter(Employee.em_id.in_(emp_ids)).all()
+    emp_map = {e.em_id: e for e in employees}
+    
     participants = []
     for p in participant_rows:
         emp = Employee.query.filter_by(em_id=p.emp_id).first()
@@ -3627,6 +3631,10 @@ def event_export_excel(event_id):
         TrainingEventParticipant.id.asc()
     ).all()
 
+    emp_ids = [p.emp_id for p in participant_rows if p.emp_id]
+    employees = Employee.query.filter(Employee.em_id.in_(emp_ids)).all()
+    emp_map = {e.em_id: e for e in employees}
+    
     participants_data = []
     for idx, p in enumerate(participant_rows, start=1):
         emp = Employee.query.filter_by(em_id=p.emp_id).first()
