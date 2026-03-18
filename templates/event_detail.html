@@ -212,11 +212,10 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 
-  function findExactEmpIdMatch(q) {
-    const exact = q.trim().toLowerCase();
-    if (!exact) return null;
+  f (!exact) return null;
     return employees.find(emp => String(emp.emp_id).trim().toLowerCase() === exact) || null;
-  }
+  }function findExactEmpIdMatch(q) {
+    const exact = q.trim().toLowerCase();
 
   async function submitParticipant(empId) {
     try {
