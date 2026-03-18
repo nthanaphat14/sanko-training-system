@@ -1179,7 +1179,7 @@ def employees_list():
     employees = Employee.query.order_by(
         Employee.status.desc(),   # Active มาก่อน
         Employee.start_work.asc()
-    ).all(
+    ).all()
 
     # ✅ Summary counts (นับจากฐานจริง ไม่ใช่จาก filter)
     total_active = Employee.query.filter(Employee.status == "Active").count()
