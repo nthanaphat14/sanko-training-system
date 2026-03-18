@@ -3134,7 +3134,7 @@ def events_list():
     rows = query.order_by(TrainingEvent.start_date.desc(), TrainingEvent.id.desc()).all()
 
     return render_template(
-        "events.html",
+        "events_list.html",
         rows=rows,
         q=q,
         event_type=event_type,
