@@ -131,7 +131,7 @@
               <input type="checkbox" name="ids" value="{{ e.em_id }}" class="rowCheck">
             </td>
 
-            <td>{{ loop.index }}</td>
+            <td>{{ ((page - 1) * per_page) + loop.index }}</td>
             <td class="nowrap"><b>{{ e.em_id }}</b></td>
 
             <td class="nowrap">
@@ -186,6 +186,56 @@
     </div>
 
   </form>
+</div>
+
+<div class="card" style="margin-top:14px;">
+  <div style="display:flex; justify-content:space-between; align-items:center; gap:16px; flex-wrap:wrap;">
+    
+    <div class="muted">
+      แสดงหน้า {{ pagination.page }} / {{ pagination.pages or 1 }}
+      • ทั้งหมด {{ pagination.total }} รายการ
+    </div>
+
+    <form method="get" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+      <input type="hidden" name="q" value="{{ q }}">
+      <input type="hidden" name="status" value="{{ status }}">
+      <input type="hidden" name="dept" value="{{ dept }}">
+      <input type="hidden" name="section" value="{{ section }}">
+      <input type="hidden" name="sort" value="{{ sort }}">
+      <input type="hidden" name="direction" value="{{ direction }}">
+
+      <span class="muted">ต่อหน้า</span>
+      <select name="per_page" class="input" onchange="this.form.submit()">
+        <option value="20" {% if per_page == 20 %}selected{% endif %}>20</option>
+        <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+        <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+      </select>
+
+      {% if pagination.has_prev %}
+        <a class="btn ghost" href="{{ url_for('employees_list', page=pagination.prev_num, per_page=per_page, q=q, status=status, dept=dept, section=section, sort=sort, direction=direction) }}">← ก่อนหน้า</a>
+      {% else %}
+        <span class="btn ghost" style="opacity:.5; pointer-events:none;">← ก่อนหน้า</span>
+      {% endif %}
+
+      {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=1) %}
+        {% if p %}
+          {% if p == pagination.page %}
+            <span class="btn active">{{ p }}</span>
+          {% else %}
+            <a class="btn ghost" href="{{ url_for('employees_list', page=p, per_page=per_page, q=q, status=status, dept=dept, section=section, sort=sort, direction=direction) }}">{{ p }}</a>
+          {% endif %}
+        {% else %}
+          <span class="muted">...</span>
+        {% endif %}
+      {% endfor %}
+
+      {% if pagination.has_next %}
+        <a class="btn ghost" href="{{ url_for('employees_list', page=pagination.next_num, per_page=per_page, q=q, status=status, dept=dept, section=section, sort=sort, direction=direction) }}">ถัดไป →</a>
+      {% else %}
+        <span class="btn ghost" style="opacity:.5; pointer-events:none;">ถัดไป →</span>
+      {% endif %}
+    </form>
+  </div>
 </div>
 
 <!-- ID Card Modal -->
