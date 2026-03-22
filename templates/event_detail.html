@@ -15,6 +15,9 @@
     <a class="btn" href="{{ url_for('event_export_excel', event_id=event.id) }}">
       Export Excel
     </a>
+    <a class="btn btn-primary" href="{{ url_for('event_qr_page', event_id=event.id) }}">
+      Generate QR Code
+    </a>
   </div>
 </div>
 
