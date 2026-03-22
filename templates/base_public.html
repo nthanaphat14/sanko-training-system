@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title or "SANKO Training" }}</title>
+  <style>
+    body { font-family: Arial, sans-serif; background:#0b1020; color:#fff; margin:0; padding:24px; }
+    .card { background:#111833; border:1px solid #2b355f; border-radius:16px; }
+    .input, select { width:100%; padding:12px; border-radius:10px; border:1px solid #334; background:#0f1630; color:#fff; }
+    .btn { padding:12px 18px; border:none; border-radius:10px; background:#6366f1; color:#fff; cursor:pointer; }
+  </style>
+</head>
+<body>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="card" style="max-width:760px; margin:0 auto 16px auto; padding:16px;">
+          {{ message }}
+        </div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  {% block content %}{% endblock %}
+</body>
+</html>
