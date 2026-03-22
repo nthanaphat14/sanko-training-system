@@ -392,6 +392,9 @@ class TrainingEvent(db.Model):
 
     trainer = db.Column(db.String(255), nullable=True)
 
+    qr_token = db.Column(db.String(120), unique=True, index=True)
+    qr_generated_at = db.Column(db.DateTime)
+
     description = db.Column(db.Text, nullable=True)
     status = db.Column(db.String(30), nullable=False, default="PLANNED")
 
@@ -424,6 +427,11 @@ class TrainingEventParticipant(db.Model):
     training_hours = db.Column(db.Float, nullable=True)
     remark = db.Column(db.String(255), nullable=True)
 
+    is_checked_in = db.Column(db.Boolean, default=False)
+    checkin_time = db.Column(db.DateTime)
+    checkin_method = db.Column(db.String(20))
+    checkin_by = db.Column(db.String(50))
+    
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     event = db.relationship(
