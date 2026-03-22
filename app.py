@@ -1,6 +1,7 @@
 import os
 import io
 import pandas as pd
+import qrcode
 
 from io import BytesIO
 from math import ceil
