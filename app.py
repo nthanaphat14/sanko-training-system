@@ -3716,6 +3716,9 @@ def event_export_excel(event_id):
             "Score": p.score or "",
             "Training Hours": p.training_hours or "",
             "Remark": p.remark or "",
+            "Check-in Status": "Checked-in" if p.is_checked_in else "Pending",
+            "Check-in Time": p.checkin_time.strftime("%d/%m/%Y %H:%M:%S") if p.checkin_time else "",
+            "Check-in Method": p.checkin_method or "",
             "Signature": "",
         })
 
@@ -3760,8 +3763,22 @@ def event_export_excel(event_id):
                 safe_write(ws, f"G{row_idx}", item["Position"])
                 safe_write(ws, f"H{row_idx}", item["Section"])
                 safe_write(ws, f"K{row_idx}", item["Score"])
-                safe_write(ws, f"M{row_idx}", item["Remark"])
+                
+                remark_text = item["Remark"] or ""
+                checkin_text = ""
 
+                if item["Check-in Time"]:
+                    checkin_text = f'[{item["Check-in Status"]}] {item["Check-in Time"]} ({item["Check-in Method"]})'
+
+                if remark_text and checkin_text:
+                    final_remark = f"{remark_text} | {checkin_text}"
+                elif checkin_text:
+                    final_remark = checkin_text
+                else:
+                    final_remark = remark_text
+                
+                safe_write(ws, f"M{row_idx}", final_remark)
+        
         # =========================================================
         # FM-PN010 : EXTERNAL
         # =========================================================
@@ -3781,8 +3798,20 @@ def event_export_excel(event_id):
                 safe_write(ws, f"D{row_idx}", item["Name"])     # ชื่อ-นามสกุล
                 safe_write(ws, f"J{row_idx}", item["Position"]) # ตำแหน่ง
                 safe_write(ws, f"M{row_idx}", item["Section"])  # แผนก
-                safe_write(ws, f"O{row_idx}", item["Remark"])   # หมายเหตุ
-
+                remark_text = item["Remark"] or ""
+                checkin_text = ""
+                
+                if item["Check-in Time"]:
+                    checkin_text = f'[{item["Check-in Status"]}] {item["Check-in Time"]} ({item["Check-in Method"]})'
+                
+                if remark_text and checkin_text:
+                    final_remark = f"{remark_text} | {checkin_text}"
+                elif checkin_text:
+                    final_remark = checkin_text
+                else:
+                    final_remark = remark_text
+                
+                safe_write(ws, f"O{row_idx}", final_remark)
         else:
             flash(f"ไม่รองรับประเภท Event: {event.event_type}", "error")
             return redirect(url_for("event_detail", event_id=event.id))
