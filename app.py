@@ -3855,7 +3855,6 @@ def event_export_excel(event_id):
     )
 
 @app.get("/events/<int:event_id>/qr")
-@login_required
 def event_qr_code(event_id):
     event = TrainingEvent.query.get_or_404(event_id)
 
@@ -3873,7 +3872,6 @@ def event_qr_code(event_id):
     return send_file(output, mimetype="image/png")
 
 @app.get("/events/<int:event_id>/qr-page")
-@login_required
 def event_qr_page(event_id):
     event = TrainingEvent.query.get_or_404(event_id)
 
