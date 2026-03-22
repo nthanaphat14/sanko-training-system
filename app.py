@@ -3744,6 +3744,28 @@ def event_export_excel(event_id):
         page_data = pages[page_no - 1]
         ws.title = f"Page {page_no}"
 
+    for page_no, ws in enumerate(worksheets, start=1):
+    page_data = pages[page_no - 1]
+    ws.title = f"Page {page_no}"
+
+        # 🔥 วาง QR ตรงนี้
+        if not event.qr_token:
+            event.qr_token, event.qr_generated_at = build_event_qr_token(event)
+            db.session.commit()
+    
+        register_url = url_for("event_register_by_qr", token=event.qr_token, _external=True)
+    
+        qr_img = qrcode.make(register_url)
+        img_buffer = io.BytesIO()
+        qr_img.save(img_buffer, format="PNG")
+        img_buffer.seek(0)
+    
+        qr_excel_img = XLImage(img_buffer)
+        qr_excel_img.width = 120
+        qr_excel_img.height = 120
+    
+        ws.add_image(qr_excel_img, "K2")
+
         # =========================================================
         # FM-PN009 : IN-HOUSE / OJT
         # =========================================================
