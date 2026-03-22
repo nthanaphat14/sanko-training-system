@@ -6,6 +6,7 @@ import qrcode
 from io import BytesIO
 from math import ceil
 from datetime import datetime, date, timedelta
+from openpyxl.drawing.image import Image as XLImage
 from functools import wraps
 
 from flask import (
