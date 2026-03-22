@@ -2,12 +2,14 @@ import os
 import io
 import pandas as pd
 import qrcode
+import tempfile
 
 from io import BytesIO
 from math import ceil
 from datetime import datetime, date, timedelta
 from openpyxl.drawing.image import Image as XLImage
 from functools import wraps
+from PIL import Image as PILImage
 
 from flask import (
     Flask,
