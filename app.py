@@ -3744,10 +3744,6 @@ def event_export_excel(event_id):
         page_data = pages[page_no - 1]
         ws.title = f"Page {page_no}"
 
-    for page_no, ws in enumerate(worksheets, start=1):
-    page_data = pages[page_no - 1]
-    ws.title = f"Page {page_no}"
-
         # 🔥 วาง QR ตรงนี้
         if not event.qr_token:
             event.qr_token, event.qr_generated_at = build_event_qr_token(event)
