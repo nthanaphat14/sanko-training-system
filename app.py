@@ -732,6 +732,10 @@ def safe_str(v):
     if v is None:
         return ""
     return str(v).strip()
+
+def build_event_qr_token(event):
+    now = datetime.now()
+    return f"E{event.id}{now.strftime('%y%m%d%H%M%S')}", now
     
 def build_employee_query(q="", status="Active", dept="", section="", sort="no", direction="asc"):
     query = Employee.query
@@ -3797,6 +3801,116 @@ def event_export_excel(event_id):
         download_name=filename,
         as_attachment=True,
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
+@app.get("/events/<int:event_id>/qr")
+@login_required
+def event_qr_code(event_id):
+    event = TrainingEvent.query.get_or_404(event_id)
+
+    if not event.qr_token:
+        event.qr_token, event.qr_generated_at = build_event_qr_token(event)
+        db.session.commit()
+
+    register_url = url_for("event_register_by_qr", token=event.qr_token, _external=True)
+
+    img = qrcode.make(register_url)
+    output = io.BytesIO()
+    img.save(output, format="PNG")
+    output.seek(0)
+
+    return send_file(output, mimetype="image/png")
+
+@app.get("/events/<int:event_id>/qr-page")
+@login_required
+def event_qr_page(event_id):
+    event = TrainingEvent.query.get_or_404(event_id)
+
+    if not event.qr_token:
+        event.qr_token, event.qr_generated_at = build_event_qr_token(event)
+        db.session.commit()
+
+    register_url = url_for("event_register_by_qr", token=event.qr_token, _external=True)
+    qr_url = url_for("event_qr_code", event_id=event.id)
+
+    return render_template(
+        "event_qr_page.html",
+        event=event,
+        register_url=register_url,
+        qr_url=qr_url
+    )
+
+@app.get("/events/register/<token>")
+def event_register_by_qr(token):
+    event = TrainingEvent.query.filter_by(qr_token=token).first_or_404()
+
+    participant_rows = (
+        TrainingEventParticipant.query
+        .filter_by(event_id=event.id)
+        .order_by(TrainingEventParticipant.emp_id.asc())
+        .all()
+    )
+
+    participant_options = []
+    for p in participant_rows:
+        emp = Employee.query.filter_by(em_id=p.emp_id).first()
+        participant_options.append({
+            "emp_id": p.emp_id,
+            "display": f"{p.emp_id} - {emp.th_full() if emp else p.emp_id}",
+            "checked_in": p.is_checked_in
+        })
+
+    return render_template(
+        "event_register_qr.html",
+        event=event,
+        participant_options=participant_options
+    )
+
+@app.post("/events/register/<token>")
+def event_register_by_qr_submit(token):
+    event = TrainingEvent.query.filter_by(qr_token=token).first_or_404()
+
+    emp_id = (request.form.get("emp_id") or "").strip()
+
+    if not emp_id:
+        flash("กรุณาเลือกชื่อพนักงาน", "error")
+        return redirect(url_for("event_register_by_qr", token=token))
+
+    participant = TrainingEventParticipant.query.filter_by(
+        event_id=event.id,
+        emp_id=emp_id
+    ).first()
+
+    if not participant:
+        flash("ไม่พบรายชื่อพนักงานในกิจกรรมนี้", "error")
+        return redirect(url_for("event_register_by_qr", token=token))
+
+    if participant.is_checked_in:
+        flash("พนักงานคนนี้เช็กอินแล้ว", "warning")
+        return redirect(url_for("event_register_by_qr", token=token))
+
+    now = datetime.now()
+    participant.is_checked_in = True
+    participant.checkin_time = now
+    participant.checkin_method = "QR"
+    participant.checkin_by = "SELF"
+
+    now_text = now.strftime("%d/%m/%Y %H:%M:%S")
+    qr_text = f"เช็กอินผ่าน QR: {now_text}"
+
+    if participant.remark and participant.remark.strip():
+        participant.remark = f"{participant.remark}\n{qr_text}"
+    else:
+        participant.remark = qr_text
+
+    db.session.commit()
+
+    flash("ลงทะเบียนสำเร็จ", "success")
+    return render_template(
+        "event_register_success.html",
+        event=event,
+        emp_id=emp_id,
+        checkin_time=now_text
     )
 
 @app.post("/events/participants/<int:participant_id>/move-up")
