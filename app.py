@@ -3755,15 +3755,16 @@ def event_export_excel(event_id):
     
         register_url = url_for("event_register_by_qr", token=event.qr_token, _external=True)
     
-        qr_img = qrcode.make(register_url)
-        img_buffer = io.BytesIO()
-        qr_img.save(img_buffer, format="PNG")
-        img_buffer.seek(0)
-    
-        qr_excel_img = XLImage(img_buffer)
+        qr_img = qrcode.make(register_url).convert("RGB")
+
+        tmp_qr = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+        qr_img.save(tmp_qr.name, format="PNG")
+        tmp_qr.close()
+        
+        qr_excel_img = XLImage(tmp_qr.name)
         qr_excel_img.width = 120
         qr_excel_img.height = 120
-    
+        
         ws.add_image(qr_excel_img, "K2")
 
         # =========================================================
@@ -3844,7 +3845,12 @@ def event_export_excel(event_id):
     output = BytesIO()
     wb.save(output)
     output.seek(0)
-
+    
+    try:
+        os.unlink(tmp_qr.name)
+    except Exception:
+        pass   
+            
     filename = f"{event.event_code or 'event'}_export.xlsx"
 
     return send_file(
