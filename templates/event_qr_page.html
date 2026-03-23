@@ -9,7 +9,7 @@
   <p><strong>สถานที่:</strong> {{ event.location or "-" }}</p>
   <p><strong>QR Code:</strong> {{ event.qr_token }}</p>
   <p><strong>Generate เวลา:</strong>
-    {{ event.qr_generated_at.strftime("%d/%m/%Y %H:%M:%S") if event.qr_generated_at else "-" }}
+    {{ event.qr_generated_at.strftime("%d/%m/%Y %H:%M:%S") }}
   </p>
 
   <img src="{{ qr_url }}" alt="QR Code" style="max-width:320px; margin:20px auto; display:block;">
