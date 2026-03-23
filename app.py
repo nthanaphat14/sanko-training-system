@@ -3749,7 +3749,11 @@ def event_export_excel(event_id):
         qr_excel_img.width = 120
         qr_excel_img.height = 120
         
-        ws.add_image(qr_excel_img, "P2")
+        if event.event_type in ["INH", "OJT"]:
+            qr_position = "M1"   # FM-PN009
+        elif event.event_type == "EXT":
+            qr_position = "P2"   # FM-PN010
+        ws.add_image(qr_excel_img, qr_position)
 
         # =========================================================
         # FM-PN009 : IN-HOUSE / OJT
