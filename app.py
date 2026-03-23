@@ -1082,31 +1082,6 @@ def admin_reset_password(user_id):
 
     return redirect(url_for("admin_users"))
 
-
-# -------------------------------------------------
-# Require login globally
-# -------------------------------------------------
-
-@app.before_request
-def require_login_globally():
-
-    open_paths = {"/login", "/healthz"}
-
-    if request.path.startswith("/static/"):
-        return
-
-    if request.path in open_paths:
-        return
-
-    if request.path == "/login" and request.method == "POST":
-        return
-
-    u = get_current_user()
-
-    if not u or not u.is_active:
-        return redirect(url_for("login"))
-
-
 # -------------------------------------------------
 # Root
 # -------------------------------------------------
