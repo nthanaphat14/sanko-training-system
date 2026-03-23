@@ -684,7 +684,7 @@ def require_login_globally():
     if request.endpoint is None:
         return
 
-    allow = {
+    public_endpoints = {
         "login",
         "login_post",
         "logout",
@@ -695,7 +695,7 @@ def require_login_globally():
         "event_register_by_qr_submit",
     }
 
-    if request.endpoint in allow:
+    if request.endpoint in public_endpoints:
         return
 
     u = get_current_user()
