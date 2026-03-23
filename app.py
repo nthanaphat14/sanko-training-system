@@ -748,13 +748,12 @@ def safe_str(v):
     return str(v).strip()
 
 def build_event_qr_token(event):
-    tz = pytz.timezone("Asia/Bangkok")
-    now = datetime.now(tz)
+    now = datetime.utcnow() + timedelta(hours=7)
     return f"E{event.id}{now.strftime('%y%m%d%H%M%S')}", now
     
 def build_employee_query(q="", status="Active", dept="", section="", sort="no", direction="asc"):
     query = Employee.query
-
+    
     # ---- status filter ----
     if status and status != "All":
         query = query.filter(Employee.status == status)
