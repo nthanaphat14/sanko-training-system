@@ -748,7 +748,8 @@ def safe_str(v):
     return str(v).strip()
 
 def build_event_qr_token(event):
-    now = datetime.now()
+    tz = pytz.timezone("Asia/Bangkok")
+    now = datetime.now(tz)
     return f"E{event.id}{now.strftime('%y%m%d%H%M%S')}", now
     
 def build_employee_query(q="", status="Active", dept="", section="", sort="no", direction="asc"):
@@ -3933,7 +3934,8 @@ def event_register_by_qr_submit(token):
         flash("พนักงานคนนี้เช็กอินแล้ว", "warning")
         return redirect(url_for("event_register_by_qr", token=token))
 
-    now = datetime.now()
+    tz = pytz.timezone("Asia/Bangkok")
+    now = datetime.now(tz)
     participant.is_checked_in = True
     participant.checkin_time = now
     participant.checkin_method = "QR"
