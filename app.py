@@ -684,7 +684,16 @@ def require_login_globally():
     if request.endpoint is None:
         return
 
-    allow = {"login", "login_post", "logout", "static"}
+    allow = {
+        "login",
+        "login_post",
+        "logout",
+        "static",
+        "event_qr_page",
+        "event_qr_code",
+        "event_register_by_qr",
+        "event_register_by_qr_submit",
+    }
 
     if request.endpoint in allow:
         return
