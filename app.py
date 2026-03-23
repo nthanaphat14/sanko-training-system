@@ -3,6 +3,7 @@ import io
 import pandas as pd
 import qrcode
 import tempfile
+import pytz
 
 from io import BytesIO
 from math import ceil
