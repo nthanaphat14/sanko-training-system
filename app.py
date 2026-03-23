@@ -3765,7 +3765,7 @@ def event_export_excel(event_id):
         qr_excel_img.width = 120
         qr_excel_img.height = 120
         
-        ws.add_image(qr_excel_img, "K2")
+        ws.add_image(qr_excel_img, "P2")
 
         # =========================================================
         # FM-PN009 : IN-HOUSE / OJT
