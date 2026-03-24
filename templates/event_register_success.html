@@ -1,11 +1,17 @@
 {% extends "base_public.html" %}
 {% block content %}
 
-<div class="card" style="max-width:640px; margin:24px auto; padding:24px; text-align:center;">
-  <h2>ลงทะเบียนสำเร็จ</h2>
-  <p>ระบบบันทึกเวลาเข้าอบรมเรียบร้อยแล้ว</p>
-  <p><strong>หลักสูตร:</strong> {{ event.course.course_name if event.course else "-" }}</p>
-  <p><strong>เวลาเช็กอิน:</strong> {{ checkin_time }}</p>
+<div class="card">
+  <div class="top-accent"></div>
+  <div class="card-body">
+    <h1 class="title">ลงทะเบียนสำเร็จ</h1>
+    <p class="desc">ระบบบันทึกเวลาเข้าอบรมเรียบร้อยแล้ว</p>
+  </div>
+</div>
+
+<div class="field-card">
+  <div class="kv"><strong>หลักสูตร:</strong> {{ event.course.course_name if event.course else "-" }}</div>
+  <div class="kv"><strong>เวลาเช็กอิน:</strong> {{ checkin_time }}</div>
 </div>
 
 {% endblock %}
