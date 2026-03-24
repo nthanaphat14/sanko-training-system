@@ -3,51 +3,147 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ title or "SANKO Training" }}</title>
+  <title>{{ title or "แบบฟอร์มลงทะเบียน" }}</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #0b1020;
-      color: #fff;
-      margin: 0;
-      padding: 24px;
+    :root{
+      --bg:#f0ebf8;
+      --card:#ffffff;
+      --text:#202124;
+      --sub:#5f6368;
+      --border:#dadce0;
+      --primary:#673ab7;
+      --primary-hover:#5b33a6;
+      --radius:12px;
     }
-    .card {
-      background: #111833;
-      border: 1px solid #2b355f;
-      border-radius: 16px;
-      padding: 24px;
-      max-width: 760px;
-      margin: 0 auto;
+
+    *{box-sizing:border-box}
+
+    body{
+      margin:0;
+      font-family: Arial, Helvetica, sans-serif;
+      background:var(--bg);
+      color:var(--text);
+      padding:24px 16px 48px;
     }
-    .input, select {
-      width: 100%;
-      padding: 12px;
-      border-radius: 10px;
-      border: 1px solid #334;
-      background: #0f1630;
-      color: #fff;
-      box-sizing: border-box;
+
+    .wrap{
+      max-width:720px;
+      margin:0 auto;
     }
-    .btn {
-      padding: 12px 18px;
-      border: none;
-      border-radius: 10px;
-      background: #6366f1;
-      color: #fff;
-      cursor: pointer;
+
+    .top-accent{
+      height:10px;
+      background:var(--primary);
+      border-radius:12px 12px 0 0;
+    }
+
+    .card{
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      box-shadow:0 1px 2px rgba(0,0,0,.08);
+      overflow:hidden;
+      margin-bottom:16px;
+    }
+
+    .card-body{
+      padding:24px;
+    }
+
+    .title{
+      font-size:32px;
+      font-weight:700;
+      margin:0 0 8px;
+    }
+
+    .desc{
+      color:var(--sub);
+      font-size:15px;
+      line-height:1.6;
+      margin:0;
+    }
+
+    .field-card{
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      padding:24px;
+      margin-top:16px;
+      box-shadow:0 1px 2px rgba(0,0,0,.06);
+    }
+
+    .label{
+      display:block;
+      font-size:18px;
+      font-weight:600;
+      margin-bottom:14px;
+    }
+
+    select, .input{
+      width:100%;
+      padding:14px 16px;
+      font-size:16px;
+      border:1px solid var(--border);
+      border-radius:8px;
+      background:#fff;
+      color:var(--text);
+      outline:none;
+    }
+
+    select:focus, .input:focus{
+      border-color:var(--primary);
+      box-shadow:0 0 0 3px rgba(103,58,183,.12);
+    }
+
+    .btn{
+      display:inline-block;
+      margin-top:18px;
+      background:var(--primary);
+      color:#fff;
+      border:none;
+      border-radius:8px;
+      padding:12px 22px;
+      font-size:15px;
+      font-weight:600;
+      cursor:pointer;
+    }
+
+    .btn:hover{
+      background:var(--primary-hover);
+    }
+
+    .kv{
+      margin:8px 0;
+      line-height:1.7;
+      font-size:16px;
+    }
+
+    .muted{
+      color:var(--sub);
+    }
+
+    .flash{
+      background:#fff;
+      border:1px solid var(--border);
+      border-left:5px solid var(--primary);
+      border-radius:10px;
+      padding:14px 16px;
+      margin-bottom:16px;
+      box-shadow:0 1px 2px rgba(0,0,0,.06);
     }
   </style>
 </head>
 <body>
-  {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-      {% for category, message in messages %}
-        <div class="card" style="margin-bottom:16px;">{{ message }}</div>
-      {% endfor %}
-    {% endif %}
-  {% endwith %}
+  <div class="wrap">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="flash">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
 
-  {% block content %}{% endblock %}
+    {% block content %}{% endblock %}
+  </div>
 </body>
 </html>
