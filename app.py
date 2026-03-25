@@ -2701,19 +2701,19 @@ def report_monthly_export():
     import pandas as pd
 
     # 🔹 สร้าง Summary
-summary_map = {}
-
-for r in detail_rows:
-    t = r["Training Type"]
-
-    if t not in summary_map:
-        summary_map[t] = {
-            "Training Type": t,
-            "No. Course": 0,
-            "No. of Trainees": 0,
-            "Total Hours": 0,
-            "Cost": 0
-        }
+    summary_map = {}
+    
+    for r in detail_rows:
+        t = r["Training Type"]
+    
+        if t not in summary_map:
+            summary_map[t] = {
+                "Training Type": t,
+                "No. Course": 0,
+                "No. of Trainees": 0,
+                "Total Hours": 0,
+                "Cost": 0
+            }
 
     summary_map[t]["No. Course"] += 1
     summary_map[t]["No. of Trainees"] += r["Trainee Count"]
