@@ -2700,12 +2700,44 @@ def report_monthly_export():
     import io
     import pandas as pd
 
-    df = pd.DataFrame(detail_rows)
+    # 🔹 สร้าง Summary
+summary_map = {}
+
+for r in detail_rows:
+    t = r["Training Type"]
+
+    if t not in summary_map:
+        summary_map[t] = {
+            "Training Type": t,
+            "No. Course": 0,
+            "No. of Trainees": 0,
+            "Total Hours": 0,
+            "Cost": 0
+        }
+
+    summary_map[t]["No. Course"] += 1
+    summary_map[t]["No. of Trainees"] += r["Trainee Count"]
+    summary_map[t]["Total Hours"] += r["Total Hours"]
+    summary_map[t]["Cost"] += r["Cost"]
+
+    summary_data = list(summary_map.values())
+    
+    
+    # 🔹 เขียน Excel 2 sheet
     output = io.BytesIO()
-
+    
     with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
-        df.to_excel(writer, index=False, sheet_name="Monthly Report")
-
+        
+        # Sheet 1: Summary
+        pd.DataFrame(summary_data).to_excel(
+            writer, index=False, sheet_name="Summary"
+        )
+    
+        # Sheet 2: Detail
+        pd.DataFrame(detail_rows).to_excel(
+            writer, index=False, sheet_name="Detail"
+        )
+    
     output.seek(0)
     return send_file(
         output,
