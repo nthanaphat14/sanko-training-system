@@ -2609,11 +2609,23 @@ def report_monthly():
 @app.get("/report/yearly/export")
 @login_required
 def report_yearly_export():
-    year = request.args.get("year", type=int) or date.today().year
+    import io
+    import pandas as pd
 
-    events = TrainingEvent.query.filter(
+    year = request.args.get("year", type=int) or date.today().year
+    months = request.args.getlist("months", type=int)
+
+    if not months:
+        months = list(range(1, 13))
+
+    months = sorted(set(months))
+
+    # -------------------------
+    # YEARLY SUMMARY
+    # -------------------------
+    all_events = TrainingEvent.query.filter(
         extract("year", TrainingEvent.start_date) == year
-    ).all()
+    ).order_by(TrainingEvent.start_date.asc()).all()
 
     month_map = {
         m: {
@@ -2627,20 +2639,24 @@ def report_yearly_export():
         for m in range(1, 13)
     }
 
-    for e in events:
+    for e in all_events:
+        if not e.start_date:
+            continue
+
         m = e.start_date.month
         month_map[m]["Course Count"] += 1
 
-        p_count = len(e.participants) if hasattr(e, "participants") else 0
+        p_count = len(e.participants) if hasattr(e, "participants") and e.participants else 0
         month_map[m]["Participant Count"] += p_count
 
         total_hours = 0.0
         if hasattr(e, "participants") and e.participants:
             total_hours = sum(float(p.training_hours or 0) for p in e.participants)
-
         month_map[m]["Total Hours"] += total_hours
 
-        total_cost = sum(float(x.amount_total or 0) for x in e.cost_items) if hasattr(e, "cost_items") and e.cost_items else 0.0
+        total_cost = 0.0
+        if hasattr(e, "cost_items") and e.cost_items:
+            total_cost = sum(float(x.amount_total or 0) for x in e.cost_items)
         month_map[m]["Total Cost"] += total_cost
 
     rows = []
@@ -2650,16 +2666,17 @@ def report_yearly_export():
             row["Avg Hours / Person"] = row["Total Hours"] / row["Participant Count"]
         rows.append(row)
 
-    import io
-    import pandas as pd
-
-    df = pd.DataFrame(rows)
+    # -------------------------
+    # EXPORT EXCEL
+    # -------------------------
     output = io.BytesIO()
 
     with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
+        df = pd.DataFrame(rows)
         df.to_excel(writer, index=False, sheet_name="Yearly Summary")
 
     output.seek(0)
+
     return send_file(
         output,
         download_name=f"yearly_summary_{year}.xlsx",
