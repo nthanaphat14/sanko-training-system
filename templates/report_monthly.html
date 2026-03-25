@@ -29,7 +29,7 @@
     </div>
 
     </div>
-      <a href="/export/monthly?year={{year}}&month={{month}}">
+      <a href="{{ url_for('report_monthly_export', year=year, month=month) }}">
         Export Excel
       </a>
     </div>
