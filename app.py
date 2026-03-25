@@ -2611,6 +2611,9 @@ def report_monthly():
 def report_yearly_export():
     import io
     import pandas as pd
+    from datetime import date
+    from flask import request, send_file
+    from sqlalchemy import extract
 
     year = request.args.get("year", type=int) or date.today().year
     months = request.args.getlist("months", type=int)
@@ -2624,7 +2627,8 @@ def report_yearly_export():
     # YEARLY SUMMARY
     # -------------------------
     all_events = TrainingEvent.query.filter(
-        extract("year", TrainingEvent.start_date) == year
+        extract("year", TrainingEvent.start_date) == year,
+        extract("month", TrainingEvent.start_date).in_(months)
     ).order_by(TrainingEvent.start_date.asc()).all()
 
     month_map = {
@@ -2636,7 +2640,7 @@ def report_yearly_export():
             "Avg Hours / Person": 0.0,
             "Total Cost": 0.0,
         }
-        for m in range(1, 13)
+        for m in months
     }
 
     for e in all_events:
@@ -2644,6 +2648,9 @@ def report_yearly_export():
             continue
 
         m = e.start_date.month
+        if m not in month_map:
+            continue
+
         month_map[m]["Course Count"] += 1
 
         p_count = len(e.participants) if hasattr(e, "participants") and e.participants else 0
@@ -2660,11 +2667,27 @@ def report_yearly_export():
         month_map[m]["Total Cost"] += total_cost
 
     rows = []
-    for m in range(1, 13):
+    for m in months:
         row = month_map[m]
         if row["Participant Count"] > 0:
             row["Avg Hours / Person"] = row["Total Hours"] / row["Participant Count"]
         rows.append(row)
+
+    # แถวรวม
+    total_course_count = sum(r["Course Count"] for r in rows)
+    total_participant_count = sum(r["Participant Count"] for r in rows)
+    total_hours = sum(r["Total Hours"] for r in rows)
+    total_cost = sum(r["Total Cost"] for r in rows)
+    total_avg = (total_hours / total_participant_count) if total_participant_count else 0.0
+
+    rows.append({
+        "Month": "รวม",
+        "Course Count": total_course_count,
+        "Participant Count": total_participant_count,
+        "Total Hours": total_hours,
+        "Avg Hours / Person": total_avg,
+        "Total Cost": total_cost,
+    })
 
     # -------------------------
     # EXPORT EXCEL
@@ -2677,9 +2700,11 @@ def report_yearly_export():
 
     output.seek(0)
 
+    month_text = "_".join(str(m) for m in months)
+
     return send_file(
         output,
-        download_name=f"yearly_summary_{year}.xlsx",
+        download_name=f"yearly_summary_{year}_{month_text}.xlsx",
         as_attachment=True,
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
