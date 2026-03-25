@@ -28,8 +28,8 @@
       <button class="btn primary" type="submit">แสดงรายงาน</button>
     </div>
 
-    </div>
-      <a href="{{ url_for('report_monthly_export', year=year, month=month) }}">
+    <div>
+      <a class="btn" href="{{ url_for('report_monthly_export', year=year, month=month) }}">
         Export Excel
       </a>
     </div>
