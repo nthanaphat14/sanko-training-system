@@ -30,19 +30,23 @@
       </select>
     </div>
 
-    <!-- ปุ่ม -->
+    <!-- ปุ่มแสดงรายงาน -->
     <div>
       <button class="btn primary" type="submit">แสดงรายงาน</button>
     </div>
 
-    <div>
-      <a class="btn"
-         href="{{ url_for('report_yearly_export', year=year, months=selected_months) }}">
-        Export Excel
-      </a>
-    </div>
-
   </form>
+
+  <!-- ปุ่ม Export แยก form ต่างหาก -->
+  <div style="margin-top:12px;">
+    <form method="get" action="{{ url_for('report_yearly_export') }}" style="display:inline;">
+      <input type="hidden" name="year" value="{{ year }}">
+      {% for m in selected_months %}
+        <input type="hidden" name="months" value="{{ m }}">
+      {% endfor %}
+      <button class="btn" type="submit">Export Excel</button>
+    </form>
+  </div>
 </div>
 
 <!-- ตาราง Yearly Summary -->
