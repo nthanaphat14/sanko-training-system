@@ -2712,10 +2712,17 @@ def report_yearly_export():
 @app.get("/report/monthly/export")
 @login_required
 def report_monthly_export():
+    import io
+    import pandas as pd
+    from datetime import date
+    from flask import request, send_file
+    from sqlalchemy import extract
+
     year = request.args.get("year", type=int) or date.today().year
     month = request.args.get("month", type=int) or date.today().month
 
     events = TrainingEvent.query.filter(
+        TrainingEvent.start_date.isnot(None),
         extract("year", TrainingEvent.start_date) == year,
         extract("month", TrainingEvent.start_date) == month
     ).order_by(TrainingEvent.start_date.asc()).all()
@@ -2723,64 +2730,74 @@ def report_monthly_export():
     detail_rows = []
 
     for e in events:
-        p_count = len(e.participants) if hasattr(e, "participants") else 0
+        p_count = len(e.participants) if hasattr(e, "participants") and e.participants else 0
         total_hours = sum(float(p.training_hours or 0) for p in e.participants) if hasattr(e, "participants") and e.participants else 0.0
         total_cost = sum(float(x.amount_total or 0) for x in e.cost_items) if hasattr(e, "cost_items") and e.cost_items else 0.0
 
         detail_rows.append({
-            "Date": e.start_date,
-            "Event Code": e.event_code,
+            "Date": e.start_date.strftime("%Y-%m-%d") if e.start_date else "",
+            "Event Code": e.event_code or "",
             "Course Name": e.course.course_name if e.course else "",
             "Trainer": e.trainer or "",
             "Trainee Count": p_count,
             "Total Hours": total_hours,
-            "Hours / Person": e.course.training_hours if e.course else "",
+            "Hours / Person": float(e.course.training_hours or 0) if e.course and e.course.training_hours else 0,
             "Cost": total_cost,
             "Training Type": TYPE_LABELS.get((e.event_type or "").upper(), e.event_type or "")
         })
 
-    import io
-    import pandas as pd
-
-    # 🔹 สร้าง Summary
+    # -------------------------
+    # SUMMARY
+    # -------------------------
     summary_map = {}
-    
+
     for r in detail_rows:
-        t = r["Training Type"]
-    
+        t = r["Training Type"] or "-"
+
         if t not in summary_map:
             summary_map[t] = {
                 "Training Type": t,
                 "No. Course": 0,
                 "No. of Trainees": 0,
-                "Total Hours": 0,
-                "Cost": 0
+                "Total Hours": 0.0,
+                "Cost": 0.0
             }
 
-    summary_map[t]["No. Course"] += 1
-    summary_map[t]["No. of Trainees"] += r["Trainee Count"]
-    summary_map[t]["Total Hours"] += r["Total Hours"]
-    summary_map[t]["Cost"] += r["Cost"]
+        summary_map[t]["No. Course"] += 1
+        summary_map[t]["No. of Trainees"] += r["Trainee Count"]
+        summary_map[t]["Total Hours"] += r["Total Hours"]
+        summary_map[t]["Cost"] += r["Cost"]
 
     summary_data = list(summary_map.values())
-    
-    
-    # 🔹 เขียน Excel 2 sheet
+
+    # เพิ่ม total row ใน summary sheet
+    total_row = {
+        "Training Type": "Total",
+        "No. Course": sum(r["No. Course"] for r in summary_data),
+        "No. of Trainees": sum(r["No. of Trainees"] for r in summary_data),
+        "Total Hours": sum(r["Total Hours"] for r in summary_data),
+        "Cost": sum(r["Cost"] for r in summary_data),
+    }
+
+    if summary_data:
+        summary_data.append(total_row)
+
+    # -------------------------
+    # EXPORT EXCEL
+    # -------------------------
     output = io.BytesIO()
-    
+
     with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
-        
-        # Sheet 1: Summary
         pd.DataFrame(summary_data).to_excel(
             writer, index=False, sheet_name="Summary"
         )
-    
-        # Sheet 2: Detail
+
         pd.DataFrame(detail_rows).to_excel(
             writer, index=False, sheet_name="Detail"
         )
-    
+
     output.seek(0)
+
     return send_file(
         output,
         download_name=f"monthly_report_{year}_{month:02d}.xlsx",
